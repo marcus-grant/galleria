@@ -4,6 +4,7 @@ This directory contains system architecture documentation for Galleria's core co
 
 ## Components
 
+- **[System Overview](overview.md)** - Core system architecture and key components
 - **[Static Site Generation](static-site-generation.md)** - Template system, build process, and development server architecture
 - **[Metadata Consistency System](metadata-consistency.md)** - Dual-hash metadata system for idempotent deployments and local/remote state consistency
 

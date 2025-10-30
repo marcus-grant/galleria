@@ -1,70 +1,30 @@
 # Galleria Documentation
 
-Welcome to the Galleria documentation. This directory contains comprehensive 
-documentation for the wedding photo gallery system.
+Static photo gallery system with Django-style commands and functional paradigms.
 
-## Overview
+## Status Documents
 
-Galleria is a static wedding photo gallery built with Pelican, using AlpineJS 
-for frontend interactions and Tailwind CSS for styling. Photos are processed 
-with UUIDv7-based filenames derived from EXIF data and hosted on Hetzner 
-object storage with BunnyCDN for global distribution.
+- **[TODO](TODO.md)** - Current development tasks and pending work
+- **[CHANGELOG](CHANGELOG.md)** - Completed features and implementation history
 
-**Priority**: Speed of development and deployment over feature richness. Get a 
-working, acceptable user experience deployed quickly.
+## Core Documentation
 
-## Documentation Index
+- **[Architecture](architecture/)** - System design and component overview
+- **[Deployment](deployment/)** - Production setup and deployment workflows  
+- **[Guides](guides/)** - Setup guides for CDN, storage, and development
 
-### Configuration & Settings
-- **[Settings System](./settings.md)** - Complete guide to Galleria's 
-  hierarchical settings system, environment variables, local settings, and XDG 
-  compliance
+## Reference
 
-### Development & Architecture
-- **[Development Specification](./TODO.md)** - Detailed development tasks, 
-  specifications, and project roadmap
-- **[Changelog](./CHANGELOG.md)** - Record of completed features and major 
-  changes
-- **[Contributing Guidelines](./CONTRIBUTE.md)** - Development workflow, testing requirements, and commit conventions
+- **[Contributing Guidelines](CONTRIBUTE.md)** - Development workflow and standards
+- **[Settings System](settings.md)** - Configuration and environment variables
 
-### Testing Infrastructure
-- **[Testing Documentation](./testing/README.md)** - Test fixtures, isolation patterns, and synthetic photo generation for reproducible CI/CD-compatible testing
+## Quick Start
 
-### Command-Line Interface
-- **[Command Documentation](./command/README.md)** - Complete guide to all CLI 
-  commands including usage examples, options, and workflows
+```bash
+# Complete deployment pipeline
+uv run python manage.py process-photos
+uv run python manage.py build  
+uv run python manage.py deploy --setup-cors
+```
 
-### Architecture & Implementation  
-- **[Static Site Generation](./architecture/static-site-generation.md)** - Template system, build process, and development server
-- **[Services Documentation](./services/README.md)** - Service layer components and core business logic implementations
-
-### Utilities & Implementation Notes
-- **[UUIDv7 Implementation](./util/UUIDv7.md)** - RFC 9562 compliance, Python 
-  standard library status, and implementation strategy for chronological photo IDs
-
-### Getting Started
-- **[Main README](../README.md)** - Project overview, setup instructions, and 
-  basic usage
-
-## Quick Reference
-
-### Key Concepts
-- **Settings Hierarchy**: CLI args > env vars > local settings > defaults
-- **Environment Variables**: All use `GALLERIA_` prefix
-- **Local Settings**: Override defaults via `settings.local.py`
-- **XDG Compliance**: Respects `XDG_CONFIG_HOME` and `XDG_CACHE_HOME`
-
-### Technology Stack
-- **Backend**: Python 3.12, Pelican static generator
-- **Frontend**: AlpineJS + Tailwind CSS (CDN, no build step)
-- **Photo Processing**: Pillow, exifread, RFC 9562 UUIDv7 naming
-- **Storage**: Hetzner object storage with BunnyCDN
-- **Testing**: pytest with pyfakefs for filesystem mocking
-
-## Contributing
-
-When adding new documentation:
-1. Create focused, single-purpose documents
-2. Update this index with appropriate links
-3. Follow existing markdown formatting conventions
-4. Keep technical details in specific documents, overviews here
+See [deployment/production-setup.md](deployment/production-setup.md) for detailed setup instructions.

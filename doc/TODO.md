@@ -2,34 +2,15 @@
 
 **Commands implemented**: find-samples, upload-photos, process-photos, deploy
 
-## TODO Management Guidelines **[IMPORTANT - READ FIRST]**
+## TODO Management Guidelines
 
-**Size Control**: Keep TODO concise by moving completed work to CHANGELOG.md daily.
+**Workflow**: Complete → Document in CHANGELOG.md → Remove from TODO. Keep TODO focused on current work only. Complex features may require additional documentation in doc/ directory.
 
-**Workflow**:
-1. **During Implementation**: Follow TDD process, mark todos as completed when tests pass
-2. **After Implementation**: Document completed work in `doc/CHANGELOG.md` under today's date section
-3. **Daily Cleanup**: Remove completed items from TODO after documenting in CHANGELOG
-4. **CHANGELOG Format**: Brief bullet points with key changes, no verbose details
+**Architecture**: See [doc/architecture/overview.md](architecture/overview.md) for system architecture and key components.
 
-**CHANGELOG Structure**:
-- Top section = most recent date (2025-10-29)
-- Add new date sections when working on new days
-- Keep entries concise: "- **Feature X**: Brief description of what was implemented"
 
-**Result**: TODO stays focused on current/upcoming work, CHANGELOG tracks historical progress.
+## Production Deployment Commands
 
-## Production Deployment Status **[2025-10-29 UPDATE]**
-
-**✅ FULLY COMPLETE**: All implementation tasks finished! 329/329 tests passing. Ready for immediate production deployment.
-
-### What Works Now
-- ✅ **Complete pipeline**: `process-photos` → `build` → `deploy` 
-- ✅ **Full metadata recording**: All processing settings captured
-- ✅ **Settings isolation**: Tests run cleanly with `GALLERIA_TEST_MODE=1`
-- ✅ **326/329 tests passing**: Only 3 expected failures for unimplemented nice-to-have features
-
-### Production Deployment Commands
 ```bash
 # Process 645 wedding photos with timezone corrections
 uv run python manage.py process-photos
@@ -41,139 +22,25 @@ uv run python manage.py build
 uv run python manage.py deploy --setup-cors
 ```
 
-### Key System Components (All Working)
-- **EXIF processing**: Timezone correction with `TARGET_TIMEZONE_OFFSET_HOURS = 2` for Swedish wedding
-- **Metadata system**: Complete gallery metadata with all processing settings recorded
-- **Deployment pipeline**: Hash-based selective uploads with CORS validation
-- **Test isolation**: `GALLERIA_TEST_MODE=1` prevents local settings pollution
-
-**🔧 FOR NEW DEVELOPERS - CURRENT IMPLEMENTATION STATE**:
-
-**What's implemented:**
-- ✅ `TARGET_TIMEZONE_OFFSET_HOURS` setting with full test coverage (`test/test_settings.py`)
-- ✅ `PhotoMetadata` dataclass has `deployment_file_hash` field (`src/models/photo.py`)
-- ✅ `GalleryMetadata.from_dict()` handles both hash fields correctly
-- ✅ `modify_exif_in_memory()` function implemented (`src/services/s3_storage.py`)
-- ✅ Deployment hash calculation implemented (`src/services/file_processing.py:258-285`)
-- ✅ Deployment orchestration functions implemented (`src/services/deployment.py`)
-- ✅ Comprehensive test suite for EXIF modification (`test/services/test_s3_storage.py`)
-- ✅ Integration tests for dual-hash system (`test/test_dual_hash_integration.py`)
-- ✅ Complete test suite for deployment orchestration (`test/services/test_deployment.py`)
-- ✅ Complete documentation for metadata consistency system
-- ✅ CORS management functions implemented (`src/services/s3_storage.py`)
-- ✅ Deploy command CORS integration with early exit (`src/command/deploy.py`)
-- ✅ Comprehensive CORS test suite (`test/services/test_s3_storage.py::TestCORSConfiguration`)
-- ✅ Enhanced deploy command tests with CORS validation (`test/command/test_deploy.py::TestDeployCommandCORSValidation`)
-
-**Key files to understand:**
-- `src/models/photo.py` - PhotoMetadata structure with dual hashes
-- `src/services/s3_storage.py` - modify_exif_in_memory() function and CORS management
-- `src/services/file_processing.py` - Lines 258-285: deployment hash calculation
-- `src/services/deployment.py` - Deployment orchestration with metadata-last upload ordering
-- `settings.py` - Line 58: TARGET_TIMEZONE_OFFSET_HOURS setting
-- `doc/architecture/metadata-consistency.md` - Complete system documentation
-
-**Phase 3 Complete - Dual Timezone System Implemented:**
-
-**Dual Timezone System Explanation:**
-- **`TIMESTAMP_OFFSET_HOURS`**: Corrects systematic camera time errors ✅ IMPLEMENTED
-  - Example: Camera was set 2 hours fast → offset = -2 to correct
-- **`TARGET_TIMEZONE_OFFSET_HOURS`**: Sets actual timezone context for deployment ✅ IMPLEMENTED
-  - Writes timezone info to EXIF `OffsetTimeOriginal` field per EXIF 2.31 standard
-  - Format: `±HH:MM` (e.g., `-05:00` for EST, `+02:00` for CET)
-  - Special value 13 = preserve original timezone (don't modify `OffsetTimeOriginal`)
-- **Combined Logic**: corrected timestamp + timezone context = complete local time information ✅ IMPLEMENTED
-
-✅ **Completed Phase 3 Tasks:**
-1. ✅ **`modify_exif_in_memory()` implemented in `src/services/s3_storage.py`**:
-   - Function signature: `modify_exif_in_memory(image_bytes, corrected_timestamp, target_timezone_offset_hours) -> bytes`
-   - Uses `piexif` library for in-memory EXIF modification
-   - Applies corrected timestamp to `DateTimeOriginal`
-   - Applies timezone offset to `OffsetTimeOriginal` in `±HH:MM` format (unless offset = 13)
-   - Complies with EXIF 2.31 standard for timezone information
-2. ✅ **Deployment hash calculation implemented in `src/services/file_processing.py:258-285`**:
-   - Simulates EXIF modification during processing using both timezone settings
-   - Calculates hash of modified image bytes (reflects both timestamp correction and timezone)
-   - Stores as `deployment_file_hash` with error fallback
-3. ✅ **Comprehensive test suite implemented**:
-   - `test/services/test_s3_storage.py::TestExifModification` (8 tests)
-   - `test/test_dual_hash_integration.py` (5 integration tests)
-   - Full documentation in `doc/architecture/metadata-consistency.md`
-
-## Ready for Production Deployment
-
-**Status**: ✅ ALL IMPLEMENTATION COMPLETE - 329/329 tests passing
-
-The wedding photo gallery is fully implemented and ready for production deployment. All UX enhancement features have been completed and documented.
 
 
-## Real-world Deployment Testing **[READY TO PROCEED]**
+## Production Deployment Verification
 
-**Objective**: Execute production deployment pipeline and test with real 645 Swedish wedding photos.
+**Remaining Tasks**:
+- [ ] **Verify EXIF corrections** - Confirm timezone fixes in deployed photos
+- [ ] **Test deployed gallery functionality** - Verify photos load correctly in browser
 
-**Prerequisites**: ✅ All deployment infrastructure complete (Phases 1-5 + CORS). ✅ All blocking issues resolved.
+**Deployment Setup**: See [doc/deployment/production-setup.md](deployment/production-setup.md) for detailed configuration instructions.
 
-### Current Walkthrough Progress
 
-**Status**: Ready for production deployment walkthrough
+## Future Performance Improvements **[POST-DEPLOYMENT]**
 
-**Completed Steps**:
-1. ✅ **Personal configuration analysis** - EXIF timezone issue identified and settings determined
-2. ✅ **Settings configuration** - `settings.local.py` configured with correct timezone settings  
-3. ✅ **All implementation tasks complete** - 329/329 tests passing, UX features implemented
-4. ✅ **Critical issues resolved** - Timezone metadata, performance, and batch processing complete
+**Current Baseline**: 645 wedding photos processed in 9m15s (555 seconds) = ~1.16 photos/second
 
-**New Features Available (2025-10-29)**:
-- **Progress reporting**: Real-time "Processing photo X/Y" output during processing
-- **Batch processing**: `--batch-size` option for memory management (default: 50 photos)
-- **Crash recovery**: `--resume` and `--restart` flags for interrupted processing
-- **All tests passing**: 329/329 tests complete, ready for production use
-
-**Ready for Deployment Pipeline**:
-1. **Execute process-photos** - Process 645 photos with new UX features (progress, batch processing, recovery)
-2. **Execute build command** - Generate static site with complete metadata
-3. **Execute deploy --setup-cors** - First production deployment with CORS validation
-4. **Verify EXIF corrections** - Confirm timezone fixes in deployed photos
-
-### Production Deployment Instructions
-
-**READY TO DEPLOY**: The system is production-ready. Follow these steps for first deployment:
-
-#### Step 1: Configure Production Settings
-
-Add to `settings.local.py`:
-```python
-# S3 Production Configuration  
-S3_PUBLIC_ENDPOINT = "https://eu-central-1.s3.hetznerobjects.com"  # Your actual endpoint
-S3_PUBLIC_BUCKET = "your-actual-bucket-name"  # From bucket setup
-S3_PUBLIC_REGION = "eu-central-1"  # Your bucket region
-
-# Photo Processing Settings
-TIMESTAMP_OFFSET_HOURS = -4  # Your camera systematic correction
-TARGET_TIMEZONE_OFFSET_HOURS = -5  # Target timezone (e.g., EST = -5, CET = +1)
-```
-
-#### Step 2: Set Environment Variables for Secrets
-```bash
-export GALLERIA_S3_PUBLIC_ACCESS_KEY="your_access_key"
-export GALLERIA_S3_PUBLIC_SECRET_KEY="your_secret_key"
-```
-
-#### Step 3: Complete Deployment Workflow
-```bash
-# Process photos with timezone corrections
-uv run python manage.py process-photos
-
-# Build static site
-uv run python manage.py build
-
-# Deploy with automatic CORS setup
-uv run python manage.py deploy --setup-cors
-```
-
-**What happens**: System processes photos with `-4h` correction, applies target timezone to EXIF, generates dual hashes, validates/configures CORS, and uploads only changed photos using metadata comparison.
-
-**Next steps after deployment**: CDN setup using `doc/bunnycdn-setup.md`
+**Tasks for Future Optimization**:
+- [ ] **Investigate process-photos performance bottlenecks** - Profile individual photo processing to identify slow operations (EXIF extraction, file copying, thumbnail generation, deployment hash calculation)
+- [ ] **Develop performance improvements** - Implement optimizations such as parallel processing, optimized image operations, or caching strategies based on investigation findings  
+- [ ] **Document performance improvements** - Measure and document performance gains using the 9m15s baseline for 645 photos as comparison metric
 
 ### S3 Bucket Setup Requirements
 
@@ -733,6 +600,18 @@ Originally planned to display saved sample metadata from JSON cache. However, fi
 already shows all necessary information when run, and the JSON output is primarily useful
 for debugging. The command structure and edge case detection from find-samples proved more
 valuable as building blocks for chronological UUID generation than as a standalone tool.
+
+---
+
+## Deploy Command Improvements **[POST-DEPLOYMENT]**
+
+**Current Issues with Deploy Command UX**:
+
+**Tasks for Future Optimization**:
+- [ ] **Split setup-cors into standalone command** - Deploy should fail and cite invalid CORS configuration, user should run dedicated setup-cors command
+- [ ] **Add progress reporting to deploy command** - User should see real-time upload progress, not be in the dark about what's happening
+- [ ] **Improve deploy output clarity** - Clearly distinguish between files being updated vs skipped due to no changes needed
+- [ ] **Test deploy command idempotency** - Verify running deploy multiple times with no changes behaves correctly and shows appropriate "no changes" messaging
 
 ---
 

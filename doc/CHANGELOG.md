@@ -1,6 +1,33 @@
 # Galleria Changelog
 
+## 2025-10-30
+
+### Deploy Command S3 Endpoint URL Fix
+
+- **S3 endpoint URL construction bug**: Fixed double `https://` issue in `settings.local.py` bucket extraction logic
+- **Bucket name extraction**: Updated logic to handle both full URLs and bare hostnames in environment variables
+- **S3 client compatibility**: Modified `get_s3_client()` in `s3_storage.py` to accept both URL formats
+- **Credential rotation**: Resolved deployment blocking issue requiring new S3 credentials and bucket recreation
+- **Deploy command validation**: Successfully tested with `--setup-cors` flag, CORS configuration working
+- **Root cause**: Environment variable contained full URL but extraction logic assumed bare hostname format
+
 ## 2025-10-29
+
+### Batch Processing Performance Optimization (Complete Fix)
+
+- **Batch processing metadata efficiency**: Fixed O(N²) to O(N) performance by implementing batch-only partial files and metadata merging
+- **Deployment hash calculation optimization**: Moved deployment hash calculation from metadata generation to photo processing loop (lines 498-526)
+- **File I/O elimination**: Removed redundant 2.5GB file I/O per batch (50MB × 50 photos) during metadata generation
+- **Integration test coverage**: Added comprehensive test for batch processing efficiency verification  
+- **Metadata generation functions**: Implemented `generate_batch_metadata()` and `merge_partial_metadata_files()` in `src/services/file_processing.py`
+- **Partial file structure**: Each batch now saves only current photos, not cumulative
+- **Performance impact**: Eliminated both quadratic metadata generation AND redundant file processing
+- **Real-world validation**: 645 wedding photos processed in 9m15s baseline (1.16 photos/sec)
+- **Technical implementation**: 
+  - Modified `src/services/file_processing.py` lines 470-526 (deployment hash during processing)
+  - Modified `src/services/file_processing.py` lines 326-393 (batch metadata functions)
+  - Simplified metadata generation lines 263-271 (removed redundant file I/O)
+  - Added test `test/integration/test_batch_metadata_efficiency.py`
 
 ### Critical Process-Photos Performance & Metadata Fixes - DEPLOYMENT UNBLOCKED
 
