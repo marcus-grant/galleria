@@ -2,18 +2,33 @@
 
 ## 2025-10-30
 
+### Settings Architecture Migration (Breaking Change)
+
+- **S3 settings restructure**: Migrated from confusing `S3_PUBLIC_*`/`S3_SITE_*` to logical `S3_SITE_*`/`S3_PICS_*` naming convention
+- **Clean migration**: Removed all `S3_PUBLIC_*` settings and backward compatibility code for simplified architecture
+- **Dual bucket detection update**: `is_dual_bucket_configured()` now checks for `S3_PICS_*` settings instead of `S3_SITE_*`
+- **Settings validation**: Updated `validate_s3_config()` to require `S3_SITE_*` settings and optionally validate `S3_PICS_*` for dual bucket mode  
+- **Deploy command migration**: Updated all S3 client creation and bucket references to use new settings structure
+- **Upload command migration**: Updated upload-photos command to use `S3_SITE_*` settings for all operations
+- **Test suite update**: Updated all 60 command tests to use new settings structure, all passing
+- **Error message updates**: Updated all error messages and help text to reference new `S3_SITE_*` settings
+- **Environment variables**: Added `GALLERIA_S3_PICS_*` environment variable support for dual bucket mode
+
+**Migration Guide**:
+- **Single bucket**: Use `S3_SITE_*` settings (was `S3_PUBLIC_*`)
+- **Dual bucket**: Use `S3_SITE_*` for site files + `S3_PICS_*` for photos (was `S3_PUBLIC_*` + `S3_SITE_*`)
+
 ### Dual Bucket Architecture Implementation
 
 - **Thumbnail upload fix**: Fixed metadata file paths by removing incorrect `photos/` prefix from `src/services/file_processing.py` lines 258-260
-- **Dual bucket deployment support**: Added `S3_SITE_*` settings for separate photos and site bucket deployment
-- **Deploy command enhancement**: Modified deploy command to support both single bucket (backward compatible) and dual bucket modes
-- **Smart bucket detection**: Added `is_dual_bucket_configured()` function to automatically detect deployment mode
+- **Dual bucket deployment support**: Added `S3_PICS_*` settings for separate photos bucket in dual mode
+- **Deploy command enhancement**: Modified deploy command to support both single bucket and dual bucket modes  
+- **Smart bucket detection**: Added `is_dual_bucket_configured()` function to detect dual mode via `S3_PICS_*` settings
 - **Deployment path logic**: Photos deploy without prefix in dual bucket mode, with `photos/` prefix in single bucket mode
-- **Site bucket deployment**: Site files deploy to separate `S3_SITE_BUCKET` in dual bucket mode
+- **Site bucket deployment**: Site files deploy to `S3_SITE_BUCKET` in both single and dual bucket modes
 - **ProcessedPhoto model update**: Added missing `deployment_file_hash` field to support deployment hash functionality
 - **PhotoMetadataService fix**: Updated to use metadata file paths directly without adding redundant prefixes
-- **Test compatibility**: Updated deploy tests to handle dual bucket mode detection correctly
-- **Backward compatibility**: System defaults to single bucket mode when site bucket settings not configured
+- **Test compatibility**: Added comprehensive test coverage for both single and dual bucket deployment modes
 
 ### Deploy Command S3 Endpoint URL Fix
 

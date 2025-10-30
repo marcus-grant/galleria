@@ -13,7 +13,7 @@ def get_s3_client(endpoint: str, access_key: str, secret_key: str, region: str):
     """Create boto3 S3 client for any S3-compatible service.
     
     Args:
-        endpoint: S3 endpoint URL (e.g., 'eu-central-1.s3.hetznerobjects.com')
+        endpoint: S3 endpoint URL (can be full URL or just hostname)
         access_key: S3 access key ID
         secret_key: S3 secret access key
         region: S3 region for the provider
@@ -21,9 +21,15 @@ def get_s3_client(endpoint: str, access_key: str, secret_key: str, region: str):
     Returns:
         boto3 S3 client configured for the endpoint
     """
+    # Handle both full URL and bare hostname formats
+    if not endpoint.startswith('http'):
+        endpoint_url = f'https://{endpoint}'
+    else:
+        endpoint_url = endpoint
+    
     return boto3.client(
         's3',
-        endpoint_url=f'https://{endpoint}',
+        endpoint_url=endpoint_url,
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
         region_name=region

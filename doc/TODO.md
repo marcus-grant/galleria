@@ -22,26 +22,6 @@ uv run python manage.py build
 uv run python manage.py deploy --setup-cors
 ```
 
-
-
-## Settings Architecture Reconsideration **[TDD REQUIRED]**
-
-**Improve S3 Settings Variable Naming for Clarity**:
-- [ ] **Rename S3 settings for logical consistency** - Site is always deployed, photos bucket is optional for dual bucket mode
-  - Current: `S3_PUBLIC_*` (photos) and `S3_SITE_*` (site in dual mode)
-  - Proposed: `S3_SITE_*` (always the site) and `S3_PICS_*` (photos bucket in dual mode)
-- [ ] **Write tests for new settings structure** - Create comprehensive tests covering both single and dual bucket modes
-- [ ] **Implement settings migration** - Update deploy command and related code to use new variable names
-- [ ] **Update validation logic** - Modify `is_dual_bucket_configured()` to check for `S3_PICS_*` settings instead of `S3_SITE_*`
-- [ ] **Backward compatibility** - Ensure existing deployments continue to work during transition
-- [ ] **Documentation updates** - Update all documentation to reflect new settings naming convention
-- [ ] **Update module documentation** - Update documentation pages for modules changed in dual bucket implementation:
-  - `doc/command/deploy.md` - Document dual bucket mode options and behavior
-  - `doc/services/file_processing.md` - Document corrected metadata path generation
-  - `doc/services/photo_metadata.md` - Document URL generation changes
-  - `doc/models/photo.md` - Document added `deployment_file_hash` field in ProcessedPhoto
-  - `doc/settings.md` - Document new S3_SITE_* settings and dual bucket configuration
-
 ## URGENT: Architecture Changes **[BLOCKING DEPLOYMENT]**
 
 **Critical Issues Preventing Complete Deployment**:
@@ -58,6 +38,22 @@ uv run python manage.py deploy --setup-cors
 - [ ] **Test deployed gallery functionality** - Verify photos load correctly in browser with dual bucket setup
 
 **Deployment Setup**: See [doc/deployment/production-setup.md](deployment/production-setup.md) for detailed configuration instructions.
+
+## Settings Migration Documentation
+
+**Document Settings Architecture Changes**:
+- [ ] **Settings migration guide** - Document complete migration from S3_PUBLIC_* to S3_SITE_*/S3_PICS_* naming convention
+- [ ] **Single bucket configuration** - Document how to configure S3_SITE_* settings for single bucket deployment
+- [ ] **Dual bucket configuration** - Document how to configure S3_SITE_* + S3_PICS_* settings for dual bucket deployment
+- [ ] **Environment variables guide** - Document all GALLERIA_S3_SITE_* and GALLERIA_S3_PICS_* environment variables
+- [ ] **Deployment mode detection** - Document how is_dual_bucket_configured() works and when dual mode is enabled
+- [ ] **Breaking changes notice** - Document that S3_PUBLIC_* settings are no longer supported (breaking change)
+- [ ] **Migration examples** - Provide before/after configuration examples for both deployment modes
+- [ ] **Update module documentation** - Update documentation pages for modules changed in settings migration:
+  - `doc/command/deploy.md` - Document new settings structure and dual bucket behavior
+  - `doc/command/upload_photos.md` - Document S3_SITE_* settings usage
+  - `doc/settings.md` - Document complete S3_SITE_* and S3_PICS_* settings reference
+  - `doc/deployment/production-setup.md` - Update with new settings examples
 
 
 ## Future Performance Improvements **[POST-DEPLOYMENT]**
@@ -94,26 +90,6 @@ uv run python manage.py deploy --setup-cors
    - [ ] Document operational procedures
    - [ ] Create deployment checklist
    - [ ] Plan for CI/CD integration
-
-## External Settings Path Verification **[COMPLETED]**
-
-**Task**: Document and verify existing capability for settings files outside project root.
-
-**Current Status**: ✅ COMPLETED - Settings system supports external paths via XDG config specification.
-
-### Verification Results
-
-1. **Existing Implementation Verified** ✅
-   - [x] XDG config directory support confirmed (`settings.py:37-38`)
-   - [x] `GALLERIA_LOCAL_SETTINGS_FILENAME` environment variable works
-   - [x] `XDG_CONFIG_HOME` allows settings outside project root  
-   - [x] Comprehensive test suite exists (`test/test_settings.py`)
-
-2. **Usage Examples** ✅
-   - **Local settings file**: Add `TIMESTAMP_OFFSET_HOURS = -4` to `settings.local.py`
-   - **Environment variable**: `export GALLERIA_TIMESTAMP_OFFSET_HOURS=-4`
-   - **XDG config**: Create `$XDG_CONFIG_HOME/galleria/settings.local.py`
-   - **Precedence**: `defaults → local settings → environment variables`
 
 ## Project Overview
 

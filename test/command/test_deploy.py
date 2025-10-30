@@ -90,17 +90,23 @@ class TestDeployCommandFunctionality:
                             assert mock_deploy.call_count == 2  # photos + static site
     
     def test_photos_only_deployment(self, tmp_path):
-        """Test deployment with --photos-only flag."""
+        """Test deployment with --photos-only flag using S3_SITE_* settings."""
         runner = CliRunner()
         
         mock_settings = Mock()
         mock_settings.BASE_DIR = tmp_path
-        # Ensure single bucket mode by setting site bucket settings to None
-        mock_settings.S3_SITE_ENDPOINT = None
-        mock_settings.S3_SITE_ACCESS_KEY = None
-        mock_settings.S3_SITE_SECRET_KEY = None
-        mock_settings.S3_SITE_BUCKET = None
-        mock_settings.S3_SITE_REGION = None
+        # Use S3_SITE_* settings for single bucket mode
+        mock_settings.S3_SITE_ENDPOINT = "https://s3.example.com"
+        mock_settings.S3_SITE_ACCESS_KEY = "site-access-key"
+        mock_settings.S3_SITE_SECRET_KEY = "site-secret-key"
+        mock_settings.S3_SITE_BUCKET = "my-site-bucket"
+        mock_settings.S3_SITE_REGION = "us-east-1"
+        # No S3_PICS_* settings (single bucket mode)
+        mock_settings.S3_PICS_ENDPOINT = None
+        mock_settings.S3_PICS_ACCESS_KEY = None
+        mock_settings.S3_PICS_SECRET_KEY = None
+        mock_settings.S3_PICS_BUCKET = None
+        mock_settings.S3_PICS_REGION = None
         # Create prod/pics directory structure
         prod_pics = tmp_path / "prod" / "pics"
         prod_pics.mkdir(parents=True)

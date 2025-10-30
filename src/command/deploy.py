@@ -11,16 +11,22 @@ from src.models.photo import GalleryMetadata
 
 
 def is_dual_bucket_configured() -> bool:
-    """Check if dual bucket deployment is configured."""
+    """Check if dual bucket deployment is configured.
+    
+    Dual bucket mode is enabled when S3_PICS_* settings are configured.
+    In this mode:
+    - S3_SITE_* settings are used for the site bucket
+    - S3_PICS_* settings are used for the photos bucket
+    """
     import settings
-    site_settings = [
-        settings.S3_SITE_ENDPOINT,
-        settings.S3_SITE_ACCESS_KEY, 
-        settings.S3_SITE_SECRET_KEY,
-        settings.S3_SITE_BUCKET,
-        settings.S3_SITE_REGION
+    pics_settings = [
+        settings.S3_PICS_ENDPOINT,
+        settings.S3_PICS_ACCESS_KEY, 
+        settings.S3_PICS_SECRET_KEY,
+        settings.S3_PICS_BUCKET,
+        settings.S3_PICS_REGION
     ]
-    return all(setting is not None for setting in site_settings)
+    return all(setting is not None for setting in pics_settings)
 
 
 def load_local_gallery_metadata(prod_dir: Path) -> GalleryMetadata:
@@ -80,11 +86,18 @@ def deploy(source, dry_run, force, progress, invalidate_cdn, mode_photos, mode_s
     if not is_valid:
         click.echo(f"Error: {error_msg}", err=True)
         click.echo("\nPlease configure S3 settings in settings.local.py or environment variables:", err=True)
-        click.echo("  - GALLERIA_S3_PUBLIC_ENDPOINT", err=True)
-        click.echo("  - GALLERIA_S3_PUBLIC_ACCESS_KEY", err=True)
-        click.echo("  - GALLERIA_S3_PUBLIC_SECRET_KEY", err=True)
-        click.echo("  - GALLERIA_S3_PUBLIC_BUCKET", err=True)
-        click.echo("  - GALLERIA_S3_PUBLIC_REGION", err=True)
+        click.echo("  Required (site bucket):", err=True)
+        click.echo("    - GALLERIA_S3_SITE_ENDPOINT", err=True)
+        click.echo("    - GALLERIA_S3_SITE_ACCESS_KEY", err=True)
+        click.echo("    - GALLERIA_S3_SITE_SECRET_KEY", err=True)
+        click.echo("    - GALLERIA_S3_SITE_BUCKET", err=True)
+        click.echo("    - GALLERIA_S3_SITE_REGION", err=True)
+        click.echo("  Optional (photos bucket for dual bucket mode):", err=True)
+        click.echo("    - GALLERIA_S3_PICS_ENDPOINT", err=True)
+        click.echo("    - GALLERIA_S3_PICS_ACCESS_KEY", err=True)
+        click.echo("    - GALLERIA_S3_PICS_SECRET_KEY", err=True)
+        click.echo("    - GALLERIA_S3_PICS_BUCKET", err=True)
+        click.echo("    - GALLERIA_S3_PICS_REGION", err=True)
         sys.exit(1)
     
     # Determine source directories
@@ -95,12 +108,26 @@ def deploy(source, dry_run, force, progress, invalidate_cdn, mode_photos, mode_s
     dual_bucket_mode = is_dual_bucket_configured()
     
     # Create photos bucket client
+    # In dual bucket mode, use S3_PICS_* settings for photos
+    # In single bucket mode, use S3_SITE_* settings for both photos and site
+    if dual_bucket_mode:
+        photos_endpoint = settings.S3_PICS_ENDPOINT
+        photos_access_key = settings.S3_PICS_ACCESS_KEY
+        photos_secret_key = settings.S3_PICS_SECRET_KEY
+        photos_region = settings.S3_PICS_REGION
+    else:
+        # Single bucket mode: use S3_SITE_* settings for both photos and site
+        photos_endpoint = settings.S3_SITE_ENDPOINT
+        photos_access_key = settings.S3_SITE_ACCESS_KEY
+        photos_secret_key = settings.S3_SITE_SECRET_KEY
+        photos_region = settings.S3_SITE_REGION
+    
     try:
         photos_client = get_s3_client(
-            endpoint=settings.S3_PUBLIC_ENDPOINT,
-            access_key=settings.S3_PUBLIC_ACCESS_KEY,
-            secret_key=settings.S3_PUBLIC_SECRET_KEY,
-            region=settings.S3_PUBLIC_REGION
+            endpoint=photos_endpoint,
+            access_key=photos_access_key,
+            secret_key=photos_secret_key,
+            region=photos_region
         )
     except Exception as e:
         click.echo(f"Error creating photos bucket S3 client: {str(e)}", err=True)
@@ -123,14 +150,16 @@ def deploy(source, dry_run, force, progress, invalidate_cdn, mode_photos, mode_s
     # Display deployment info and examine bucket CORS configuration
     if dual_bucket_mode:
         click.echo(f"{'[DRY RUN] ' if dry_run else ''}Deploying gallery to S3 (dual bucket mode)...")
-        click.echo(f"Photos bucket: {settings.S3_PUBLIC_BUCKET}")
+        click.echo(f"Photos bucket: {settings.S3_PICS_BUCKET}")
         click.echo(f"Site bucket: {settings.S3_SITE_BUCKET}")
+        photos_bucket = settings.S3_PICS_BUCKET
     else:
         click.echo(f"{'[DRY RUN] ' if dry_run else ''}Deploying gallery to S3 (single bucket mode)...")
-        click.echo(f"Bucket: {settings.S3_PUBLIC_BUCKET}")
+        photos_bucket = settings.S3_SITE_BUCKET
+        click.echo(f"Bucket: {settings.S3_SITE_BUCKET}")
     
     # Check CORS for photos bucket
-    cors_examination = examine_bucket_cors(photos_client, settings.S3_PUBLIC_BUCKET)
+    cors_examination = examine_bucket_cors(photos_client, photos_bucket)
     cors_configured_properly = False
     
     if cors_examination['success']:
@@ -141,7 +170,7 @@ def deploy(source, dry_run, force, progress, invalidate_cdn, mode_photos, mode_s
             click.echo("CORS Status: Configured but rules need updating")
             if setup_cors:
                 click.echo("Updating CORS rules...")
-                cors_result = configure_bucket_cors(photos_client, settings.S3_PUBLIC_BUCKET, get_default_gallery_cors_rules())
+                cors_result = configure_bucket_cors(photos_client, photos_bucket, get_default_gallery_cors_rules())
                 if cors_result['success']:
                     click.echo("CORS Status: Updated successfully")
                     cors_configured_properly = True
@@ -156,7 +185,7 @@ def deploy(source, dry_run, force, progress, invalidate_cdn, mode_photos, mode_s
             click.echo("CORS Status: Not configured for web access")
             if setup_cors:
                 click.echo("Configuring CORS rules...")
-                cors_result = configure_bucket_cors(photos_client, settings.S3_PUBLIC_BUCKET, get_default_gallery_cors_rules())
+                cors_result = configure_bucket_cors(photos_client, photos_bucket, get_default_gallery_cors_rules())
                 if cors_result['success']:
                     click.echo("CORS Status: Configured successfully")
                     cors_configured_properly = True
@@ -186,7 +215,7 @@ def deploy(source, dry_run, force, progress, invalidate_cdn, mode_photos, mode_s
             # Use deploy_gallery_metadata for photos
             deployment_result = deploy_gallery_metadata(
                 client=photos_client,
-                bucket=settings.S3_PUBLIC_BUCKET,
+                bucket=photos_bucket,
                 local_metadata=local_metadata,
                 prod_dir=photos_dir,
                 dry_run=dry_run
@@ -230,7 +259,7 @@ def deploy(source, dry_run, force, progress, invalidate_cdn, mode_photos, mode_s
             photos_result = deploy_directory_to_s3(
                 client=photos_client,
                 source_dir=photos_dir,
-                bucket=settings.S3_PUBLIC_BUCKET,
+                bucket=photos_bucket,
                 prefix=photos_prefix,
                 dry_run=dry_run
             )
@@ -250,7 +279,7 @@ def deploy(source, dry_run, force, progress, invalidate_cdn, mode_photos, mode_s
         # In dual bucket mode, site goes to separate site bucket
         # In single bucket mode, site goes to same bucket as photos
         site_deployment_client = site_client if dual_bucket_mode else photos_client
-        site_deployment_bucket = settings.S3_SITE_BUCKET if dual_bucket_mode else settings.S3_PUBLIC_BUCKET
+        site_deployment_bucket = settings.S3_SITE_BUCKET if dual_bucket_mode else settings.S3_SITE_BUCKET
         
         site_result = deploy_directory_to_s3(
             client=site_deployment_client,

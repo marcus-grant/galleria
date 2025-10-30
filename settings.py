@@ -24,12 +24,6 @@ S3_ARCHIVE_SECRET_KEY = None
 S3_ARCHIVE_BUCKET = None  # Your private bucket name
 S3_ARCHIVE_REGION = None  # e.g., 'eu-central-1'
 
-# Public gallery bucket (for processed photos - automated upload)
-S3_PUBLIC_ENDPOINT = None  # e.g., 'eu-central-1.s3.hetznerobjects.com'
-S3_PUBLIC_ACCESS_KEY = None
-S3_PUBLIC_SECRET_KEY = None
-S3_PUBLIC_BUCKET = None  # Your public bucket name
-S3_PUBLIC_REGION = None  # e.g., 'eu-central-1'
 
 # Public site bucket (for HTML, CSS, JS, JSON files - automated upload)
 S3_SITE_ENDPOINT = None  # e.g., 'eu-central-1.s3.hetznerobjects.com'
@@ -37,6 +31,13 @@ S3_SITE_ACCESS_KEY = None
 S3_SITE_SECRET_KEY = None
 S3_SITE_BUCKET = None  # Your site bucket name
 S3_SITE_REGION = None  # e.g., 'eu-central-1'
+
+# Photos bucket for dual bucket mode (optional - when configured enables dual bucket deployment)
+S3_PICS_ENDPOINT = None  # e.g., 'eu-central-1.s3.hetznerobjects.com'
+S3_PICS_ACCESS_KEY = None
+S3_PICS_SECRET_KEY = None
+S3_PICS_BUCKET = None  # Your photos bucket name
+S3_PICS_REGION = None  # e.g., 'eu-central-1'
 
 # XDG directories
 CONFIG_DIR = BASE_DIR  # Default to project root
@@ -92,17 +93,18 @@ S3_ARCHIVE_SECRET_KEY = os.getenv('GALLERIA_S3_ARCHIVE_SECRET_KEY', S3_ARCHIVE_S
 S3_ARCHIVE_BUCKET = os.getenv('GALLERIA_S3_ARCHIVE_BUCKET', S3_ARCHIVE_BUCKET)
 S3_ARCHIVE_REGION = os.getenv('GALLERIA_S3_ARCHIVE_REGION', S3_ARCHIVE_REGION)
 
-S3_PUBLIC_ENDPOINT = os.getenv('GALLERIA_S3_PUBLIC_ENDPOINT', S3_PUBLIC_ENDPOINT)
-S3_PUBLIC_ACCESS_KEY = os.getenv('GALLERIA_S3_PUBLIC_ACCESS_KEY', S3_PUBLIC_ACCESS_KEY)
-S3_PUBLIC_SECRET_KEY = os.getenv('GALLERIA_S3_PUBLIC_SECRET_KEY', S3_PUBLIC_SECRET_KEY)
-S3_PUBLIC_BUCKET = os.getenv('GALLERIA_S3_PUBLIC_BUCKET', S3_PUBLIC_BUCKET)
-S3_PUBLIC_REGION = os.getenv('GALLERIA_S3_PUBLIC_REGION', S3_PUBLIC_REGION)
 
 S3_SITE_ENDPOINT = os.getenv('GALLERIA_S3_SITE_ENDPOINT', S3_SITE_ENDPOINT)
 S3_SITE_ACCESS_KEY = os.getenv('GALLERIA_S3_SITE_ACCESS_KEY', S3_SITE_ACCESS_KEY)
 S3_SITE_SECRET_KEY = os.getenv('GALLERIA_S3_SITE_SECRET_KEY', S3_SITE_SECRET_KEY)
 S3_SITE_BUCKET = os.getenv('GALLERIA_S3_SITE_BUCKET', S3_SITE_BUCKET)
 S3_SITE_REGION = os.getenv('GALLERIA_S3_SITE_REGION', S3_SITE_REGION)
+
+S3_PICS_ENDPOINT = os.getenv('GALLERIA_S3_PICS_ENDPOINT', S3_PICS_ENDPOINT)
+S3_PICS_ACCESS_KEY = os.getenv('GALLERIA_S3_PICS_ACCESS_KEY', S3_PICS_ACCESS_KEY)
+S3_PICS_SECRET_KEY = os.getenv('GALLERIA_S3_PICS_SECRET_KEY', S3_PICS_SECRET_KEY)
+S3_PICS_BUCKET = os.getenv('GALLERIA_S3_PICS_BUCKET', S3_PICS_BUCKET)
+S3_PICS_REGION = os.getenv('GALLERIA_S3_PICS_REGION', S3_PICS_REGION)
 
 # EXIF timestamp correction - environment variable override
 TIMESTAMP_OFFSET_HOURS = int(os.getenv('GALLERIA_TIMESTAMP_OFFSET_HOURS', str(TIMESTAMP_OFFSET_HOURS)))

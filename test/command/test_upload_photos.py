@@ -16,53 +16,53 @@ class TestValidateS3Config:
     def test_validate_complete_config(self):
         """Test validation with all required settings."""
         settings = Mock()
-        settings.S3_PUBLIC_ENDPOINT = 'eu-central-1.s3.hetznerobjects.com'
-        settings.S3_PUBLIC_ACCESS_KEY = 'test_key'
-        settings.S3_PUBLIC_SECRET_KEY = 'test_secret'
-        settings.S3_PUBLIC_BUCKET = 'test-bucket'
-        settings.S3_PUBLIC_REGION = 'eu-central-1'
+        settings.S3_SITE_ENDPOINT = 'eu-central-1.s3.hetznerobjects.com'
+        settings.S3_SITE_ACCESS_KEY = 'test_key'
+        settings.S3_SITE_SECRET_KEY = 'test_secret'
+        settings.S3_SITE_BUCKET = 'test-bucket'
+        settings.S3_SITE_REGION = 'eu-central-1'
         
         is_valid, error_msg = validate_s3_config(settings)
         assert is_valid
         assert error_msg == ""
     
     def test_validate_missing_endpoint(self):
-        """Test validation with missing endpoint."""
+        """Test validation with missing endpoint in S3_SITE_* settings."""
         settings = Mock()
-        settings.S3_PUBLIC_ENDPOINT = None
-        settings.S3_PUBLIC_ACCESS_KEY = 'test_key'
-        settings.S3_PUBLIC_SECRET_KEY = 'test_secret'
-        settings.S3_PUBLIC_BUCKET = 'test-bucket'
-        settings.S3_PUBLIC_REGION = 'eu-central-1'
+        settings.S3_SITE_ENDPOINT = None  # Missing
+        settings.S3_SITE_ACCESS_KEY = 'test_key'
+        settings.S3_SITE_SECRET_KEY = 'test_secret'
+        settings.S3_SITE_BUCKET = 'test-bucket'
+        settings.S3_SITE_REGION = 'eu-central-1'
         
         is_valid, error_msg = validate_s3_config(settings)
         assert not is_valid
-        assert 'S3_PUBLIC_ENDPOINT' in error_msg
+        assert 'S3_SITE_ENDPOINT' in error_msg
     
     def test_validate_multiple_missing(self):
-        """Test validation with multiple missing settings."""
+        """Test validation with multiple missing settings in S3_SITE_* configuration."""
         settings = Mock()
-        settings.S3_PUBLIC_ENDPOINT = None
-        settings.S3_PUBLIC_ACCESS_KEY = None
-        settings.S3_PUBLIC_SECRET_KEY = 'test_secret'
-        settings.S3_PUBLIC_BUCKET = 'test-bucket'
-        settings.S3_PUBLIC_REGION = 'eu-central-1'
+        settings.S3_SITE_ENDPOINT = None  # Missing
+        settings.S3_SITE_ACCESS_KEY = None  # Missing
+        settings.S3_SITE_SECRET_KEY = 'test_secret'
+        settings.S3_SITE_BUCKET = 'test-bucket'
+        settings.S3_SITE_REGION = 'eu-central-1'
         
         is_valid, error_msg = validate_s3_config(settings)
         assert not is_valid
-        assert 'S3_PUBLIC_ENDPOINT' in error_msg
-        assert 'S3_PUBLIC_ACCESS_KEY' in error_msg
+        assert 'S3_SITE_ENDPOINT' in error_msg
+        assert 'S3_SITE_ACCESS_KEY' in error_msg
 
 
 @pytest.fixture
 def mock_settings():
     """Create mock settings for testing."""
     settings = Mock()
-    settings.S3_PUBLIC_ENDPOINT = 's3.amazonaws.com'
-    settings.S3_PUBLIC_ACCESS_KEY = 'test_key'
-    settings.S3_PUBLIC_SECRET_KEY = 'test_secret'
-    settings.S3_PUBLIC_BUCKET = 'test-bucket'
-    settings.S3_PUBLIC_REGION = 'us-east-1'
+    settings.S3_SITE_ENDPOINT = 's3.amazonaws.com'
+    settings.S3_SITE_ACCESS_KEY = 'test_key'
+    settings.S3_SITE_SECRET_KEY = 'test_secret'
+    settings.S3_SITE_BUCKET = 'test-bucket'
+    settings.S3_SITE_REGION = 'us-east-1'
     settings.BASE_DIR = Path('/tmp')
     return settings
 
@@ -95,12 +95,19 @@ class TestUploadPhotosCommand:
         
         with patch.dict(sys.modules, {'settings': Mock()}):
             mock_settings_module = sys.modules['settings']
-            mock_settings_module.S3_PUBLIC_ENDPOINT = None
+            # Set all S3_SITE_* settings to None to ensure validation fails
+            mock_settings_module.S3_SITE_ENDPOINT = None
+            mock_settings_module.S3_SITE_ACCESS_KEY = None
+            mock_settings_module.S3_SITE_SECRET_KEY = None
+            mock_settings_module.S3_SITE_BUCKET = None
+            mock_settings_module.S3_SITE_REGION = None
+            # Set BASE_DIR to avoid path issues
+            mock_settings_module.BASE_DIR = Path('/tmp')
             
             result = runner.invoke(upload_photos)
             
             assert result.exit_code == 1
-            assert "Missing required S3 settings" in result.output
+            assert "Missing required S3 site settings" in result.output
     
     def test_source_dir_not_exists(self, mock_settings):
         """Test command fails when source directory doesn't exist."""

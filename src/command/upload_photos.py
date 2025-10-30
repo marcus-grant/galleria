@@ -19,24 +19,45 @@ from src.services.s3_storage import (
 def validate_s3_config(settings) -> tuple[bool, str]:
     """Validate that all required S3 settings are configured.
     
+    In the new settings structure:
+    - S3_SITE_* settings are always required for site deployment
+    - S3_PICS_* settings are optional and enable dual bucket mode when present
+    
     Returns:
         Tuple of (is_valid, error_message)
     """
-    required_settings = [
-        'S3_PUBLIC_ENDPOINT',
-        'S3_PUBLIC_ACCESS_KEY',
-        'S3_PUBLIC_SECRET_KEY',
-        'S3_PUBLIC_BUCKET',
-        'S3_PUBLIC_REGION'
+    # S3_SITE_* settings are always required
+    required_site_settings = [
+        'S3_SITE_ENDPOINT',
+        'S3_SITE_ACCESS_KEY',
+        'S3_SITE_SECRET_KEY',
+        'S3_SITE_BUCKET',
+        'S3_SITE_REGION'
     ]
     
     missing = []
-    for setting in required_settings:
+    for setting in required_site_settings:
         if not getattr(settings, setting, None):
             missing.append(setting)
     
     if missing:
-        return False, f"Missing required S3 settings: {', '.join(missing)}"
+        return False, f"Missing required S3 site settings: {', '.join(missing)}"
+    
+    # Check if S3_PICS_* settings are partially configured (which would be invalid)
+    pics_settings = [
+        'S3_PICS_ENDPOINT',
+        'S3_PICS_ACCESS_KEY',
+        'S3_PICS_SECRET_KEY',
+        'S3_PICS_BUCKET',
+        'S3_PICS_REGION'
+    ]
+    
+    pics_configured = [setting for setting in pics_settings if getattr(settings, setting, None)]
+    pics_missing = [setting for setting in pics_settings if not getattr(settings, setting, None)]
+    
+    # If some but not all S3_PICS_* settings are configured, that's an error
+    if pics_configured and pics_missing:
+        return False, f"Incomplete S3 pics settings for dual bucket mode. Missing: {', '.join(pics_missing)}"
     
     return True, ""
 
@@ -85,11 +106,11 @@ def upload_photos(
     if not is_valid:
         click.echo(f"Error: {error_msg}", err=True)
         click.echo("\nPlease configure S3 settings in settings.local.py or environment variables:", err=True)
-        click.echo("  - GALLERIA_S3_PUBLIC_ENDPOINT", err=True)
-        click.echo("  - GALLERIA_S3_PUBLIC_ACCESS_KEY", err=True)
-        click.echo("  - GALLERIA_S3_PUBLIC_SECRET_KEY", err=True)
-        click.echo("  - GALLERIA_S3_PUBLIC_BUCKET", err=True)
-        click.echo("  - GALLERIA_S3_PUBLIC_REGION", err=True)
+        click.echo("  - GALLERIA_S3_SITE_ENDPOINT", err=True)
+        click.echo("  - GALLERIA_S3_SITE_ACCESS_KEY", err=True)
+        click.echo("  - GALLERIA_S3_SITE_SECRET_KEY", err=True)
+        click.echo("  - GALLERIA_S3_SITE_BUCKET", err=True)
+        click.echo("  - GALLERIA_S3_SITE_REGION", err=True)
         sys.exit(1)
     
     # Use provided source or default photos directory
@@ -107,7 +128,7 @@ def upload_photos(
     
     click.echo(f"{'[DRY RUN] ' if dry_run else ''}Uploading photos to S3...")
     click.echo(f"Source: {upload_dir}")
-    click.echo(f"Bucket: {settings.S3_PUBLIC_BUCKET}")
+    click.echo(f"Bucket: {settings.S3_SITE_BUCKET}")
     click.echo(f"Prefix: {prefix or '(root)'}")
     click.echo(f"Files: {file_count}")
     
@@ -117,15 +138,15 @@ def upload_photos(
     try:
         # Create S3 client
         client = get_s3_client(
-            endpoint=settings.S3_PUBLIC_ENDPOINT,
-            access_key=settings.S3_PUBLIC_ACCESS_KEY,
-            secret_key=settings.S3_PUBLIC_SECRET_KEY,
-            region=settings.S3_PUBLIC_REGION
+            endpoint=settings.S3_SITE_ENDPOINT,
+            access_key=settings.S3_SITE_ACCESS_KEY,
+            secret_key=settings.S3_SITE_SECRET_KEY,
+            region=settings.S3_SITE_REGION
         )
         
         # List existing files in bucket
         if not dry_run:
-            existing_files = list_bucket_files(client, settings.S3_PUBLIC_BUCKET, prefix)
+            existing_files = list_bucket_files(client, settings.S3_SITE_BUCKET, prefix)
             click.echo(f"Existing files in bucket: {len(existing_files)}")
         
         # Upload directory
@@ -134,7 +155,7 @@ def upload_photos(
         result = upload_directory_to_s3(
             client=client,
             local_dir=upload_dir,
-            bucket=settings.S3_PUBLIC_BUCKET,
+            bucket=settings.S3_SITE_BUCKET,
             prefix=prefix,
             dry_run=dry_run,
             progress_callback=callback

@@ -86,11 +86,18 @@ class TestDeployCommandIntegration:
         
         mock_settings = Mock()
         mock_settings.BASE_DIR = tmp_path
-        mock_settings.S3_PUBLIC_BUCKET = "test-bucket"
-        mock_settings.S3_PUBLIC_ENDPOINT = "https://s3.example.com"
-        mock_settings.S3_PUBLIC_ACCESS_KEY = "test-key"
-        mock_settings.S3_PUBLIC_SECRET_KEY = "test-secret"
-        mock_settings.S3_PUBLIC_REGION = "us-east-1"
+        # Use S3_SITE_* settings for single bucket mode
+        mock_settings.S3_SITE_BUCKET = "test-bucket"
+        mock_settings.S3_SITE_ENDPOINT = "https://s3.example.com"
+        mock_settings.S3_SITE_ACCESS_KEY = "test-key"
+        mock_settings.S3_SITE_SECRET_KEY = "test-secret"
+        mock_settings.S3_SITE_REGION = "us-east-1"
+        # No S3_PICS_* settings (single bucket mode)
+        mock_settings.S3_PICS_ENDPOINT = None
+        mock_settings.S3_PICS_ACCESS_KEY = None
+        mock_settings.S3_PICS_SECRET_KEY = None
+        mock_settings.S3_PICS_BUCKET = None
+        mock_settings.S3_PICS_REGION = None
         
         with patch.dict(sys.modules, {'settings': mock_settings}):
             with patch('src.command.deploy.validate_s3_config', return_value=(True, "")):
@@ -147,7 +154,17 @@ class TestDeployCommandIntegration:
         
         mock_settings = Mock()
         mock_settings.BASE_DIR = tmp_path
-        mock_settings.S3_PUBLIC_BUCKET = "test-bucket"
+        mock_settings.S3_SITE_BUCKET = "test-bucket"
+        mock_settings.S3_SITE_ENDPOINT = "https://s3.example.com"
+        mock_settings.S3_SITE_ACCESS_KEY = "test-key"
+        mock_settings.S3_SITE_SECRET_KEY = "test-secret"
+        mock_settings.S3_SITE_REGION = "us-east-1"
+        # No S3_PICS_* settings (single bucket mode)
+        mock_settings.S3_PICS_ENDPOINT = None
+        mock_settings.S3_PICS_ACCESS_KEY = None
+        mock_settings.S3_PICS_SECRET_KEY = None
+        mock_settings.S3_PICS_BUCKET = None
+        mock_settings.S3_PICS_REGION = None
         
         deployment_plan = {
             'upload': [sample_gallery_metadata.photos[0]],  # One new photo
@@ -199,7 +216,17 @@ class TestDeployCommandIntegration:
         
         mock_settings = Mock()
         mock_settings.BASE_DIR = tmp_path
-        mock_settings.S3_PUBLIC_BUCKET = "test-bucket"
+        mock_settings.S3_SITE_BUCKET = "test-bucket"
+        mock_settings.S3_SITE_ENDPOINT = "https://s3.example.com"
+        mock_settings.S3_SITE_ACCESS_KEY = "test-key"
+        mock_settings.S3_SITE_SECRET_KEY = "test-secret"
+        mock_settings.S3_SITE_REGION = "us-east-1"
+        # No S3_PICS_* settings (single bucket mode)
+        mock_settings.S3_PICS_ENDPOINT = None
+        mock_settings.S3_PICS_ACCESS_KEY = None
+        mock_settings.S3_PICS_SECRET_KEY = None
+        mock_settings.S3_PICS_BUCKET = None
+        mock_settings.S3_PICS_REGION = None
         
         with patch.dict(sys.modules, {'settings': mock_settings}):
             with patch('src.command.deploy.validate_s3_config', return_value=(True, "")):
