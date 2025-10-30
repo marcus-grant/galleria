@@ -206,6 +206,105 @@ def test_integration_photo_processing_to_metadata_service(tmp_path):
     assert photo["timestamp"] == processed_photo.exif.timestamp.isoformat()
     
     # Verify URLs are properly formatted
-    assert photo["full_url"] == f"full/{processed_photo.generated_filename}"
-    assert photo["web_url"] == f"web/{processed_photo.generated_filename}"
-    assert photo["thumb_url"] == f"thumb/{processed_photo.generated_filename.replace('.jpg', '.webp')}"
+    assert photo["full_url"] == f"photos/full/{processed_photo.generated_filename}"
+    assert photo["web_url"] == f"photos/web/{processed_photo.generated_filename}"
+    assert photo["thumb_url"] == f"photos/thumb/{processed_photo.generated_filename.replace('.jpg', '.webp')}"
+
+
+def test_photo_metadata_with_photos_base_url(tmp_path):
+    """Test that photo URLs use configured PHOTOS_BASE_URL when available"""
+    from unittest.mock import patch
+    
+    # Create test gallery metadata JSON
+    metadata = {
+        "schema_version": "1.0",
+        "generated_at": "2024-10-28T12:00:00Z",
+        "collection": "wedding", 
+        "settings": {"timestamp_offset_hours": 0},
+        "photos": [
+            {
+                "id": "wedding-20240810T143045-r5a-0",
+                "original_path": "pics-full/IMG_001.jpg",
+                "file_hash": "abc123def456",
+                "deployment_file_hash": "deployment123def456",
+                "exif": {
+                    "original_timestamp": "2024-08-10T14:30:45",
+                    "corrected_timestamp": "2024-08-10T14:30:45", 
+                    "timezone_original": "+00:00",
+                    "camera": {"make": "Canon", "model": "EOS R5"},
+                    "subsecond": 123
+                },
+                "files": {
+                    "full": "full/wedding-20240810T143045-r5a-0.jpg",
+                    "web": "web/wedding-20240810T143045-r5a-0.jpg",
+                    "thumb": "wedding-20240810T143045-r5a-0.webp"
+                }
+            }
+        ]
+    }
+    
+    # Save metadata JSON to temp directory
+    metadata_file = tmp_path / "gallery-metadata.json"
+    with open(metadata_file, 'w') as f:
+        json.dump(metadata, f)
+    
+    # Test with photos base URL configured
+    with patch('settings.PHOTOS_BASE_URL', 'https://cdn.example.com/photos'):
+        with patch('src.services.s3_storage.is_dual_bucket_configured', return_value=False):
+            service = PhotoMetadataService()
+            json_data = service.generate_json_metadata_from_file(str(metadata_file))
+            
+            photo = json_data["photos"][0]
+            assert photo["full_url"] == "https://cdn.example.com/photos/photos/full/wedding-20240810T143045-r5a-0.jpg"
+            assert photo["web_url"] == "https://cdn.example.com/photos/photos/web/wedding-20240810T143045-r5a-0.jpg"
+            assert photo["thumb_url"] == "https://cdn.example.com/photos/photos/thumb/wedding-20240810T143045-r5a-0.webp"
+
+
+def test_photo_metadata_with_dual_bucket_base_url(tmp_path):
+    """Test that photo URLs work correctly with dual bucket configuration"""
+    from unittest.mock import patch
+    
+    # Create test gallery metadata JSON
+    metadata = {
+        "schema_version": "1.0",
+        "generated_at": "2024-10-28T12:00:00Z",
+        "collection": "wedding", 
+        "settings": {"timestamp_offset_hours": 0},
+        "photos": [
+            {
+                "id": "wedding-20240810T143045-r5a-0",
+                "original_path": "pics-full/IMG_001.jpg",
+                "file_hash": "abc123def456",
+                "deployment_file_hash": "deployment123def456",
+                "exif": {
+                    "original_timestamp": "2024-08-10T14:30:45",
+                    "corrected_timestamp": "2024-08-10T14:30:45", 
+                    "timezone_original": "+00:00",
+                    "camera": {"make": "Canon", "model": "EOS R5"},
+                    "subsecond": 123
+                },
+                "files": {
+                    "full": "full/wedding-20240810T143045-r5a-0.jpg",
+                    "web": "web/wedding-20240810T143045-r5a-0.jpg",
+                    "thumb": "wedding-20240810T143045-r5a-0.webp"
+                }
+            }
+        ]
+    }
+    
+    # Save metadata JSON to temp directory
+    metadata_file = tmp_path / "gallery-metadata.json"
+    with open(metadata_file, 'w') as f:
+        json.dump(metadata, f)
+    
+    # Test with dual bucket mode and photos base URL configured
+    with patch('settings.PHOTOS_BASE_URL', 'https://photos.example.com'):
+        with patch('src.services.s3_storage.is_dual_bucket_configured', return_value=True):
+            service = PhotoMetadataService()
+            json_data = service.generate_json_metadata_from_file(str(metadata_file))
+            
+            photo = json_data["photos"][0]
+            # In dual bucket mode, photos are stored without 'photos/' prefix
+            assert photo["full_url"] == "https://photos.example.com/full/wedding-20240810T143045-r5a-0.jpg"
+            assert photo["web_url"] == "https://photos.example.com/web/wedding-20240810T143045-r5a-0.jpg"
+            assert photo["thumb_url"] == "https://photos.example.com/wedding-20240810T143045-r5a-0.webp"

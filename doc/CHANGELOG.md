@@ -2,6 +2,14 @@
 
 ## 2025-10-30
 
+### Photo Base URL Support for CDN/Dual Bucket Deployment
+
+- **Photo Base URLs**: Added `PHOTOS_BASE_URL` and `SITE_BASE_URL` settings for CDN support
+- **Smart URL generation**: PhotoMetadataService generates absolute/relative URLs based on deployment mode
+- **Build process update**: Build command now uses gallery metadata for consistent URL generation
+- **EXIF verification test**: Added test to verify EXIF corrections without full deployment
+- **Architecture fix**: Moved `is_dual_bucket_configured()` from command to service module
+
 ### Settings Architecture Migration (Breaking Change)
 
 - **S3 settings restructure**: Migrated from confusing `S3_PUBLIC_*`/`S3_SITE_*` to logical `S3_SITE_*`/`S3_PICS_*` naming convention

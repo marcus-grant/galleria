@@ -1,6 +1,7 @@
 """Unit tests for file processing functions."""
 import pytest
 import json
+import hashlib
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -97,3 +98,63 @@ class TestMetadataConsistency:
         # 3. Merge the partial files
         # 4. Verify final metadata is identical
         # 5. Verify photo order, hashes, and all fields match exactly
+
+
+class TestExifCorrections:
+    """Test EXIF correction verification using existing gallery metadata."""
+    
+    def test_exif_corrections_in_production_metadata(self):
+        """Test that EXIF corrections are properly applied in production gallery metadata."""
+        from src.services.s3_storage import modify_exif_in_memory
+        from datetime import datetime
+        
+        # Load production gallery metadata
+        metadata_file = Path("prod/pics/gallery-metadata.json")
+        if not metadata_file.exists():
+            pytest.skip("Production gallery metadata not found. Run process-photos first.")
+            
+        with open(metadata_file) as f:
+            metadata = json.load(f)
+        
+        # Test a small sample of photos (first 3)
+        sample_photos = metadata['photos'][:3]
+        target_timezone_offset = metadata['settings']['target_timezone_offset_hours']
+        
+        for photo in sample_photos:
+            # Check that original and deployment hashes are different (EXIF was modified)
+            assert photo['file_hash'] != photo['deployment_file_hash'], \
+                f"Photo {photo['id']}: deployment hash should differ from original (EXIF modification)"
+            
+            # Verify the deployment hash by recalculating it
+            original_path = Path(photo['original_path'])
+            if not original_path.exists():
+                pytest.skip(f"Original photo not found: {original_path}")
+                
+            # Read original file and verify file hash
+            with open(original_path, 'rb') as f:
+                original_bytes = f.read()
+            
+            original_hash = hashlib.sha256(original_bytes).hexdigest()
+            assert original_hash == photo['file_hash'], \
+                f"Photo {photo['id']}: stored file hash doesn't match actual file"
+            
+            # Simulate EXIF modification and verify deployment hash
+            corrected_timestamp = datetime.fromisoformat(photo['exif']['corrected_timestamp'])
+            
+            try:
+                modified_bytes = modify_exif_in_memory(
+                    original_bytes,
+                    corrected_timestamp,
+                    target_timezone_offset
+                )
+                
+                calculated_deployment_hash = hashlib.sha256(modified_bytes).hexdigest()
+                assert calculated_deployment_hash == photo['deployment_file_hash'], \
+                    f"Photo {photo['id']}: calculated deployment hash doesn't match stored hash"
+                    
+            except Exception as e:
+                pytest.fail(f"Photo {photo['id']}: EXIF modification failed: {e}")
+                
+        # Verify timezone settings are configured
+        assert target_timezone_offset is not None, "Target timezone offset should be configured"
+        assert isinstance(target_timezone_offset, int), "Target timezone offset should be an integer"

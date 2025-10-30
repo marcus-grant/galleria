@@ -39,6 +39,10 @@ S3_PICS_SECRET_KEY = None
 S3_PICS_BUCKET = None  # Your photos bucket name
 S3_PICS_REGION = None  # e.g., 'eu-central-1'
 
+# Photo Base URLs for frontend (supports both single and dual bucket deployment)
+PHOTOS_BASE_URL = None  # Base URL for photos (e.g., 'https://cdn.example.com/photos' or relative path 'photos')
+SITE_BASE_URL = None  # Base URL for site files (e.g., 'https://cdn.example.com' or empty for relative)
+
 # XDG directories
 CONFIG_DIR = BASE_DIR  # Default to project root
 if 'XDG_CONFIG_HOME' in os.environ:
@@ -105,6 +109,10 @@ S3_PICS_ACCESS_KEY = os.getenv('GALLERIA_S3_PICS_ACCESS_KEY', S3_PICS_ACCESS_KEY
 S3_PICS_SECRET_KEY = os.getenv('GALLERIA_S3_PICS_SECRET_KEY', S3_PICS_SECRET_KEY)
 S3_PICS_BUCKET = os.getenv('GALLERIA_S3_PICS_BUCKET', S3_PICS_BUCKET)
 S3_PICS_REGION = os.getenv('GALLERIA_S3_PICS_REGION', S3_PICS_REGION)
+
+# Photo Base URLs - environment variable overrides
+PHOTOS_BASE_URL = os.getenv('GALLERIA_PHOTOS_BASE_URL', PHOTOS_BASE_URL)
+SITE_BASE_URL = os.getenv('GALLERIA_SITE_BASE_URL', SITE_BASE_URL)
 
 # EXIF timestamp correction - environment variable override
 TIMESTAMP_OFFSET_HOURS = int(os.getenv('GALLERIA_TIMESTAMP_OFFSET_HOURS', str(TIMESTAMP_OFFSET_HOURS)))

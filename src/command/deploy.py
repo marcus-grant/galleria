@@ -5,28 +5,9 @@ import json
 from pathlib import Path
 
 from src.command.upload_photos import validate_s3_config
-from src.services.s3_storage import get_s3_client, examine_bucket_cors, configure_bucket_cors, get_default_gallery_cors_rules
+from src.services.s3_storage import get_s3_client, examine_bucket_cors, configure_bucket_cors, get_default_gallery_cors_rules, is_dual_bucket_configured
 from src.services.deployment import deploy_directory_to_s3, deploy_gallery_metadata
 from src.models.photo import GalleryMetadata
-
-
-def is_dual_bucket_configured() -> bool:
-    """Check if dual bucket deployment is configured.
-    
-    Dual bucket mode is enabled when S3_PICS_* settings are configured.
-    In this mode:
-    - S3_SITE_* settings are used for the site bucket
-    - S3_PICS_* settings are used for the photos bucket
-    """
-    import settings
-    pics_settings = [
-        settings.S3_PICS_ENDPOINT,
-        settings.S3_PICS_ACCESS_KEY, 
-        settings.S3_PICS_SECRET_KEY,
-        settings.S3_PICS_BUCKET,
-        settings.S3_PICS_REGION
-    ]
-    return all(setting is not None for setting in pics_settings)
 
 
 def load_local_gallery_metadata(prod_dir: Path) -> GalleryMetadata:

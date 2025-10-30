@@ -2,9 +2,52 @@ import re
 import json
 from pathlib import Path
 from src.models.photo import GalleryMetadata
+import settings
 
 
 class PhotoMetadataService:
+    def _generate_photo_url(self, relative_path: str) -> str:
+        """Generate absolute or relative URL for a photo based on deployment settings.
+        
+        Args:
+            relative_path: Relative path from metadata (e.g., 'full/photo.jpg', 'web/photo.jpg', 'photo.webp')
+            
+        Returns:
+            Complete URL for the photo
+        """
+        # Determine if we're in dual bucket mode
+        from src.services.s3_storage import is_dual_bucket_configured
+        is_dual_mode = is_dual_bucket_configured()
+        
+        # Check if we have a photos base URL configured
+        photos_base_url = getattr(settings, 'PHOTOS_BASE_URL', None)
+        
+        if photos_base_url:
+            # Use configured photos base URL
+            if is_dual_mode:
+                # In dual bucket mode, photos are stored without 'photos/' prefix
+                # Remove any 'photos/' prefix and path prefixes for thumbnails
+                if relative_path.startswith('full/') or relative_path.startswith('web/'):
+                    # Keep the directory structure for full/web photos
+                    clean_path = relative_path
+                else:
+                    # For thumbnails, they're stored in the root of photos bucket
+                    clean_path = relative_path
+            else:
+                # In single bucket mode, photos are stored with 'photos/' prefix
+                if relative_path.startswith('full/') or relative_path.startswith('web/'):
+                    clean_path = f"photos/{relative_path}"
+                else:
+                    clean_path = f"photos/thumb/{relative_path}"
+            
+            return f"{photos_base_url.rstrip('/')}/{clean_path}"
+        else:
+            # Fall back to relative URLs
+            if relative_path.startswith('full/') or relative_path.startswith('web/'):
+                return f"photos/{relative_path}"
+            else:
+                return f"photos/thumb/{relative_path}"
+    
     def scan_processed_photos(self):
         prod_pics_dir = Path("prod/pics/full")
         if not prod_pics_dir.exists():
@@ -92,9 +135,9 @@ class PhotoMetadataService:
                 "id": photo.id,
                 "timestamp": photo.exif.corrected_timestamp,
                 "camera": camera_name,
-                "full_url": photo.files.full,
-                "web_url": photo.files.web,
-                "thumb_url": photo.files.thumb
+                "full_url": self._generate_photo_url(photo.files.full),
+                "web_url": self._generate_photo_url(photo.files.web),
+                "thumb_url": self._generate_photo_url(photo.files.thumb)
             })
         
         return {"photos": photo_data}

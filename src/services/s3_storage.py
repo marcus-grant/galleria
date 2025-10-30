@@ -9,6 +9,25 @@ from PIL import Image
 import piexif
 
 
+def is_dual_bucket_configured() -> bool:
+    """Check if dual bucket deployment is configured.
+    
+    Dual bucket mode is enabled when S3_PICS_* settings are configured.
+    In this mode:
+    - S3_SITE_* settings are used for the site bucket
+    - S3_PICS_* settings are used for the photos bucket
+    """
+    import settings
+    pics_settings = [
+        settings.S3_PICS_ENDPOINT,
+        settings.S3_PICS_ACCESS_KEY, 
+        settings.S3_PICS_SECRET_KEY,
+        settings.S3_PICS_BUCKET,
+        settings.S3_PICS_REGION
+    ]
+    return all(setting is not None for setting in pics_settings)
+
+
 def get_s3_client(endpoint: str, access_key: str, secret_key: str, region: str):
     """Create boto3 S3 client for any S3-compatible service.
     

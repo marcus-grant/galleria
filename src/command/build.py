@@ -29,7 +29,12 @@ def build_gallery():
     
     # Generate photo metadata
     metadata_service = PhotoMetadataService()
-    photo_data = metadata_service.generate_json_metadata()
+    # Use gallery metadata file if it exists, otherwise scan files directly
+    metadata_file = Path("prod/pics/gallery-metadata.json")
+    if metadata_file.exists():
+        photo_data = metadata_service.generate_json_metadata_from_file(str(metadata_file))
+    else:
+        photo_data = metadata_service.generate_json_metadata()
     
     photos_count = len(photo_data['photos'])
     gallery_generated = False
