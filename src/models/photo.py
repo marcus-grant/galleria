@@ -38,6 +38,7 @@ class ProcessedPhoto:
     collection: Optional[str] = None
     generated_filename: Optional[str] = None
     file_hash: Optional[str] = None
+    deployment_file_hash: Optional[str] = None
 
 
 def photo_from_exif_service(

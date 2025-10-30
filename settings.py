@@ -10,7 +10,6 @@ BASE_DIR = Path(__file__).resolve().parent
 # Default settings - will be overridden by local settings then env vars
 PIC_SOURCE_PATH_FULL = BASE_DIR / 'pics'
 PIC_SOURCE_PATH_WEB = BASE_DIR / 'pics-web'  # Web-optimized versions from photographer
-OUTPUT_DIR = BASE_DIR / 'output'
 
 # Pelican settings
 CONTENT_DIR = BASE_DIR / 'content'
@@ -31,6 +30,13 @@ S3_PUBLIC_ACCESS_KEY = None
 S3_PUBLIC_SECRET_KEY = None
 S3_PUBLIC_BUCKET = None  # Your public bucket name
 S3_PUBLIC_REGION = None  # e.g., 'eu-central-1'
+
+# Public site bucket (for HTML, CSS, JS, JSON files - automated upload)
+S3_SITE_ENDPOINT = None  # e.g., 'eu-central-1.s3.hetznerobjects.com'
+S3_SITE_ACCESS_KEY = None
+S3_SITE_SECRET_KEY = None
+S3_SITE_BUCKET = None  # Your site bucket name
+S3_SITE_REGION = None  # e.g., 'eu-central-1'
 
 # XDG directories
 CONFIG_DIR = BASE_DIR  # Default to project root
@@ -78,7 +84,6 @@ if LOCAL_SETTINGS_PATH.exists() and not TEST_MODE:
 # Apply environment variable overrides after local settings
 PIC_SOURCE_PATH_FULL = Path(os.getenv('GALLERIA_PIC_SOURCE_PATH_FULL', str(PIC_SOURCE_PATH_FULL)))
 PIC_SOURCE_PATH_WEB = Path(os.getenv('GALLERIA_PIC_SOURCE_PATH_WEB', str(PIC_SOURCE_PATH_WEB)))
-OUTPUT_DIR = Path(os.getenv('GALLERIA_OUTPUT_DIR', str(OUTPUT_DIR)))
 
 # S3 settings - environment variable overrides
 S3_ARCHIVE_ENDPOINT = os.getenv('GALLERIA_S3_ARCHIVE_ENDPOINT', S3_ARCHIVE_ENDPOINT)
@@ -92,6 +97,12 @@ S3_PUBLIC_ACCESS_KEY = os.getenv('GALLERIA_S3_PUBLIC_ACCESS_KEY', S3_PUBLIC_ACCE
 S3_PUBLIC_SECRET_KEY = os.getenv('GALLERIA_S3_PUBLIC_SECRET_KEY', S3_PUBLIC_SECRET_KEY)
 S3_PUBLIC_BUCKET = os.getenv('GALLERIA_S3_PUBLIC_BUCKET', S3_PUBLIC_BUCKET)
 S3_PUBLIC_REGION = os.getenv('GALLERIA_S3_PUBLIC_REGION', S3_PUBLIC_REGION)
+
+S3_SITE_ENDPOINT = os.getenv('GALLERIA_S3_SITE_ENDPOINT', S3_SITE_ENDPOINT)
+S3_SITE_ACCESS_KEY = os.getenv('GALLERIA_S3_SITE_ACCESS_KEY', S3_SITE_ACCESS_KEY)
+S3_SITE_SECRET_KEY = os.getenv('GALLERIA_S3_SITE_SECRET_KEY', S3_SITE_SECRET_KEY)
+S3_SITE_BUCKET = os.getenv('GALLERIA_S3_SITE_BUCKET', S3_SITE_BUCKET)
+S3_SITE_REGION = os.getenv('GALLERIA_S3_SITE_REGION', S3_SITE_REGION)
 
 # EXIF timestamp correction - environment variable override
 TIMESTAMP_OFFSET_HOURS = int(os.getenv('GALLERIA_TIMESTAMP_OFFSET_HOURS', str(TIMESTAMP_OFFSET_HOURS)))

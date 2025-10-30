@@ -257,43 +257,15 @@ def generate_gallery_metadata(photos: List[ProcessedPhoto], collection_name: str
         files_data = MetadataFileData(
             full=f"full/{photo.generated_filename}" if photo.generated_filename else "",
             web=f"web/{photo.generated_filename}" if photo.generated_filename else "",
-            thumb=photo.generated_filename.replace('.jpg', '.webp').replace('.jpeg', '.webp') if photo.generated_filename else ""
+            thumb=f"thumb/{photo.generated_filename.replace('.jpg', '.webp').replace('.jpeg', '.webp')}" if photo.generated_filename else ""
         )
         
-        # Calculate deployment file hash after EXIF modification simulation
-        deployment_hash = photo.file_hash or ""
-        if photo.file_hash and corrected_timestamp:
-            try:
-                # Read original image bytes
-                with open(photo.path, 'rb') as f:
-                    original_image_bytes = f.read()
-                
-                # Import here to avoid circular imports
-                from src.services.s3_storage import modify_exif_in_memory
-                
-                # Get target timezone setting
-                target_timezone_offset_hours = getattr(settings, 'TARGET_TIMEZONE_OFFSET_HOURS', 13)
-                
-                # Simulate EXIF modification for deployment
-                modified_image_bytes = modify_exif_in_memory(
-                    original_image_bytes,
-                    corrected_timestamp,
-                    target_timezone_offset_hours
-                )
-                
-                # Calculate hash of modified image bytes
-                import hashlib
-                deployment_hash = hashlib.sha256(modified_image_bytes).hexdigest()
-                
-            except Exception:
-                # If EXIF modification fails, fall back to original hash
-                deployment_hash = photo.file_hash or ""
-        
+        # Use deployment hash calculated during photo processing
         photo_meta = PhotoMetadata(
             id=photo_id,
             original_path=str(photo.path),
             file_hash=photo.file_hash or "",
-            deployment_file_hash=deployment_hash,
+            deployment_file_hash=photo.deployment_file_hash or photo.file_hash or "",
             exif=exif_data,
             files=files_data
         )
@@ -321,6 +293,78 @@ def save_gallery_metadata(metadata: GalleryMetadata, output_dir: Path) -> None:
     
     with open(metadata_file, 'w') as f:
         json.dump(metadata.to_dict(), f, indent=2)
+
+
+def generate_batch_metadata(photos: List[ProcessedPhoto], collection_name: str, batch_number: int) -> dict:
+    """Generate metadata for current batch only (not cumulative).
+    
+    Args:
+        photos: List of photos from current batch only
+        collection_name: Name of the collection
+        batch_number: Current batch number (1-based)
+        
+    Returns:
+        Dictionary with batch metadata including batch_info
+    """
+    # Generate metadata for current batch photos only
+    batch_metadata = generate_gallery_metadata(photos, collection_name)
+    
+    # Convert to dict and add batch tracking info
+    batch_dict = batch_metadata.to_dict()
+    batch_dict["batch_info"] = {
+        "batch_number": batch_number,
+        "photos_in_batch": len(photos),
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    return batch_dict
+
+
+def merge_partial_metadata_files(output_dir: Path, collection_name: str) -> GalleryMetadata:
+    """Merge all partial metadata files into complete gallery metadata.
+    
+    Args:
+        output_dir: Directory containing partial metadata files
+        collection_name: Name of the collection
+        
+    Returns:
+        Complete GalleryMetadata object with all photos from all batches
+    """
+    # Find all partial metadata files
+    partial_files = list(output_dir.glob("gallery-metadata.part*.json"))
+    
+    if not partial_files:
+        raise FileNotFoundError("No partial metadata files found")
+    
+    # Sort by batch number to ensure correct order
+    partial_files.sort(key=lambda f: int(f.stem.split('part')[1]))
+    
+    all_photos = []
+    settings_data = None
+    
+    # Load and merge all partial files
+    for partial_file in partial_files:
+        with open(partial_file) as f:
+            partial_data = json.load(f)
+        
+        # Add photos from this batch to complete list
+        all_photos.extend(partial_data["photos"])
+        
+        # Use settings from first partial (should be same across all)
+        if settings_data is None:
+            settings_data = partial_data.get("settings")
+    
+    # Create complete metadata directly from merged photo data
+    complete_metadata_dict = {
+        "schema_version": "1.0",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "collection": collection_name,
+        "settings": settings_data,
+        "photos": all_photos
+    }
+    
+    # Convert back to GalleryMetadata object
+    return GalleryMetadata.from_dict(complete_metadata_dict)
 
 
 def process_dual_photo_collection(
@@ -391,6 +435,9 @@ def process_dual_photo_collection(
         
         print(f"Processing batch {batch_number}, photos {batch_start + 1}-{batch_end}")
         
+        # Track photos from current batch only
+        current_batch_photos = []
+        
         # Process each photo in this batch
         for full_path, web_path in batch_pairs:
             current_photo += 1
@@ -419,6 +466,35 @@ def process_dual_photo_collection(
                 
                 # Calculate file hash of original source file
                 photo_data.file_hash = calculate_file_checksum(full_path)
+                
+                # Calculate deployment hash (with EXIF modifications) during photo processing
+                photo_data.deployment_file_hash = photo_data.file_hash  # Default fallback
+                if photo_data.file_hash and photo_data.exif.timestamp:
+                    try:
+                        # Read original image bytes (already needed for processing)
+                        with open(full_path, 'rb') as f:
+                            original_image_bytes = f.read()
+                        
+                        # Import here to avoid circular imports
+                        from src.services.s3_storage import modify_exif_in_memory
+                        
+                        # Get target timezone setting
+                        target_timezone_offset_hours = getattr(settings, 'TARGET_TIMEZONE_OFFSET_HOURS', 13)
+                        
+                        # Simulate EXIF modification for deployment (corrected_timestamp = exif.timestamp)
+                        modified_image_bytes = modify_exif_in_memory(
+                            original_image_bytes,
+                            photo_data.exif.timestamp,
+                            target_timezone_offset_hours
+                        )
+                        
+                        # Calculate hash of modified image bytes
+                        import hashlib
+                        photo_data.deployment_file_hash = hashlib.sha256(modified_image_bytes).hexdigest()
+                        
+                    except Exception as e:
+                        print(f"Warning: Could not calculate deployment hash for {full_path.name}: {e}")
+                        photo_data.deployment_file_hash = photo_data.file_hash
                     
                 # Generate chronological filename
                 photo_data.collection = collection_name
@@ -461,23 +537,24 @@ def process_dual_photo_collection(
                 create_thumbnail(web_path, thumb_path)
                 
                 results["photos"].append(photo_data)
+                current_batch_photos.append(photo_data)
                 results["total_processed"] += 1
                 
             except Exception as e:
                 results["errors"].append(f"{full_path.name}: {str(e)}")
         
-        # Save partial metadata after each batch
-        if results["photos"]:
-            partial_metadata = generate_gallery_metadata(results["photos"], collection_name)
+        # Save partial metadata after each batch (current batch only)
+        if current_batch_photos:
+            partial_metadata = generate_batch_metadata(current_batch_photos, collection_name, batch_number)
             partial_filename = f"gallery-metadata.part{batch_number:03d}.json"
             partial_path = output_dir / partial_filename
             with open(partial_path, 'w') as f:
-                json.dump(partial_metadata.to_dict(), f, indent=2)
+                json.dump(partial_metadata, f, indent=2)
             print(f"Saved partial metadata: {partial_filename}")
     
-    # Generate and save gallery metadata JSON
+    # Generate and save gallery metadata JSON by merging partial files
     if results["photos"]:
-        metadata = generate_gallery_metadata(results["photos"], collection_name)
+        metadata = merge_partial_metadata_files(output_dir, collection_name)
         save_gallery_metadata(metadata, output_dir)
     
     return results

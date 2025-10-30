@@ -300,4 +300,4 @@ class TestProcessDualPhotoCollection:
         expected_filename = processed_photo.generated_filename
         assert photo_meta["files"]["full"] == f"full/{expected_filename}"
         assert photo_meta["files"]["web"] == f"web/{expected_filename}"
-        assert photo_meta["files"]["thumb"] == expected_filename.replace(".jpg", ".webp")
+        assert photo_meta["files"]["thumb"] == f"thumb/{expected_filename.replace('.jpg', '.webp')}"

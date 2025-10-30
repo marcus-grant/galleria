@@ -55,9 +55,9 @@ class PhotoMetadataService:
                     "timestamp": metadata["timestamp"],
                     "camera": metadata["camera"],
                     "counter": metadata["counter"],
-                    "thumb_url": f"photos/thumb/{thumb_filename}",
-                    "web_url": f"photos/web/{filename}",
-                    "full_url": f"photos/full/{filename}"
+                    "thumb_url": f"photos/{thumb_filename}",
+                    "web_url": f"photos/{filename}",
+                    "full_url": f"photos/{filename}"
                 })
         
         return {"photos": photo_data}
@@ -92,9 +92,9 @@ class PhotoMetadataService:
                 "id": photo.id,
                 "timestamp": photo.exif.corrected_timestamp,
                 "camera": camera_name,
-                "full_url": f"photos/{photo.files.full}",
-                "web_url": f"photos/{photo.files.web}",
-                "thumb_url": f"photos/thumb/{photo.files.thumb}"
+                "full_url": photo.files.full,
+                "web_url": photo.files.web,
+                "thumb_url": photo.files.thumb
             })
         
         return {"photos": photo_data}

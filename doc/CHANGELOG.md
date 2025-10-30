@@ -2,6 +2,19 @@
 
 ## 2025-10-30
 
+### Dual Bucket Architecture Implementation
+
+- **Thumbnail upload fix**: Fixed metadata file paths by removing incorrect `photos/` prefix from `src/services/file_processing.py` lines 258-260
+- **Dual bucket deployment support**: Added `S3_SITE_*` settings for separate photos and site bucket deployment
+- **Deploy command enhancement**: Modified deploy command to support both single bucket (backward compatible) and dual bucket modes
+- **Smart bucket detection**: Added `is_dual_bucket_configured()` function to automatically detect deployment mode
+- **Deployment path logic**: Photos deploy without prefix in dual bucket mode, with `photos/` prefix in single bucket mode
+- **Site bucket deployment**: Site files deploy to separate `S3_SITE_BUCKET` in dual bucket mode
+- **ProcessedPhoto model update**: Added missing `deployment_file_hash` field to support deployment hash functionality
+- **PhotoMetadataService fix**: Updated to use metadata file paths directly without adding redundant prefixes
+- **Test compatibility**: Updated deploy tests to handle dual bucket mode detection correctly
+- **Backward compatibility**: System defaults to single bucket mode when site bucket settings not configured
+
 ### Deploy Command S3 Endpoint URL Fix
 
 - **S3 endpoint URL construction bug**: Fixed double `https://` issue in `settings.local.py` bucket extraction logic
@@ -10,6 +23,22 @@
 - **Credential rotation**: Resolved deployment blocking issue requiring new S3 credentials and bucket recreation
 - **Deploy command validation**: Successfully tested with `--setup-cors` flag, CORS configuration working
 - **Root cause**: Environment variable contained full URL but extraction logic assumed bare hostname format
+
+### Deploy Command Output Directory Fix
+
+- **Static site deployment path bug**: Fixed deploy command using `OUTPUT_DIR` setting instead of hardcoded `prod/site` path
+- **Path consistency**: Deploy command now uses `prod/site` to match build command output location
+- **Settings cleanup**: Removed unused `OUTPUT_DIR` setting from `settings.py` since paths are hardcoded by design
+- **Deploy command correction**: Modified `src/command/deploy.py` to use `settings.BASE_DIR / 'prod' / 'site'` as default
+
+### Production Deployment Testing
+
+- **Successful photo upload**: 1290 photos uploaded to S3 (645 full + 645 web-optimized)
+- **CORS configuration**: Bucket CORS successfully configured for web access
+- **Static site deployment**: HTML and JSON files successfully deployed
+- **Idempotent deployment confirmed**: Subsequent deploy commands run instantly, detecting no changes
+- **Missing components identified**: Thumbnails generated locally but not uploaded to S3
+- **Process-photos gap discovered**: Missing `web/` directory creation with symlinks to `PIC_SOURCE_PATH_WEB`
 
 ## 2025-10-29
 

@@ -90,7 +90,7 @@ def test_photo_metadata_service_reads_from_json_metadata(tmp_path):
                 "files": {
                     "full": "full/wedding-20240810T143045-r5a-0.jpg",
                     "web": "web/wedding-20240810T143045-r5a-0.jpg",
-                    "thumb": "wedding-20240810T143045-r5a-0.webp"
+                    "thumb": "thumb/wedding-20240810T143045-r5a-0.webp"
                 }
             },
             {
@@ -108,7 +108,7 @@ def test_photo_metadata_service_reads_from_json_metadata(tmp_path):
                 "files": {
                     "full": "full/wedding-20240810T144500-r5a-0.jpg",
                     "web": "web/wedding-20240810T144500-r5a-0.jpg",
-                    "thumb": "wedding-20240810T144500-r5a-0.webp"
+                    "thumb": "thumb/wedding-20240810T144500-r5a-0.webp"
                 }
             }
         ]
@@ -134,9 +134,9 @@ def test_photo_metadata_service_reads_from_json_metadata(tmp_path):
     assert photo1["id"] == "wedding-20240810T143045-r5a-0"
     assert photo1["timestamp"] == "2024-08-10T14:30:45"
     assert photo1["camera"] == "Canon EOS R5"
-    assert photo1["full_url"] == "photos/full/wedding-20240810T143045-r5a-0.jpg"
-    assert photo1["web_url"] == "photos/web/wedding-20240810T143045-r5a-0.jpg"
-    assert photo1["thumb_url"] == "photos/thumb/wedding-20240810T143045-r5a-0.webp"
+    assert photo1["full_url"] == "full/wedding-20240810T143045-r5a-0.jpg"
+    assert photo1["web_url"] == "web/wedding-20240810T143045-r5a-0.jpg"
+    assert photo1["thumb_url"] == "thumb/wedding-20240810T143045-r5a-0.webp"
     
     # Verify second photo data  
     photo2 = json_data["photos"][1]
@@ -206,6 +206,6 @@ def test_integration_photo_processing_to_metadata_service(tmp_path):
     assert photo["timestamp"] == processed_photo.exif.timestamp.isoformat()
     
     # Verify URLs are properly formatted
-    assert photo["full_url"] == f"photos/full/{processed_photo.generated_filename}"
-    assert photo["web_url"] == f"photos/web/{processed_photo.generated_filename}"
-    assert photo["thumb_url"] == f"photos/thumb/{processed_photo.generated_filename.replace('.jpg', '.webp')}"
+    assert photo["full_url"] == f"full/{processed_photo.generated_filename}"
+    assert photo["web_url"] == f"web/{processed_photo.generated_filename}"
+    assert photo["thumb_url"] == f"thumb/{processed_photo.generated_filename.replace('.jpg', '.webp')}"

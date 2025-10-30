@@ -62,7 +62,8 @@ def create_processed_photo(photo_path):
         edge_cases=[],
         collection="test-collection",
         generated_filename="20231225-153045-000.jpg",
-        file_hash="original_file_hash_123"
+        file_hash="original_file_hash_123",
+        deployment_file_hash="deployment_hash_with_timezone_123"  # Simulates modified EXIF hash
     )
 
 

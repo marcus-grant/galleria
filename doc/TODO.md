@@ -24,11 +24,38 @@ uv run python manage.py deploy --setup-cors
 
 
 
+## Settings Architecture Reconsideration **[TDD REQUIRED]**
+
+**Improve S3 Settings Variable Naming for Clarity**:
+- [ ] **Rename S3 settings for logical consistency** - Site is always deployed, photos bucket is optional for dual bucket mode
+  - Current: `S3_PUBLIC_*` (photos) and `S3_SITE_*` (site in dual mode)
+  - Proposed: `S3_SITE_*` (always the site) and `S3_PICS_*` (photos bucket in dual mode)
+- [ ] **Write tests for new settings structure** - Create comprehensive tests covering both single and dual bucket modes
+- [ ] **Implement settings migration** - Update deploy command and related code to use new variable names
+- [ ] **Update validation logic** - Modify `is_dual_bucket_configured()` to check for `S3_PICS_*` settings instead of `S3_SITE_*`
+- [ ] **Backward compatibility** - Ensure existing deployments continue to work during transition
+- [ ] **Documentation updates** - Update all documentation to reflect new settings naming convention
+- [ ] **Update module documentation** - Update documentation pages for modules changed in dual bucket implementation:
+  - `doc/command/deploy.md` - Document dual bucket mode options and behavior
+  - `doc/services/file_processing.md` - Document corrected metadata path generation
+  - `doc/services/photo_metadata.md` - Document URL generation changes
+  - `doc/models/photo.md` - Document added `deployment_file_hash` field in ProcessedPhoto
+  - `doc/settings.md` - Document new S3_SITE_* settings and dual bucket configuration
+
+## URGENT: Architecture Changes **[BLOCKING DEPLOYMENT]**
+
+**Critical Issues Preventing Complete Deployment**:
+- [ ] **Missing web symlinks** - process-photos creates `full/` symlinks but missing `web/` symlinks to `PIC_SOURCE_PATH_WEB` 
+- [ ] **Thumbnail format decision** - Should thumbnails be WebP for better performance? Do enough devices support WebP?
+- [ ] **Web directory creation** - process-photos should create `prod/pics/web/` with symlinks using chronological filenames
+
 ## Production Deployment Verification
 
 **Remaining Tasks**:
-- [ ] **Verify EXIF corrections** - Confirm timezone fixes in deployed photos
-- [ ] **Test deployed gallery functionality** - Verify photos load correctly in browser
+- [ ] **Fix process-photos web symlinking** - Ensure `prod/pics/web/` directory created with symlinks to photographer's web-optimized collection
+- [ ] **Add photos bucket base URL setting** - Configure base URL for photos bucket to generate correct frontend URLs
+- [ ] **Verify EXIF corrections** - Confirm timezone fixes in deployed photos  
+- [ ] **Test deployed gallery functionality** - Verify photos load correctly in browser with dual bucket setup
 
 **Deployment Setup**: See [doc/deployment/production-setup.md](deployment/production-setup.md) for detailed configuration instructions.
 

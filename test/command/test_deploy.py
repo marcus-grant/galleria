@@ -95,6 +95,12 @@ class TestDeployCommandFunctionality:
         
         mock_settings = Mock()
         mock_settings.BASE_DIR = tmp_path
+        # Ensure single bucket mode by setting site bucket settings to None
+        mock_settings.S3_SITE_ENDPOINT = None
+        mock_settings.S3_SITE_ACCESS_KEY = None
+        mock_settings.S3_SITE_SECRET_KEY = None
+        mock_settings.S3_SITE_BUCKET = None
+        mock_settings.S3_SITE_REGION = None
         # Create prod/pics directory structure
         prod_pics = tmp_path / "prod" / "pics"
         prod_pics.mkdir(parents=True)
