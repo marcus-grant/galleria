@@ -2,16 +2,16 @@ from bs4 import BeautifulSoup
 from src.services.template_renderer import TemplateRenderer
 
 
-def test_photo_grid_component_renders_container():
-    """Test that photo-grid component renders a container div"""
+def test_pic_grid_component_renders_container():
+    """Test that pic-grid component renders a container div"""
     renderer = TemplateRenderer()
     
     context = {
-        "photos": [],
+        "pics": [],
         "grid_classes": "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4"
     }
     
-    html = renderer.render("components/photo-grid.j2.html", context)
+    html = renderer.render("components/pic-grid.j2.html", context)
     soup = BeautifulSoup(html, 'html.parser')
     
     # Check for grid container
@@ -23,51 +23,50 @@ def test_photo_grid_component_renders_container():
     assert any('grid-cols' in cls for cls in classes)
 
 
-def test_photo_grid_component_renders_photo_cells():
-    """Test that photo-grid includes photo-cell components for each photo"""
-    renderer = TemplateRenderer()
+def test_pic_grid_component_renders_pic_cells():
+    """Test that pic-grid includes pic-cell components for each pic"""
+    from unittest.mock import patch
     
-    context = {
-        "photos": [
-            {
-                "filename": "2024-06-15_14-30-45_photo1.jpg",
-                "thumb_url": "photos/thumb/2024-06-15_14-30-45_photo1.webp",
-                "web_url": "photos/web/2024-06-15_14-30-45_photo1.jpg"
-            },
-            {
-                "filename": "2024-06-15_14-35-20_photo2.jpg", 
-                "thumb_url": "photos/thumb/2024-06-15_14-35-20_photo2.webp",
-                "web_url": "photos/web/2024-06-15_14-35-20_photo2.jpg"
-            }
-        ],
-        "grid_classes": "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4"
-    }
-    
-    html = renderer.render("components/photo-grid.j2.html", context)
-    soup = BeautifulSoup(html, 'html.parser')
-    
-    # Check that photo cells are rendered (looking for anchor tags from photo-cell template)
-    photo_links = soup.find_all('a', class_=lambda x: x and 'aspect-square' in x)
-    assert len(photo_links) == 2
-    
-    # Check that images have correct src
-    images = soup.find_all('img')
-    assert len(images) == 2
-    assert any('photo1.webp' in img.get('src', '') for img in images)
-    assert any('photo2.webp' in img.get('src', '') for img in images)
+    with patch('src.services.template_renderer.settings.PICS_BASE_URL', 'https://pics.example.com'):
+        renderer = TemplateRenderer()
+        
+        context = {
+            "pics": [
+                {
+                    "filename": "2024-06-15_14-30-45_pic1.jpg"
+                },
+                {
+                    "filename": "2024-06-15_14-35-20_pic2.jpg"
+                }
+            ],
+            "grid_classes": "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4"
+        }
+        
+        html = renderer.render("components/pic-grid.j2.html", context)
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # Check that pic cells are rendered (looking for anchor tags from pic-cell template)
+        pic_links = soup.find_all('a', class_=lambda x: x and 'aspect-square' in x)
+        assert len(pic_links) == 2
+        
+        # Check that images have correct src with constructed URLs
+        images = soup.find_all('img')
+        assert len(images) == 2
+        assert any('https://pics.example.com/thumb/2024-06-15_14-30-45_pic1.jpg' in img.get('src', '') for img in images)
+        assert any('https://pics.example.com/thumb/2024-06-15_14-35-20_pic2.jpg' in img.get('src', '') for img in images)
 
 
-def test_photo_grid_component_is_configurable():
-    """Test that photo-grid accepts custom CSS classes"""
+def test_pic_grid_component_is_configurable():
+    """Test that pic-grid accepts custom CSS classes"""
     renderer = TemplateRenderer()
     
     custom_classes = "grid grid-cols-3 gap-2 p-2"
     context = {
-        "photos": [],
+        "pics": [],
         "grid_classes": custom_classes
     }
     
-    html = renderer.render("components/photo-grid.j2.html", context)
+    html = renderer.render("components/pic-grid.j2.html", context)
     soup = BeautifulSoup(html, 'html.parser')
     
     grid_container = soup.find('div')

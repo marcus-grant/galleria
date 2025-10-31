@@ -23,14 +23,14 @@ class TestSettingsEnvironmentIsolation:
                 import settings as test_settings
                 
                 # Critical test: S3 settings should be None by default
-                assert test_settings.S3_PUBLIC_REGION is None, \
-                    f"S3_PUBLIC_REGION should be None but got '{test_settings.S3_PUBLIC_REGION}' - " \
+                assert test_settings.S3_SITE_REGION is None, \
+                    f"S3_SITE_REGION should be None but got '{test_settings.S3_SITE_REGION}' - " \
                     "settings.local.py is polluting test environment"
                 
-                assert test_settings.S3_PUBLIC_ENDPOINT is None
-                assert test_settings.S3_PUBLIC_ACCESS_KEY is None
-                assert test_settings.S3_PUBLIC_SECRET_KEY is None
-                assert test_settings.S3_PUBLIC_BUCKET is None
+                assert test_settings.S3_SITE_ENDPOINT is None
+                assert test_settings.S3_SITE_ACCESS_KEY is None
+                assert test_settings.S3_SITE_SECRET_KEY is None
+                assert test_settings.S3_SITE_BUCKET is None
                 
                 # Timezone settings should have defaults
                 assert test_settings.TIMESTAMP_OFFSET_HOURS == 0
@@ -56,11 +56,11 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent
 
 # S3 Settings - should default to None
-S3_PUBLIC_ENDPOINT = None
-S3_PUBLIC_ACCESS_KEY = None  
-S3_PUBLIC_SECRET_KEY = None
-S3_PUBLIC_BUCKET = None
-S3_PUBLIC_REGION = None
+S3_SITE_ENDPOINT = None
+S3_SITE_ACCESS_KEY = None  
+S3_SITE_SECRET_KEY = None
+S3_SITE_BUCKET = None
+S3_SITE_REGION = None
 
 # Timezone settings
 TIMESTAMP_OFFSET_HOURS = 0
@@ -80,8 +80,8 @@ except ImportError:
             
             # Create a settings.local.py that would pollute defaults
             local_settings_content = '''
-S3_PUBLIC_REGION = "eu-central-1"
-S3_PUBLIC_ENDPOINT = "https://polluted.endpoint.com"
+S3_SITE_REGION = "eu-central-1"
+S3_SITE_ENDPOINT = "https://polluted.endpoint.com"
 TARGET_TIMEZONE_OFFSET_HOURS = 2
 '''
             fs.create_file("settings/local.py", contents=local_settings_content)
@@ -93,7 +93,7 @@ TARGET_TIMEZONE_OFFSET_HOURS = 2
                     import settings as clean_settings
                     
                     # This test will fail because settings isolation isn't working properly
-                    assert clean_settings.S3_PUBLIC_REGION is None, \
+                    assert clean_settings.S3_SITE_REGION is None, \
                         "Settings isolation failed - local settings are bleeding into test environment"
     
     def test_environment_variable_override_works(self):
@@ -104,7 +104,7 @@ TARGET_TIMEZONE_OFFSET_HOURS = 2
         
         # Set specific environment variables
         test_env = {
-            "GALLERIA_S3_PUBLIC_REGION": "us-west-2",
+            "GALLERIA_S3_SITE_REGION": "us-west-2",
             "GALLERIA_TARGET_TIMEZONE_OFFSET_HOURS": "5",
             "GALLERIA_TIMESTAMP_OFFSET_HOURS": "-4"
         }
@@ -114,7 +114,7 @@ TARGET_TIMEZONE_OFFSET_HOURS = 2
                 import settings as env_settings
                 
                 # Environment variables should override defaults
-                assert env_settings.S3_PUBLIC_REGION == "us-west-2"
+                assert env_settings.S3_SITE_REGION == "us-west-2"
                 assert env_settings.TARGET_TIMEZONE_OFFSET_HOURS == 5
                 assert env_settings.TIMESTAMP_OFFSET_HOURS == -4
     
@@ -122,8 +122,8 @@ TARGET_TIMEZONE_OFFSET_HOURS = 2
         """Test that production settings don't leak into test environment."""
         # Simulate production environment with local settings
         production_settings = {
-            "S3_PUBLIC_REGION": "eu-central-1",
-            "S3_PUBLIC_ENDPOINT": "https://production.bucket.com",
+            "S3_SITE_REGION": "eu-central-1",
+            "S3_SITE_ENDPOINT": "https://production.bucket.com",
             "TARGET_TIMEZONE_OFFSET_HOURS": 2,
             "TIMESTAMP_OFFSET_HOURS": 0
         }
@@ -151,7 +151,7 @@ TARGET_TIMEZONE_OFFSET_HOURS = 2
                     import settings as test_isolated_settings
                     
                     # In test mode, should get defaults, not production values
-                    assert test_isolated_settings.S3_PUBLIC_REGION is None, \
+                    assert test_isolated_settings.S3_SITE_REGION is None, \
                         "Production settings leaked into test environment"
                     
                     assert test_isolated_settings.TARGET_TIMEZONE_OFFSET_HOURS == 13, \

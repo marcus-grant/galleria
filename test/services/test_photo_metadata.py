@@ -25,19 +25,19 @@ def test_photo_metadata_service_extracts_metadata_from_filename():
     assert metadata["counter"] == "0"
 
 
-def test_photo_metadata_service_generates_json_structure():
-    """Test that service generates JSON structure with photo metadata for frontend consumption"""
+def test_pic_metadata_service_generates_json_structure():
+    """Test that service generates JSON structure with pic metadata for frontend consumption"""
     service = PhotoMetadataService()
     json_data = service.generate_json_metadata()
     
-    assert "photos" in json_data
-    assert len(json_data["photos"]) > 0
+    assert "pics" in json_data
+    assert len(json_data["pics"]) > 0
     
-    photo = json_data["photos"][0]
-    assert "filename" in photo
-    assert "timestamp" in photo
-    assert "camera" in photo
-    assert "counter" in photo
+    pic = json_data["pics"][0]
+    assert "filename" in pic
+    assert "timestamp" in pic
+    assert "camera" in pic
+    assert "counter" in pic
 
 
 def test_photo_metadata_service_returns_photos_in_chronological_order():
@@ -126,22 +126,21 @@ def test_photo_metadata_service_reads_from_json_metadata(tmp_path):
     json_data = service.generate_json_metadata_from_file(str(metadata_file))
     
     # Verify JSON structure
-    assert "photos" in json_data
-    assert len(json_data["photos"]) == 2
+    assert "pics" in json_data
+    assert len(json_data["pics"]) == 2
     
-    # Verify first photo data
-    photo1 = json_data["photos"][0]
-    assert photo1["id"] == "wedding-20240810T143045-r5a-0"
-    assert photo1["timestamp"] == "2024-08-10T14:30:45"
-    assert photo1["camera"] == "Canon EOS R5"
-    assert photo1["full_url"] == "full/wedding-20240810T143045-r5a-0.jpg"
-    assert photo1["web_url"] == "web/wedding-20240810T143045-r5a-0.jpg"
-    assert photo1["thumb_url"] == "thumb/wedding-20240810T143045-r5a-0.webp"
+    # Verify first pic data
+    pic1 = json_data["pics"][0]
+    assert pic1["id"] == "wedding-20240810T143045-r5a-0"
+    assert pic1["timestamp"] == "2024-08-10T14:30:45"
+    assert pic1["camera"] == "Canon EOS R5"
+    assert pic1["filename"] == "wedding-20240810T143045-r5a-0.jpg"
     
-    # Verify second photo data  
-    photo2 = json_data["photos"][1]
-    assert photo2["id"] == "wedding-20240810T144500-r5a-0"
-    assert photo2["timestamp"] == "2024-08-10T14:45:00"
+    # Verify second pic data  
+    pic2 = json_data["pics"][1]
+    assert pic2["id"] == "wedding-20240810T144500-r5a-0"
+    assert pic2["timestamp"] == "2024-08-10T14:45:00"
+    assert pic2["filename"] == "wedding-20240810T144500-r5a-0.jpg"
 
 
 def test_integration_photo_processing_to_metadata_service(tmp_path):
@@ -192,119 +191,21 @@ def test_integration_photo_processing_to_metadata_service(tmp_path):
     json_data = service.generate_json_metadata_from_file(str(metadata_file))
     
     # Step 4: Verify the complete round-trip works
-    assert "photos" in json_data
-    assert len(json_data["photos"]) == 1
+    assert "pics" in json_data
+    assert len(json_data["pics"]) == 1
     
-    photo = json_data["photos"][0]
-    processed_photo = result["photos"][0]
+    pic = json_data["pics"][0]
+    processed_pic = result["photos"][0]  # Note: result still uses "photos" key from processing
     
     # Verify ID matches generated filename
-    expected_id = processed_photo.generated_filename.replace('.jpg', '')
-    assert photo["id"] == expected_id
+    expected_id = processed_pic.generated_filename.replace('.jpg', '')
+    assert pic["id"] == expected_id
     
-    # Verify timestamp matches processed photo
-    assert photo["timestamp"] == processed_photo.exif.timestamp.isoformat()
+    # Verify timestamp matches processed pic
+    assert pic["timestamp"] == processed_pic.exif.timestamp.isoformat()
     
-    # Verify URLs are properly formatted
-    assert photo["full_url"] == f"photos/full/{processed_photo.generated_filename}"
-    assert photo["web_url"] == f"photos/web/{processed_photo.generated_filename}"
-    assert photo["thumb_url"] == f"photos/thumb/{processed_photo.generated_filename.replace('.jpg', '.webp')}"
+    # Verify filename is properly extracted
+    assert pic["filename"] == processed_pic.generated_filename
 
 
-def test_photo_metadata_with_photos_base_url(tmp_path):
-    """Test that photo URLs use configured PHOTOS_BASE_URL when available"""
-    from unittest.mock import patch
-    
-    # Create test gallery metadata JSON
-    metadata = {
-        "schema_version": "1.0",
-        "generated_at": "2024-10-28T12:00:00Z",
-        "collection": "wedding", 
-        "settings": {"timestamp_offset_hours": 0},
-        "photos": [
-            {
-                "id": "wedding-20240810T143045-r5a-0",
-                "original_path": "pics-full/IMG_001.jpg",
-                "file_hash": "abc123def456",
-                "deployment_file_hash": "deployment123def456",
-                "exif": {
-                    "original_timestamp": "2024-08-10T14:30:45",
-                    "corrected_timestamp": "2024-08-10T14:30:45", 
-                    "timezone_original": "+00:00",
-                    "camera": {"make": "Canon", "model": "EOS R5"},
-                    "subsecond": 123
-                },
-                "files": {
-                    "full": "full/wedding-20240810T143045-r5a-0.jpg",
-                    "web": "web/wedding-20240810T143045-r5a-0.jpg",
-                    "thumb": "wedding-20240810T143045-r5a-0.webp"
-                }
-            }
-        ]
-    }
-    
-    # Save metadata JSON to temp directory
-    metadata_file = tmp_path / "gallery-metadata.json"
-    with open(metadata_file, 'w') as f:
-        json.dump(metadata, f)
-    
-    # Test with photos base URL configured
-    with patch('settings.PHOTOS_BASE_URL', 'https://cdn.example.com/photos'):
-        with patch('src.services.s3_storage.is_dual_bucket_configured', return_value=False):
-            service = PhotoMetadataService()
-            json_data = service.generate_json_metadata_from_file(str(metadata_file))
-            
-            photo = json_data["photos"][0]
-            assert photo["full_url"] == "https://cdn.example.com/photos/photos/full/wedding-20240810T143045-r5a-0.jpg"
-            assert photo["web_url"] == "https://cdn.example.com/photos/photos/web/wedding-20240810T143045-r5a-0.jpg"
-            assert photo["thumb_url"] == "https://cdn.example.com/photos/photos/thumb/wedding-20240810T143045-r5a-0.webp"
-
-
-def test_photo_metadata_with_dual_bucket_base_url(tmp_path):
-    """Test that photo URLs work correctly with dual bucket configuration"""
-    from unittest.mock import patch
-    
-    # Create test gallery metadata JSON
-    metadata = {
-        "schema_version": "1.0",
-        "generated_at": "2024-10-28T12:00:00Z",
-        "collection": "wedding", 
-        "settings": {"timestamp_offset_hours": 0},
-        "photos": [
-            {
-                "id": "wedding-20240810T143045-r5a-0",
-                "original_path": "pics-full/IMG_001.jpg",
-                "file_hash": "abc123def456",
-                "deployment_file_hash": "deployment123def456",
-                "exif": {
-                    "original_timestamp": "2024-08-10T14:30:45",
-                    "corrected_timestamp": "2024-08-10T14:30:45", 
-                    "timezone_original": "+00:00",
-                    "camera": {"make": "Canon", "model": "EOS R5"},
-                    "subsecond": 123
-                },
-                "files": {
-                    "full": "full/wedding-20240810T143045-r5a-0.jpg",
-                    "web": "web/wedding-20240810T143045-r5a-0.jpg",
-                    "thumb": "wedding-20240810T143045-r5a-0.webp"
-                }
-            }
-        ]
-    }
-    
-    # Save metadata JSON to temp directory
-    metadata_file = tmp_path / "gallery-metadata.json"
-    with open(metadata_file, 'w') as f:
-        json.dump(metadata, f)
-    
-    # Test with dual bucket mode and photos base URL configured
-    with patch('settings.PHOTOS_BASE_URL', 'https://photos.example.com'):
-        with patch('src.services.s3_storage.is_dual_bucket_configured', return_value=True):
-            service = PhotoMetadataService()
-            json_data = service.generate_json_metadata_from_file(str(metadata_file))
-            
-            photo = json_data["photos"][0]
-            # In dual bucket mode, photos are stored without 'photos/' prefix
-            assert photo["full_url"] == "https://photos.example.com/full/wedding-20240810T143045-r5a-0.jpg"
-            assert photo["web_url"] == "https://photos.example.com/web/wedding-20240810T143045-r5a-0.jpg"
-            assert photo["thumb_url"] == "https://photos.example.com/wedding-20240810T143045-r5a-0.webp"
+# Removed tests for URL generation in metadata service - URLs are now generated in templates

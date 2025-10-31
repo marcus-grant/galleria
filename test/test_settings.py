@@ -130,11 +130,17 @@ class TestSettingsHierarchy:
         assert test_settings.S3_ARCHIVE_BUCKET is None
         assert test_settings.S3_ARCHIVE_REGION is None
         
-        assert test_settings.S3_PUBLIC_ENDPOINT is None
-        assert test_settings.S3_PUBLIC_ACCESS_KEY is None
-        assert test_settings.S3_PUBLIC_SECRET_KEY is None
-        assert test_settings.S3_PUBLIC_BUCKET is None
-        assert test_settings.S3_PUBLIC_REGION is None
+        assert test_settings.S3_SITE_ENDPOINT is None
+        assert test_settings.S3_SITE_ACCESS_KEY is None
+        assert test_settings.S3_SITE_SECRET_KEY is None
+        assert test_settings.S3_SITE_BUCKET is None
+        assert test_settings.S3_SITE_REGION is None
+        
+        assert test_settings.S3_PICS_ENDPOINT is None
+        assert test_settings.S3_PICS_ACCESS_KEY is None
+        assert test_settings.S3_PICS_SECRET_KEY is None
+        assert test_settings.S3_PICS_BUCKET is None
+        assert test_settings.S3_PICS_REGION is None
 
     def test_s3_settings_local_overrides(self):
         """Test that local settings override S3 defaults."""
@@ -146,11 +152,11 @@ S3_ARCHIVE_SECRET_KEY = 'test-archive-secret'
 S3_ARCHIVE_BUCKET = 'test-archive-bucket'
 S3_ARCHIVE_REGION = 'test-archive-region'
 
-S3_PUBLIC_ENDPOINT = 'test-public-endpoint.com'
-S3_PUBLIC_ACCESS_KEY = 'test-public-key'
-S3_PUBLIC_SECRET_KEY = 'test-public-secret'
-S3_PUBLIC_BUCKET = 'test-public-bucket'
-S3_PUBLIC_REGION = 'test-public-region'
+S3_SITE_ENDPOINT = 'test-site-endpoint.com'
+S3_SITE_ACCESS_KEY = 'test-site-key'
+S3_SITE_SECRET_KEY = 'test-site-secret'
+S3_SITE_BUCKET = 'test-site-bucket'
+S3_SITE_REGION = 'test-site-region'
 """
         
         with Patcher(modules_to_reload=[]) as patcher:
@@ -174,11 +180,11 @@ S3_PUBLIC_REGION = 'test-public-region'
             assert test_settings.S3_ARCHIVE_BUCKET == 'test-archive-bucket'
             assert test_settings.S3_ARCHIVE_REGION == 'test-archive-region'
             
-            assert test_settings.S3_PUBLIC_ENDPOINT == 'test-public-endpoint.com'
-            assert test_settings.S3_PUBLIC_ACCESS_KEY == 'test-public-key'
-            assert test_settings.S3_PUBLIC_SECRET_KEY == 'test-public-secret'
-            assert test_settings.S3_PUBLIC_BUCKET == 'test-public-bucket'
-            assert test_settings.S3_PUBLIC_REGION == 'test-public-region'
+            assert test_settings.S3_SITE_ENDPOINT == 'test-site-endpoint.com'
+            assert test_settings.S3_SITE_ACCESS_KEY == 'test-site-key'
+            assert test_settings.S3_SITE_SECRET_KEY == 'test-site-secret'
+            assert test_settings.S3_SITE_BUCKET == 'test-site-bucket'
+            assert test_settings.S3_SITE_REGION == 'test-site-region'
 
     def test_s3_settings_env_vars_override_locals(self):
         """Test that environment variables override S3 local settings."""
@@ -186,8 +192,8 @@ S3_PUBLIC_REGION = 'test-public-region'
 from pathlib import Path
 S3_ARCHIVE_ENDPOINT = 'local-archive-endpoint.com'
 S3_ARCHIVE_ACCESS_KEY = 'local-archive-key'
-S3_PUBLIC_ENDPOINT = 'local-public-endpoint.com'
-S3_PUBLIC_ACCESS_KEY = 'local-public-key'
+S3_SITE_ENDPOINT = 'local-site-endpoint.com'
+S3_SITE_ACCESS_KEY = 'local-site-key'
 """
         
         with Patcher(modules_to_reload=[]) as patcher:
@@ -205,8 +211,8 @@ S3_PUBLIC_ACCESS_KEY = 'local-public-key'
             env_overrides = {
                 'GALLERIA_S3_ARCHIVE_ENDPOINT': 'env-archive-endpoint.com',
                 'GALLERIA_S3_ARCHIVE_ACCESS_KEY': 'env-archive-key',
-                'GALLERIA_S3_PUBLIC_ENDPOINT': 'env-public-endpoint.com',
-                'GALLERIA_S3_PUBLIC_ACCESS_KEY': 'env-public-key',
+                'GALLERIA_S3_SITE_ENDPOINT': 'env-site-endpoint.com',
+                'GALLERIA_S3_SITE_ACCESS_KEY': 'env-site-key',
             }
             
             with patch.dict(os.environ, env_overrides):
@@ -216,8 +222,8 @@ S3_PUBLIC_ACCESS_KEY = 'local-public-key'
                 # Verify environment variables override local settings
                 assert test_settings.S3_ARCHIVE_ENDPOINT == 'env-archive-endpoint.com'
                 assert test_settings.S3_ARCHIVE_ACCESS_KEY == 'env-archive-key'
-                assert test_settings.S3_PUBLIC_ENDPOINT == 'env-public-endpoint.com'
-                assert test_settings.S3_PUBLIC_ACCESS_KEY == 'env-public-key'
+                assert test_settings.S3_SITE_ENDPOINT == 'env-site-endpoint.com'
+                assert test_settings.S3_SITE_ACCESS_KEY == 'env-site-key'
 
     def test_s3_settings_precedence_transitive(self):
         """Test complete S3 settings precedence: defaults -> locals -> env vars."""

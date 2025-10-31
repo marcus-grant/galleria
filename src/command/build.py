@@ -27,38 +27,38 @@ def build_gallery():
     # Create output directory structure
     create_output_directory_structure(Path.cwd())
     
-    # Generate photo metadata
+    # Generate pic metadata
     metadata_service = PhotoMetadataService()
     # Use gallery metadata file if it exists, otherwise scan files directly
     metadata_file = Path("prod/pics/gallery-metadata.json")
     if metadata_file.exists():
-        photo_data = metadata_service.generate_json_metadata_from_file(str(metadata_file))
+        pic_data = metadata_service.generate_json_metadata_from_file(str(metadata_file))
     else:
-        photo_data = metadata_service.generate_json_metadata()
+        pic_data = metadata_service.generate_json_metadata()
     
-    photos_count = len(photo_data['photos'])
+    pics_count = len(pic_data['pics'])
     gallery_generated = False
     
-    if photo_data['photos']:
+    if pic_data['pics']:
         # Render templates
         renderer = TemplateRenderer()
         
         # Generate gallery page
         gallery_template = Path("src/template/gallery.j2.html")
         if gallery_template.exists():
-            gallery_html = renderer.render("gallery.j2.html", photo_data)
+            gallery_html = renderer.render("gallery.j2.html", pic_data)
             renderer.save_html(gallery_html, "prod/site/gallery.html")
             gallery_generated = True
         
         # Generate index page  
         index_template = Path("src/template/index.j2.html")
         if index_template.exists():
-            index_html = renderer.render("index.j2.html", photo_data)
+            index_html = renderer.render("index.j2.html", pic_data)
             renderer.save_html(index_html, "prod/site/index.html")
     
     return {
         'success': True,
-        'photos_processed': photos_count,
+        'pics_processed': pics_count,
         'gallery_generated': gallery_generated
     }
 
@@ -90,7 +90,7 @@ def build():
     
     # Report results
     if result['success']:
-        click.echo(f"Found {result['photos_processed']} photos")
+        click.echo(f"Found {result['pics_processed']} pics")
         if result['gallery_generated']:
             click.echo("Gallery page created: prod/site/gallery.html")
             click.echo("Index page created: prod/site/index.html")

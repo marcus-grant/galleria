@@ -1,5 +1,18 @@
 # Galleria Changelog
 
+## 2025-10-31
+
+### URL Generation Architecture Refactor & Deployment Hash Fix
+
+- **Complete photo → pic naming refactor**: Renamed all template files, variables, and components from "photo" to "pic" for consistency (photo-cell.j2.html → pic-cell.j2.html, photo-grid.j2.html → pic-grid.j2.html)
+- **Settings migration**: Renamed PHOTOS_BASE_URL → PICS_BASE_URL with environment variable GALLERIA_PICS_BASE_URL
+- **Template/Metadata separation**: Fixed URL generation architecture - metadata now only stores filenames, templates construct URLs with base URL + directory + filename
+- **Template renderer update**: Added PICS_BASE_URL to template context for dynamic URL construction
+- **Metadata service cleanup**: Removed URL generation from PhotoMetadataService, now returns {"pics": [...]} with only filename field
+- **Deployment hash calculation fix**: Fixed generate_gallery_metadata to recalculate deployment hashes based on current timezone settings instead of using stale values
+- **Test architecture update**: Updated all metadata, template, and integration tests to use new pic naming and expect clean architecture
+- **Separation of concerns**: Photo organization data now separate from deployment URL configuration
+
 ## 2025-10-30
 
 ### Photo Base URL Support for CDN/Dual Bucket Deployment

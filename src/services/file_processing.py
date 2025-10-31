@@ -260,12 +260,37 @@ def generate_gallery_metadata(photos: List[ProcessedPhoto], collection_name: str
             thumb=f"thumb/{photo.generated_filename.replace('.jpg', '.webp').replace('.jpeg', '.webp')}" if photo.generated_filename else ""
         )
         
-        # Use deployment hash calculated during photo processing
+        # Recalculate deployment hash based on current timezone settings
+        deployment_hash = photo.file_hash or ""
+        target_timezone_offset_hours = getattr(settings, 'TARGET_TIMEZONE_OFFSET_HOURS', 13)
+        
+        # Only recalculate if we have a photo file and timezone is not preserve-original (13)
+        if photo.path and photo.path.exists() and target_timezone_offset_hours != 13:
+            try:
+                with open(photo.path, 'rb') as f:
+                    original_image_bytes = f.read()
+                
+                from src.services.s3_storage import modify_exif_in_memory
+                
+                # Use corrected timestamp for EXIF modification
+                modified_image_bytes = modify_exif_in_memory(
+                    original_image_bytes,
+                    photo.exif.timestamp,
+                    target_timezone_offset_hours
+                )
+                
+                import hashlib
+                deployment_hash = hashlib.sha256(modified_image_bytes).hexdigest()
+                
+            except Exception:
+                # Fall back to original file hash on error
+                deployment_hash = photo.file_hash or ""
+        
         photo_meta = PhotoMetadata(
             id=photo_id,
             original_path=str(photo.path),
             file_hash=photo.file_hash or "",
-            deployment_file_hash=photo.deployment_file_hash or photo.file_hash or "",
+            deployment_file_hash=deployment_hash,
             exif=exif_data,
             files=files_data
         )

@@ -26,8 +26,10 @@ def test_template_renderer_calls_correct_template_for_gallery():
         # Verify correct template was requested
         mock_get.assert_called_once_with("gallery.j2.html")
         
-        # Verify template was rendered with exact data provided
-        mock_template.render.assert_called_once_with(photo_data)
+        # Verify template was rendered with data plus added settings
+        expected_context = photo_data.copy()
+        expected_context['PICS_BASE_URL'] = None  # PICS_BASE_URL setting default
+        mock_template.render.assert_called_once_with(expected_context)
         
         # Verify we got the rendered result
         assert html == "<html>Gallery HTML</html>"

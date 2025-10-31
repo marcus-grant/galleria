@@ -95,7 +95,7 @@ def test_build_command_calls_build_gallery_function():
     # Mock the build_gallery function and directory checks
     mock_build_result = {
         'success': True,
-        'photos_processed': 5,
+        'pics_processed': 5,
         'gallery_generated': True
     }
     
@@ -109,7 +109,7 @@ def test_build_command_calls_build_gallery_function():
                 mock_build_gallery.assert_called_once()
                 
                 # Verify output reflects the results
-                assert "5 photos" in result.output
+                assert "5 pics" in result.output
                 assert "Gallery page created" in result.output
                 assert "Build complete" in result.output
 
@@ -118,9 +118,9 @@ def test_build_gallery_function_orchestrates_services():
     """Test that build_gallery function calls correct services with proper orchestration."""
     from src.command.build import build_gallery
     
-    # Mock photo data that PhotoMetadataService would return
-    mock_photo_data = {
-        'photos': [{'filename': 'wedding-20250809T132034.jpg', 'timestamp': '2024-01-01'}],
+    # Mock pic data that PhotoMetadataService would return
+    mock_pic_data = {
+        'pics': [{'filename': 'wedding-20250809T132034.jpg', 'timestamp': '2024-01-01'}],
         'total_count': 1
     }
     
@@ -131,7 +131,8 @@ def test_build_gallery_function_orchestrates_services():
                     # Setup mocks
                     mock_metadata_instance = Mock()
                     mock_metadata_service.return_value = mock_metadata_instance
-                    mock_metadata_instance.generate_json_metadata.return_value = mock_photo_data
+                    mock_metadata_instance.generate_json_metadata.return_value = mock_pic_data
+                    mock_metadata_instance.generate_json_metadata_from_file.return_value = mock_pic_data
                     
                     mock_renderer_instance = Mock()
                     mock_renderer_class.return_value = mock_renderer_instance
@@ -144,18 +145,18 @@ def test_build_gallery_function_orchestrates_services():
                     
                     # Verify return value
                     assert result['success'] == True
-                    assert result['photos_processed'] == 1
+                    assert result['pics_processed'] == 1
                     assert result['gallery_generated'] == True
                     
                     # Verify service orchestration
                     mock_metadata_service.assert_called_once()
-                    mock_metadata_instance.generate_json_metadata.assert_called_once()
+                    mock_metadata_instance.generate_json_metadata_from_file.assert_called_once()
                     
                     mock_renderer_class.assert_called_once()
                     # Verify both templates were rendered
                     assert mock_renderer_instance.render.call_count == 2
-                    mock_renderer_instance.render.assert_any_call("gallery.j2.html", mock_photo_data)
-                    mock_renderer_instance.render.assert_any_call("index.j2.html", mock_photo_data)
+                    mock_renderer_instance.render.assert_any_call("gallery.j2.html", mock_pic_data)
+                    mock_renderer_instance.render.assert_any_call("index.j2.html", mock_pic_data)
                     
                     # Verify both HTML files were saved
                     assert mock_renderer_instance.save_html.call_count == 2
@@ -165,33 +166,35 @@ def test_build_gallery_function_orchestrates_services():
                     mock_create_dir.assert_called_once()
 
 
-def test_build_gallery_function_handles_no_photos():
-    """Test that build_gallery function handles case when no photos are found."""
+def test_build_gallery_function_handles_no_pics():
+    """Test that build_gallery function handles case when no pics are found."""
     from src.command.build import build_gallery
     
-    # Mock empty photo data
-    mock_photo_data = {
-        'photos': [],
+    # Mock empty pic data
+    mock_pic_data = {
+        'pics': [],
         'total_count': 0
     }
     
     with patch('src.command.build.PhotoMetadataService') as mock_metadata_service:
         with patch('src.command.build.create_output_directory_structure') as mock_create_dir:
-            # Setup mocks
-            mock_metadata_instance = Mock()
-            mock_metadata_service.return_value = mock_metadata_instance
-            mock_metadata_instance.generate_json_metadata.return_value = mock_photo_data
-            mock_create_dir.return_value = {'created': True}
-            
-            # Call the pure function
-            result = build_gallery()
-            
-            # Verify return value
-            assert result['success'] == True
-            assert result['photos_processed'] == 0
-            assert result['gallery_generated'] == False
-            
-            # Verify only metadata service was called, not renderer
-            mock_metadata_service.assert_called_once()
-            mock_create_dir.assert_called_once()
+            with patch('pathlib.Path.exists', return_value=False):
+                # Setup mocks
+                mock_metadata_instance = Mock()
+                mock_metadata_service.return_value = mock_metadata_instance
+                mock_metadata_instance.generate_json_metadata.return_value = mock_pic_data
+                mock_metadata_instance.generate_json_metadata_from_file.return_value = mock_pic_data
+                mock_create_dir.return_value = {'created': True}
+                
+                # Call the pure function
+                result = build_gallery()
+                
+                # Verify return value
+                assert result['success'] == True
+                assert result['pics_processed'] == 0
+                assert result['gallery_generated'] == False
+                
+                # Verify only metadata service was called, not renderer
+                mock_metadata_service.assert_called_once()
+                mock_create_dir.assert_called_once()
 

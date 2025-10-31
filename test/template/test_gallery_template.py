@@ -21,30 +21,37 @@ def test_gallery_template_has_basic_structure():
     assert soup.find(class_='grid')
 
 
-def test_gallery_template_renders_photo_cells_when_photos_provided():
-    """Test that gallery template includes photo-cell components for each photo"""
-    renderer = TemplateRenderer()
-    photo_data = {
-        "photos": [
-            {
-                "filename": "2024-06-15_14-30-45_wedding-ceremony.jpg",
-                "thumb_url": "/photos/thumb/2024-06-15_14-30-45_wedding-ceremony.webp",
-                "web_url": "/photos/web/2024-06-15_14-30-45_wedding-ceremony.jpg"
-            },
-            {
-                "filename": "2024-06-15_14-32-10_wedding-rings.jpg", 
-                "thumb_url": "/photos/thumb/2024-06-15_14-32-10_wedding-rings.webp",
-                "web_url": "/photos/web/2024-06-15_14-32-10_wedding-rings.jpg"
-            }
-        ]
-    }
+def test_gallery_template_renders_pic_cells_when_pics_provided():
+    """Test that gallery template includes pic-cell components for each pic"""
+    from unittest.mock import patch
     
-    html = renderer.render("gallery.j2.html", photo_data)
-    soup = BeautifulSoup(html, 'html.parser')
-    
-    # Check that photo-cell components are rendered (images with click handlers)
-    clickable_images = soup.find_all('img', src=lambda x: x and 'thumb' in x)
-    assert len(clickable_images) == 2
+    with patch('src.services.template_renderer.settings.PICS_BASE_URL', 'https://pics.example.com'):
+        renderer = TemplateRenderer()
+        pic_data = {
+            "pics": [
+                {
+                    "filename": "2024-06-15_14-30-45_wedding-ceremony.jpg"
+                },
+                {
+                    "filename": "2024-06-15_14-32-10_wedding-rings.jpg"
+                }
+            ]
+        }
+        
+        html = renderer.render("gallery.j2.html", pic_data)
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # Check that pic-cell components are rendered (images with click handlers)
+        clickable_images = soup.find_all('img', src=lambda x: x and 'thumb' in x)
+        assert len(clickable_images) == 2
+        
+        # Verify URLs are constructed correctly with base URL
+        thumb_img = soup.find('img', src=lambda x: x and 'wedding-ceremony' in x)
+        assert thumb_img['src'] == 'https://pics.example.com/thumb/2024-06-15_14-30-45_wedding-ceremony.jpg'
+        
+        # Verify web links are constructed correctly
+        web_link = soup.find('a', href=lambda x: x and 'wedding-ceremony' in x)
+        assert web_link['href'] == 'https://pics.example.com/web/2024-06-15_14-30-45_wedding-ceremony.jpg'
     
     # TODO: Not ready for Alpine.js tests - post-deployment feature
     # click_elements = soup.find_all(attrs={'@click': True})

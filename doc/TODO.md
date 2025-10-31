@@ -26,7 +26,7 @@ uv run python manage.py deploy --setup-cors
 
 **All critical deployment-blocking issues resolved**:
 - [x] **Web symlinks verified** - `prod/pics/web/` directory exists with correct symlinks to photographer's web-optimized collection
-- [x] **Photos bucket base URL implemented** - Added `PHOTOS_BASE_URL` setting for CDN/dual bucket frontend URLs
+- [x] **Pics bucket base URL implemented** - Added `PICS_BASE_URL` setting for CDN/dual bucket frontend URLs
 - [x] **EXIF corrections verified** - Timezone fixes confirmed working via automated test (no deployment needed)
 - [x] **Thumbnail format confirmed** - WebP thumbnails working correctly (modern browser support sufficient)
 
@@ -38,11 +38,11 @@ uv run python manage.py deploy --setup-cors
 - [ ] **Settings migration guide** - Document complete migration from S3_PUBLIC_* to S3_SITE_*/S3_PICS_* naming convention
 - [ ] **Single bucket configuration** - Document how to configure S3_SITE_* settings for single bucket deployment
 - [ ] **Dual bucket configuration** - Document how to configure S3_SITE_* + S3_PICS_* settings for dual bucket deployment
-- [ ] **Environment variables guide** - Document all GALLERIA_S3_SITE_*, GALLERIA_S3_PICS_*, GALLERIA_PHOTOS_BASE_URL, GALLERIA_SITE_BASE_URL environment variables
+- [ ] **Environment variables guide** - Document all GALLERIA_S3_SITE_*, GALLERIA_S3_PICS_*, GALLERIA_PICS_BASE_URL, GALLERIA_SITE_BASE_URL environment variables
 - [ ] **Breaking changes notice** - Document that S3_PUBLIC_* settings are no longer supported (breaking change)
 
-**Photo Base URL Documentation**:
-- [ ] **CDN configuration guide** - Document how to configure PHOTOS_BASE_URL and SITE_BASE_URL for CDN deployment
+**Pic Base URL Documentation**:
+- [ ] **CDN configuration guide** - Document how to configure PICS_BASE_URL and SITE_BASE_URL for CDN deployment
 - [ ] **URL generation examples** - Provide examples of URLs generated in single bucket, dual bucket, and CDN modes
 - [ ] **Deployment mode detection** - Document how is_dual_bucket_configured() works and when dual mode is enabled
 
@@ -50,7 +50,7 @@ uv run python manage.py deploy --setup-cors
 - [ ] `doc/deployment/real-world-walkthrough.md` - Create comprehensive guide with:
   - Bucket migration steps (delete old, create S3_SITE_BUCKET + S3_PICS_BUCKET)
   - Environment variable migration (S3_PUBLIC_* → S3_SITE_*/S3_PICS_*)
-  - CDN URL configuration (GALLERIA_PHOTOS_BASE_URL, GALLERIA_SITE_BASE_URL)
+  - CDN URL configuration (GALLERIA_PICS_BASE_URL, GALLERIA_SITE_BASE_URL)
   - Step-by-step command verification (process → build → deploy)
   - Expected outputs and verification steps for each command
   - Browser testing checklist for deployed gallery
@@ -59,8 +59,8 @@ uv run python manage.py deploy --setup-cors
 **Module Documentation Updates**:
 - [ ] `doc/command/deploy.md` - Document new settings structure and dual bucket behavior
 - [ ] `doc/command/upload_photos.md` - Document S3_SITE_* settings usage  
-- [ ] `doc/command/build.md` - Document photo URL generation and metadata file usage
-- [ ] `doc/settings.md` - Document complete S3_SITE_*, S3_PICS_*, and photo base URL settings reference
+- [ ] `doc/command/build.md` - Document pic URL generation and metadata file usage
+- [ ] `doc/settings.md` - Document complete S3_SITE_*, S3_PICS_*, and pic base URL settings reference
 - [ ] `doc/services/photo_metadata.md` - Document URL generation logic and base URL support
 - [ ] `doc/deployment/production-setup.md` - Update with new settings examples and CDN configuration
 - [ ] `doc/testing/exif-verification.md` - Document EXIF correction verification test approach
@@ -92,11 +92,11 @@ uv run python manage.py deploy --setup-cors
 3. **Deployment Validation & Real-World Walkthrough**
    - [ ] **Bucket migration**: Delete old single bucket, create new S3_SITE_BUCKET and S3_PICS_BUCKET with proper CORS
    - [ ] **Settings migration**: Update environment variables from S3_PUBLIC_* to S3_SITE_*/S3_PICS_* naming (user to configure)
-   - [ ] **CDN configuration**: Set GALLERIA_PHOTOS_BASE_URL and GALLERIA_SITE_BASE_URL for production URLs (user to configure)
+   - [ ] **CDN configuration**: Set GALLERIA_PICS_BASE_URL and GALLERIA_SITE_BASE_URL for production URLs (user to configure)
    - [ ] **Process command verification**: Run `uv run python manage.py process-photos` and verify web symlinks, EXIF corrections, metadata generation
-   - [ ] **Build command verification**: Run `uv run python manage.py build` and verify gallery HTML uses correct photo URLs for CDN/dual bucket
-   - [ ] **Deploy command verification**: Run `uv run python manage.py deploy --setup-cors` and verify dual bucket deployment with photo URLs
-   - [ ] **Browser testing**: Test deployed gallery functionality - verify photos load correctly with new URL structure
+   - [ ] **Build command verification**: Run `uv run python manage.py build` and verify gallery HTML uses correct pic URLs for CDN/dual bucket
+   - [ ] **Deploy command verification**: Run `uv run python manage.py deploy --setup-cors` and verify dual bucket deployment with pic URLs
+   - [ ] **Browser testing**: Test deployed gallery functionality - verify pics load correctly with new URL structure
    - [ ] **Performance verification**: Verify incremental updates work correctly with dual bucket setup
    - [ ] **Rollback procedures**: Test rollback procedures for dual bucket deployment
    - [ ] **Load testing**: Performance testing with full 645 photo collection
@@ -633,6 +633,7 @@ valuable as building blocks for chronological UUID generation than as a standalo
 - [ ] **Add progress reporting to deploy command** - User should see real-time upload progress, not be in the dark about what's happening
 - [ ] **Improve deploy output clarity** - Clearly distinguish between files being updated vs skipped due to no changes needed
 - [ ] **Test deploy command idempotency** - Verify running deploy multiple times with no changes behaves correctly and shows appropriate "no changes" messaging
+- [ ] **Clean up old production infrastructure** - Delete old prod bucket and migrate archive bucket to new 'backup' Hetzner project with tight ACL permissions
 
 ---
 

@@ -1,0 +1,9 @@
+<!-- START: src/template/components/pic-cell.j2.html -->
+<a href="{{ PICS_BASE_URL }}/web/{{ pic.filename }}" target="_blank" class="block aspect-square cursor-pointer">
+  <img 
+    src="{{ PICS_BASE_URL }}/thumb/{{ pic.filename }}" 
+    alt="Wedding pic {{ pic.filename }}"
+    class="w-full h-full object-cover rounded-lg hover:shadow-lg transition-shadow"
+  />
+</a>
+<!-- END: src/template/components/pic-cell.j2.html -->

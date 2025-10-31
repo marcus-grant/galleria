@@ -20,8 +20,8 @@ class TestSettingsIsolationFix:
                 import settings as clean_settings
                 
                 # Should get clean defaults
-                assert clean_settings.S3_PUBLIC_REGION is None
-                assert clean_settings.S3_PUBLIC_ENDPOINT is None
+                assert clean_settings.S3_SITE_REGION is None
+                assert clean_settings.S3_SITE_ENDPOINT is None
                 assert clean_settings.TARGET_TIMEZONE_OFFSET_HOURS == 13
     
     def test_settings_test_mode_ignores_local_file(self):
@@ -37,11 +37,11 @@ class TestSettingsIsolationFix:
             with patch("dotenv.load_dotenv"):
                 # Even if local file exists, should be ignored in test mode
                 with patch("pathlib.Path.exists", return_value=True):
-                    with patch("builtins.open", mock_open(read_data="S3_PUBLIC_REGION = 'polluted'")):
+                    with patch("builtins.open", mock_open(read_data="S3_SITE_REGION = 'polluted'")):
                         import settings as test_mode_settings
                         
                         # Should ignore local file when in test mode
-                        assert test_mode_settings.S3_PUBLIC_REGION is None, \
+                        assert test_mode_settings.S3_SITE_REGION is None, \
                             "TEST_MODE should ignore local settings file"
     
     def test_settings_monkeypatch_isolation_works(self):
@@ -49,14 +49,14 @@ class TestSettingsIsolationFix:
         import settings
         
         # Store original value
-        original_region = getattr(settings, 'S3_PUBLIC_REGION', None)
+        original_region = getattr(settings, 'S3_SITE_REGION', None)
         
         # Temporarily change it
-        settings.S3_PUBLIC_REGION = "test-region"
-        assert settings.S3_PUBLIC_REGION == "test-region"
+        settings.S3_SITE_REGION = "test-region"
+        assert settings.S3_SITE_REGION == "test-region"
         
         # Reset to original (this is what pytest monkeypatch should do)
-        settings.S3_PUBLIC_REGION = original_region
+        settings.S3_SITE_REGION = original_region
         
         # Should be back to original value
-        assert settings.S3_PUBLIC_REGION == original_region
+        assert settings.S3_SITE_REGION == original_region

@@ -19,11 +19,11 @@ class PhotoMetadataService:
         from src.services.s3_storage import is_dual_bucket_configured
         is_dual_mode = is_dual_bucket_configured()
         
-        # Check if we have a photos base URL configured
-        photos_base_url = getattr(settings, 'PHOTOS_BASE_URL', None)
+        # Check if we have a pics base URL configured
+        pics_base_url = getattr(settings, 'PICS_BASE_URL', None)
         
-        if photos_base_url:
-            # Use configured photos base URL
+        if pics_base_url:
+            # Use configured pics base URL
             if is_dual_mode:
                 # In dual bucket mode, photos are stored without 'photos/' prefix
                 # Remove any 'photos/' prefix and path prefixes for thumbnails
@@ -40,7 +40,7 @@ class PhotoMetadataService:
                 else:
                     clean_path = f"photos/thumb/{relative_path}"
             
-            return f"{photos_base_url.rstrip('/')}/{clean_path}"
+            return f"{pics_base_url.rstrip('/')}/{clean_path}"
         else:
             # Fall back to relative URLs
             if relative_path.startswith('full/') or relative_path.startswith('web/'):
@@ -75,35 +75,22 @@ class PhotoMetadataService:
         }
     
     def generate_json_metadata(self):
-        photos = self.scan_processed_photos()
-        photo_data = []
+        pics = self.scan_processed_photos()
+        pic_data = []
         
-        for photo_path in photos:
-            filename = photo_path.name
+        for pic_path in pics:
+            filename = pic_path.name
             metadata = self.extract_metadata_from_filename(filename)
             
             if metadata:
-                # Generate URLs for the photos
-                base_name = filename.replace('.jpg', '')
-                # Check if WebP thumbnail exists, otherwise fall back to JPEG
-                webp_thumb = f"{base_name}.webp"
-                thumb_path = Path("prod/pics/thumb") / webp_thumb
-                if thumb_path.exists():
-                    thumb_filename = webp_thumb
-                else:
-                    thumb_filename = filename
-                    
-                photo_data.append({
+                pic_data.append({
                     "filename": filename,
                     "timestamp": metadata["timestamp"],
                     "camera": metadata["camera"],
-                    "counter": metadata["counter"],
-                    "thumb_url": f"photos/{thumb_filename}",
-                    "web_url": f"photos/{filename}",
-                    "full_url": f"photos/{filename}"
+                    "counter": metadata["counter"]
                 })
         
-        return {"photos": photo_data}
+        return {"pics": pic_data}
     
     def generate_json_metadata_from_file(self, metadata_file_path: str) -> dict:
         """Generate frontend JSON metadata from gallery-metadata.json file.
@@ -120,24 +107,25 @@ class PhotoMetadataService:
         # Parse using dataclass
         gallery_metadata = GalleryMetadata.from_dict(metadata_dict)
         
-        photo_data = []
+        pic_data = []
         
-        for photo in gallery_metadata.photos:
+        for pic in gallery_metadata.photos:
             # Combine camera make and model
             camera_parts = []
-            if photo.exif.camera.get("make"):
-                camera_parts.append(photo.exif.camera["make"])
-            if photo.exif.camera.get("model"):
-                camera_parts.append(photo.exif.camera["model"])
+            if pic.exif.camera.get("make"):
+                camera_parts.append(pic.exif.camera["make"])
+            if pic.exif.camera.get("model"):
+                camera_parts.append(pic.exif.camera["model"])
             camera_name = " ".join(camera_parts) if camera_parts else "Unknown"
             
-            photo_data.append({
-                "id": photo.id,
-                "timestamp": photo.exif.corrected_timestamp,
+            # Extract filename from any of the file paths (they all have same base name)
+            filename = Path(pic.files.full).name
+            
+            pic_data.append({
+                "id": pic.id,
+                "timestamp": pic.exif.corrected_timestamp,
                 "camera": camera_name,
-                "full_url": self._generate_photo_url(photo.files.full),
-                "web_url": self._generate_photo_url(photo.files.web),
-                "thumb_url": self._generate_photo_url(photo.files.thumb)
+                "filename": filename
             })
         
-        return {"photos": photo_data}
+        return {"pics": pic_data}

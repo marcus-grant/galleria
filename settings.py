@@ -40,7 +40,7 @@ S3_PICS_BUCKET = None  # Your photos bucket name
 S3_PICS_REGION = None  # e.g., 'eu-central-1'
 
 # Photo Base URLs for frontend (supports both single and dual bucket deployment)
-PHOTOS_BASE_URL = None  # Base URL for photos (e.g., 'https://cdn.example.com/photos' or relative path 'photos')
+PICS_BASE_URL = None  # Base URL for pics (e.g., 'https://cdn.example.com/pics' or relative path 'pics')
 SITE_BASE_URL = None  # Base URL for site files (e.g., 'https://cdn.example.com' or empty for relative)
 
 # XDG directories
@@ -111,7 +111,7 @@ S3_PICS_BUCKET = os.getenv('GALLERIA_S3_PICS_BUCKET', S3_PICS_BUCKET)
 S3_PICS_REGION = os.getenv('GALLERIA_S3_PICS_REGION', S3_PICS_REGION)
 
 # Photo Base URLs - environment variable overrides
-PHOTOS_BASE_URL = os.getenv('GALLERIA_PHOTOS_BASE_URL', PHOTOS_BASE_URL)
+PICS_BASE_URL = os.getenv('GALLERIA_PICS_BASE_URL', PICS_BASE_URL)
 SITE_BASE_URL = os.getenv('GALLERIA_SITE_BASE_URL', SITE_BASE_URL)
 
 # EXIF timestamp correction - environment variable override
