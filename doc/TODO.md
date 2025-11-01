@@ -8,7 +8,6 @@
 
 **Architecture**: See [doc/architecture/overview.md](architecture/overview.md) for system architecture and key components.
 
-
 ## Production Deployment Commands
 
 ```bash
@@ -25,6 +24,7 @@ uv run python manage.py deploy --setup-cors
 ## DEPLOYMENT READY ✅
 
 **All critical deployment-blocking issues resolved**:
+
 - [x] **Web symlinks verified** - `prod/pics/web/` directory exists with correct symlinks to photographer's web-optimized collection
 - [x] **Pics bucket base URL implemented** - Added `PICS_BASE_URL` setting for CDN/dual bucket frontend URLs
 - [x] **EXIF corrections verified** - Timezone fixes confirmed working via automated test (no deployment needed)
@@ -32,57 +32,7 @@ uv run python manage.py deploy --setup-cors
 
 **Deployment Setup**: See [doc/deployment/production-setup.md](deployment/production-setup.md) for detailed configuration instructions.
 
-## Documentation Tasks
-
-**Settings Migration Documentation**:
-- [ ] **Settings migration guide** - Document complete migration from S3_PUBLIC_* to S3_SITE_*/S3_PICS_* naming convention
-- [ ] **Single bucket configuration** - Document how to configure S3_SITE_* settings for single bucket deployment
-- [ ] **Dual bucket configuration** - Document how to configure S3_SITE_* + S3_PICS_* settings for dual bucket deployment
-- [ ] **Environment variables guide** - Document all GALLERIA_S3_SITE_*, GALLERIA_S3_PICS_*, GALLERIA_PICS_BASE_URL, GALLERIA_SITE_BASE_URL environment variables
-- [ ] **Breaking changes notice** - Document that S3_PUBLIC_* settings are no longer supported (breaking change)
-
-**Pic Base URL Documentation**:
-- [ ] **CDN configuration guide** - Document how to configure PICS_BASE_URL and SITE_BASE_URL for CDN deployment
-- [ ] **URL generation examples** - Provide examples of URLs generated in single bucket, dual bucket, and CDN modes
-- [ ] **Deployment mode detection** - Document how is_dual_bucket_configured() works and when dual mode is enabled
-
-**Real-World Deployment Guide**:
-- [ ] `doc/deployment/real-world-walkthrough.md` - Create comprehensive guide with:
-  - Bucket migration steps (delete old, create S3_SITE_BUCKET + S3_PICS_BUCKET)
-  - Environment variable migration (S3_PUBLIC_* → S3_SITE_*/S3_PICS_*)
-  - CDN URL configuration (GALLERIA_PICS_BASE_URL, GALLERIA_SITE_BASE_URL)
-  - Step-by-step command verification (process → build → deploy)
-  - Expected outputs and verification steps for each command
-  - Browser testing checklist for deployed gallery
-  - Troubleshooting common deployment issues
-
-**Module Documentation Updates**:
-- [ ] `doc/command/deploy.md` - Document new settings structure and dual bucket behavior
-- [ ] `doc/command/upload_photos.md` - Document S3_SITE_* settings usage  
-- [ ] `doc/command/build.md` - Document pic URL generation and metadata file usage
-- [ ] `doc/settings.md` - Document complete S3_SITE_*, S3_PICS_*, and pic base URL settings reference
-- [ ] `doc/services/photo_metadata.md` - Document URL generation logic and base URL support
-- [ ] `doc/deployment/production-setup.md` - Update with new settings examples and CDN configuration
-- [ ] `doc/testing/exif-verification.md` - Document EXIF correction verification test approach
-
-
-## Future Performance Improvements **[POST-DEPLOYMENT]**
-
-**Current Baseline**: 645 wedding photos processed in 9m15s (555 seconds) = ~1.16 photos/second
-
-**Tasks for Future Optimization**:
-- [ ] **Fix thumbnail file extension bug** - WebP thumbnails are generated correctly but saved with .jpg extension instead of .webp (browser handles correctly but misleading file naming)
-- [ ] **Investigate process-photos performance bottlenecks** - Profile individual photo processing to identify slow operations (EXIF extraction, file copying, thumbnail generation, deployment hash calculation)
-- [ ] **Develop performance improvements** - Implement optimizations such as parallel processing, optimized image operations, or caching strategies based on investigation findings  
-- [ ] **Document performance improvements** - Measure and document performance gains using the 9m15s baseline for 645 photos as comparison metric
-
 ### S3 Bucket Setup Requirements
-
-1. **Hetzner Object Storage Configuration**
-   - [ ] Create production bucket with appropriate permissions
-   - [ ] Configure CORS for frontend access
-   - [ ] Set up lifecycle policies for optimization
-   - [ ] Document bucket naming and region selection
 
 2. **CDN Integration (BunnyCDN)**
    - [ ] Configure BunnyCDN origin pointing to Hetzner bucket
@@ -94,14 +44,14 @@ uv run python manage.py deploy --setup-cors
    - [ ] **Bucket migration**: Delete old single bucket, create new S3_SITE_BUCKET and S3_PICS_BUCKET with proper CORS
    - [ ] **Settings migration**: Update environment variables from S3_PUBLIC_* to S3_SITE_*/S3_PICS_* naming (user to configure)
    - [ ] **CDN configuration**: Set GALLERIA_PICS_BASE_URL and GALLERIA_SITE_BASE_URL for production URLs (user to configure)
-   - [ ] **Process command verification**: Run `uv run python manage.py process-photos` and verify web symlinks, EXIF corrections, metadata generation
-   - [ ] **Build command verification**: Run `uv run python manage.py build` and verify gallery HTML uses correct pic URLs for CDN/dual bucket
-   - [ ] **Deploy command verification**: Run `uv run python manage.py deploy --setup-cors` and verify dual bucket deployment with pic URLs
-   - [ ] **Browser testing**: Test deployed gallery functionality - verify pics load correctly with new URL structure
+   - [x] **Process command verification**: Run `uv run python manage.py process-photos` and verify web symlinks, EXIF corrections, metadata generation
+   - [x] **Build command verification**: Run `uv run python manage.py build` and verify gallery HTML uses correct pic URLs for CDN/dual bucket
+   - [x] **Deploy command verification**: Run `uv run python manage.py deploy --setup-cors` and verify dual bucket deployment with pic URLs
+   - [ ] **Browser testing**: Test deployed gallery functionality - BLOCKED on CDN/static website hosting configuration (pics accessible via direct URLs, site needs CDN for browser access)
    - [ ] **Performance verification**: Verify incremental updates work correctly with dual bucket setup
    - [ ] **Rollback procedures**: Test rollback procedures for dual bucket deployment
    - [ ] **Load testing**: Performance testing with full 645 photo collection
-   
+
    **Important**: Environment variable configuration and command execution will be handed off to user. Never attempt to read shell environment variables.
 
 4. **Production Readiness**
@@ -109,6 +59,55 @@ uv run python manage.py deploy --setup-cors
    - [ ] Document operational procedures
    - [ ] Create deployment checklist
    - [ ] Plan for CI/CD integration
+
+## Documentation Tasks
+
+**Settings Migration Documentation**:
+
+- [ ] **Settings migration guide** - Document complete migration from S3_PUBLIC_* to S3_SITE_*/S3_PICS_* naming convention
+- [ ] **Single bucket configuration** - Document how to configure S3_SITE_* settings for single bucket deployment
+- [ ] **Dual bucket configuration** - Document how to configure S3_SITE_*+ S3_PICS_* settings for dual bucket deployment
+- [ ] **Environment variables guide** - Document all GALLERIA_S3_SITE_*, GALLERIA_S3_PICS_*, GALLERIA_PICS_BASE_URL, GALLERIA_SITE_BASE_URL environment variables
+- [ ] **Breaking changes notice** - Document that S3_PUBLIC_* settings are no longer supported (breaking change)
+
+**Pic Base URL Documentation**:
+
+- [ ] **CDN configuration guide** - Document how to configure PICS_BASE_URL and SITE_BASE_URL for CDN deployment
+- [ ] **URL generation examples** - Provide examples of URLs generated in single bucket, dual bucket, and CDN modes
+- [ ] **Deployment mode detection** - Document how is_dual_bucket_configured() works and when dual mode is enabled
+
+**Real-World Deployment Guide**:
+
+- [ ] `doc/deployment/real-world-walkthrough.md` - Create comprehensive guide with:
+  - Bucket migration steps (delete old, create S3_SITE_BUCKET + S3_PICS_BUCKET)
+  - Environment variable migration (S3_PUBLIC_* → S3_SITE_*/S3_PICS_*)
+  - CDN URL configuration (GALLERIA_PICS_BASE_URL, GALLERIA_SITE_BASE_URL)
+  - Step-by-step command verification (process → build → deploy)
+  - Expected outputs and verification steps for each command
+  - Browser testing checklist for deployed gallery
+  - Troubleshooting common deployment issues
+
+**Module Documentation Updates**:
+
+- [ ] `doc/command/deploy.md` - Document new settings structure and dual bucket behavior
+- [ ] `doc/command/upload_photos.md` - Document S3_SITE_* settings usage  
+- [ ] `doc/command/build.md` - Document pic URL generation and metadata file usage
+- [ ] `doc/settings.md` - Document complete S3_SITE_*, S3_PICS_*, and pic base URL settings reference
+- [ ] `doc/services/photo_metadata.md` - Document URL generation logic and base URL support
+- [ ] `doc/deployment/production-setup.md` - Update with new settings examples and CDN configuration
+- [ ] `doc/testing/exif-verification.md` - Document EXIF correction verification test approach
+
+## Future Performance Improvements **[POST-DEPLOYMENT]**
+
+**Current Baseline**: 645 wedding photos processed in 9m15s (555 seconds) = ~1.16 photos/second
+
+**Tasks for Future Optimization**:
+
+- [ ] **Fix EXIF timezone correction bug** - EXIF timezone not being corrected during deployment (should change +00:00 to +02:00 based on TARGET_TIMEZONE_OFFSET_HOURS setting)
+- [ ] **Fix thumbnail file extension bug** - WebP thumbnails are generated correctly but saved with .jpg extension instead of .webp (browser handles correctly but misleading file naming)
+- [ ] **Investigate process-photos performance bottlenecks** - Profile individual photo processing to identify slow operations (EXIF extraction, file copying, thumbnail generation, deployment hash calculation)
+- [ ] **Develop performance improvements** - Implement optimizations such as parallel processing, optimized image operations, or caching strategies based on investigation findings  
+- [ ] **Document performance improvements** - Measure and document performance gains using the 9m15s baseline for 645 photos as comparison metric
 
 ## Project Overview
 
@@ -189,11 +188,12 @@ Live Website
 
 1. **`process-photos`** - Photo processing pipeline
    - Reads original photos from `PIC_SOURCE_PATH_FULL`
-   - Reads web-optimized photos from `PIC_SOURCE_PATH_WEB` 
+   - Reads web-optimized photos from `PIC_SOURCE_PATH_WEB`
    - Extracts EXIF data and generates chronological filenames
    - Creates thumbnails (400x400 WebP) from web versions
    - Validates filename consistency between full and web collections
    - Outputs to `prod/pics` with structure:
+
      ```
      processed-photos/
        full/     (symlinks to originals with chronological names)
@@ -248,7 +248,6 @@ python manage.py deploy
 
 See `doc/architecture/static-site-generation.md` for implementation details.
 
-
 ---
 
 ### EXIF Timestamp Correction **[NEXT PRIORITY]**
@@ -256,11 +255,13 @@ See `doc/architecture/static-site-generation.md` for implementation details.
 **Deliverable**: Timezone correction system for camera clock errors
 
 #### Problem Identified
+
 - Camera EXIF shows `+00:00` (UTC) timezone but timestamps are 4 hours ahead of expected UTC
 - Ceremony at 4:00 PM Swedish time (UTC+2) should be 2:00 PM UTC, but photos show 6:10 PM
 - All 645 photos have systematic 4-hour offset from expected UTC timing
 
 #### Acceptance Criteria
+
 - [ ] **Settings-based offset**: Add `TIMESTAMP_OFFSET_HOURS` setting (e.g., `-4` hours)
 - [ ] **Processing integration**: Apply offset during `process-photos` command
 - [ ] **EXIF correction**: Modify EXIF data in production bucket copies
@@ -272,6 +273,7 @@ See `doc/architecture/static-site-generation.md` for implementation details.
 - [ ] **Documentation**: Log corrections applied for transparency
 
 #### Implementation Plan
+
 1. Add timezone offset setting to process-photos workflow
 2. Integrate EXIF correction into production bucket upload
 3. Test upload change detection and CDN invalidation
@@ -322,6 +324,7 @@ Purge: Manual trigger capability
 **Purpose**: Process original photos into web-ready formats
 
 **CLI Options**:
+
 - `--source`, `-s`: Override PIC_SOURCE_PATH_FULL
 - `--output`, `-o`: Override default output (prod/pics)
 - `--collection-name`: Name for this photo collection (default: from settings)
@@ -330,6 +333,7 @@ Purge: Manual trigger capability
 - `--workers`: Number of parallel workers for processing
 
 **Processing Steps**:
+
 1. Scan source directory for image files
 2. Extract EXIF data from each photo
 3. Generate chronological filenames with burst handling
@@ -343,12 +347,14 @@ Purge: Manual trigger capability
 **Purpose**: Generate static website from processed photos
 
 **CLI Options**:
+
 - `--skip-s3`: Build using local files instead of S3 URLs
 - `--template-dir`: Override template directory
 - `--output`, `-o`: Override OUTPUT_DIR
 - `--dev-mode`: Use unminified CSS/JS for development
 
 **Build Steps**:
+
 1. Load photo metadata from JSON cache
 2. Generate photo manifest for JavaScript
 3. Render Jinja2 templates (index, gallery, etc.)
@@ -365,6 +371,7 @@ See "Upload to Public Gallery Bucket" section above for details.
 **Purpose**: Deploy complete gallery (photos + static site) to production hosting
 
 **CLI Options**:
+
 - `--source`, `-s`: Override OUTPUT_DIR
 - `--dry-run`: Show deployment plan without executing
 - `--invalidate-cdn`: Trigger CDN cache purge
@@ -372,6 +379,7 @@ See "Upload to Public Gallery Bucket" section above for details.
 - `--site-only`: Upload only static site files (skip photos)
 
 **Storage Architecture**:
+
 - **Archive Bucket**: Original photographer files (read-only, never modified)
 - **Production Bucket**: Processed photos + static site for public access
   - `/photos/full/` - Full resolution with corrected EXIF
@@ -381,6 +389,7 @@ See "Upload to Public Gallery Bucket" section above for details.
   - `/index.html`, `/gallery.html` - Static site files
 
 **Architecture Plan**:
+
 - **Service Layer**: Create reusable `deploy_directory_to_s3()` function
   - Takes source dir, bucket, prefix, options
   - Handles S3 logic, progress, dry-run, error handling
@@ -394,6 +403,7 @@ See "Upload to Public Gallery Bucket" section above for details.
   - Track deployment state in metadata
 
 **Deployment Steps**:
+
 1. Call `deploy_directory_to_s3()` for photos (if not --site-only)
 2. Call `deploy_directory_to_s3()` for static site files (if not --photos-only)
 3. Trigger CDN cache invalidation (if --invalidate-cdn)
@@ -523,7 +533,6 @@ Alpine.data('photoGallery', () => ({
 - [ ] **BunnyCDN Analytics Integration**: Parse CDN access logs for photo popularity tracking
 - [ ] **Popularity-Based Ordering**: Sort photos by download frequency from CDN logs
 
-
 ### Photo Modal Navigation **[MOVED FROM PRE-DEPLOY]**
 
 **Deliverable**: Interactive photo preview with navigation
@@ -531,7 +540,7 @@ Alpine.data('photoGallery', () => ({
 #### Photo Modal Navigation Design
 
 - **Modal Size**: 80% viewport (keeping 20% for dismiss area)
-- **Navigation Zones**: 
+- **Navigation Zones**:
   - Left 25% of modal: Previous photo
   - Right 25% of modal: Next photo  
   - Middle 50%: No action (view photo)
@@ -618,7 +627,7 @@ Human-readable filenames chosen because they provide immediate temporal context,
 
 **Status**: Deprioritized - find-samples already provides needed functionality
 
-Originally planned to display saved sample metadata from JSON cache. However, find-samples 
+Originally planned to display saved sample metadata from JSON cache. However, find-samples
 already shows all necessary information when run, and the JSON output is primarily useful
 for debugging. The command structure and edge case detection from find-samples proved more
 valuable as building blocks for chronological UUID generation than as a standalone tool.
@@ -630,6 +639,7 @@ valuable as building blocks for chronological UUID generation than as a standalo
 **Current Issues with Deploy Command UX**:
 
 **Tasks for Future Optimization**:
+
 - [ ] **Split setup-cors into standalone command** - Deploy should fail and cite invalid CORS configuration, user should run dedicated setup-cors command
 - [ ] **Add progress reporting to deploy command** - User should see real-time upload progress, not be in the dark about what's happening
 - [ ] **Improve deploy output clarity** - Clearly distinguish between files being updated vs skipped due to no changes needed
@@ -639,4 +649,3 @@ valuable as building blocks for chronological UUID generation than as a standalo
 ---
 
 *This specification prioritizes rapid deployment of core functionality. Features marked as "Future" can be implemented in subsequent iterations after the initial gallery is live and functional.*
-
