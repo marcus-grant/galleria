@@ -27,7 +27,11 @@ def test_pic_grid_component_renders_pic_cells():
     """Test that pic-grid includes pic-cell components for each pic"""
     from unittest.mock import patch
     
-    with patch('src.services.template_renderer.settings.PICS_BASE_URL', 'https://pics.example.com'):
+    with patch('src.services.template_renderer.is_dual_bucket_configured', return_value=True), \
+         patch('src.services.template_renderer.settings') as mock_settings:
+        mock_settings.S3_PICS_ENDPOINT = "https://pics.example.com"
+        mock_settings.S3_PICS_BUCKET = "test-bucket"
+        
         renderer = TemplateRenderer()
         
         context = {
@@ -52,8 +56,8 @@ def test_pic_grid_component_renders_pic_cells():
         # Check that images have correct src with constructed URLs
         images = soup.find_all('img')
         assert len(images) == 2
-        assert any('https://pics.example.com/thumb/2024-06-15_14-30-45_pic1.jpg' in img.get('src', '') for img in images)
-        assert any('https://pics.example.com/thumb/2024-06-15_14-35-20_pic2.jpg' in img.get('src', '') for img in images)
+        assert any('https://test-bucket.pics.example.com/thumb/2024-06-15_14-30-45_pic1.jpg' in img.get('src', '') for img in images)
+        assert any('https://test-bucket.pics.example.com/thumb/2024-06-15_14-35-20_pic2.jpg' in img.get('src', '') for img in images)
 
 
 def test_pic_grid_component_is_configurable():

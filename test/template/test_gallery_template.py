@@ -25,7 +25,11 @@ def test_gallery_template_renders_pic_cells_when_pics_provided():
     """Test that gallery template includes pic-cell components for each pic"""
     from unittest.mock import patch
     
-    with patch('src.services.template_renderer.settings.PICS_BASE_URL', 'https://pics.example.com'):
+    with patch('src.services.template_renderer.is_dual_bucket_configured', return_value=True), \
+         patch('src.services.template_renderer.settings') as mock_settings:
+        mock_settings.S3_PICS_ENDPOINT = "https://pics.example.com"
+        mock_settings.S3_PICS_BUCKET = "test-bucket"
+        
         renderer = TemplateRenderer()
         pic_data = {
             "pics": [
@@ -47,11 +51,11 @@ def test_gallery_template_renders_pic_cells_when_pics_provided():
         
         # Verify URLs are constructed correctly with base URL
         thumb_img = soup.find('img', src=lambda x: x and 'wedding-ceremony' in x)
-        assert thumb_img['src'] == 'https://pics.example.com/thumb/2024-06-15_14-30-45_wedding-ceremony.jpg'
+        assert thumb_img['src'] == 'https://test-bucket.pics.example.com/thumb/2024-06-15_14-30-45_wedding-ceremony.jpg'
         
         # Verify web links are constructed correctly
         web_link = soup.find('a', href=lambda x: x and 'wedding-ceremony' in x)
-        assert web_link['href'] == 'https://pics.example.com/web/2024-06-15_14-30-45_wedding-ceremony.jpg'
+        assert web_link['href'] == 'https://test-bucket.pics.example.com/web/2024-06-15_14-30-45_wedding-ceremony.jpg'
     
     # TODO: Not ready for Alpine.js tests - post-deployment feature
     # click_elements = soup.find_all(attrs={'@click': True})

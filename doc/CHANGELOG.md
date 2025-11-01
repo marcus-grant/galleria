@@ -1,5 +1,15 @@
 # Galleria Changelog
 
+## 2025-11-01
+
+### TDD Fix: Dynamic Pic URL Generation
+
+- **URL generation bug fix**: Fixed broken pic URLs (was generating "None/thumb/...") by implementing dynamic PICS_BASE_URL generation based on dual vs single bucket settings
+- **Dual bucket support**: Template renderer now generates correct URLs using S3_PICS_* settings for dual bucket mode
+- **Single bucket support**: Generates S3_SITE_*/pics URLs for single bucket mode  
+- **TDD implementation**: Added comprehensive tests for URL generation logic
+- **Test cleanup**: Updated template tests to mock proper S3 settings instead of non-existent PICS_BASE_URL setting
+
 ## 2025-10-31
 
 ### URL Generation Architecture Refactor & Deployment Hash Fix

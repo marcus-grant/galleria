@@ -71,6 +71,7 @@ uv run python manage.py deploy --setup-cors
 **Current Baseline**: 645 wedding photos processed in 9m15s (555 seconds) = ~1.16 photos/second
 
 **Tasks for Future Optimization**:
+- [ ] **Fix thumbnail file extension bug** - WebP thumbnails are generated correctly but saved with .jpg extension instead of .webp (browser handles correctly but misleading file naming)
 - [ ] **Investigate process-photos performance bottlenecks** - Profile individual photo processing to identify slow operations (EXIF extraction, file copying, thumbnail generation, deployment hash calculation)
 - [ ] **Develop performance improvements** - Implement optimizations such as parallel processing, optimized image operations, or caching strategies based on investigation findings  
 - [ ] **Document performance improvements** - Measure and document performance gains using the 9m15s baseline for 645 photos as comparison metric

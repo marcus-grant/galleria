@@ -26,10 +26,10 @@ def test_template_renderer_calls_correct_template_for_gallery():
         # Verify correct template was requested
         mock_get.assert_called_once_with("gallery.j2.html")
         
-        # Verify template was rendered with data plus added settings
-        expected_context = photo_data.copy()
-        expected_context['PICS_BASE_URL'] = None  # PICS_BASE_URL setting default
-        mock_template.render.assert_called_once_with(expected_context)
+        # Verify template was rendered with data plus generated PICS_BASE_URL
+        call_args = mock_template.render.call_args[0][0]
+        assert 'PICS_BASE_URL' in call_args
+        assert call_args['PICS_BASE_URL'] is not None  # Should be generated, not None
         
         # Verify we got the rendered result
         assert html == "<html>Gallery HTML</html>"
@@ -57,3 +57,54 @@ def test_template_renderer_saves_rendered_html_to_file():
             
             # Verify HTML was written
             mock_file.write.assert_called_once_with("<html>Test</html>")
+
+
+def test_template_renderer_generates_pics_base_url_for_dual_bucket():
+    """Test that renderer generates correct PICS_BASE_URL for dual bucket setup"""
+    renderer = TemplateRenderer()
+    
+    # Mock dual bucket settings
+    with patch('src.services.template_renderer.settings') as mock_settings:
+        mock_settings.S3_PICS_ENDPOINT = "https://fsn1.your-objectstorage.com"
+        mock_settings.S3_PICS_ACCESS_KEY = "access_key"
+        mock_settings.S3_PICS_SECRET_KEY = "secret_key"
+        mock_settings.S3_PICS_BUCKET = "galleria-pics"
+        mock_settings.S3_PICS_REGION = "eu-central-1"
+        
+        # Mock is_dual_bucket_configured to return True
+        with patch('src.services.template_renderer.is_dual_bucket_configured', return_value=True):
+            mock_template = Mock()
+            mock_template.render.return_value = "<html>Gallery HTML</html>"
+            
+            with patch.object(renderer.env, 'get_template', return_value=mock_template):
+                photo_data = {"photos": [{"filename": "test.jpg"}]}
+                renderer.render_gallery(photo_data)
+                
+                # Verify PICS_BASE_URL was generated correctly for dual bucket
+                call_args = mock_template.render.call_args[0][0]
+                expected_url = "https://galleria-pics.fsn1.your-objectstorage.com"
+                assert call_args['PICS_BASE_URL'] == expected_url
+
+
+def test_template_renderer_generates_pics_base_url_for_single_bucket():
+    """Test that renderer generates correct PICS_BASE_URL for single bucket setup"""
+    renderer = TemplateRenderer()
+    
+    # Mock single bucket settings (no S3_PICS_* configured)
+    with patch('src.services.template_renderer.settings') as mock_settings:
+        mock_settings.S3_SITE_ENDPOINT = "https://fsn1.your-objectstorage.com"
+        mock_settings.S3_SITE_BUCKET = "galleria-site"
+        
+        # Mock is_dual_bucket_configured to return False
+        with patch('src.services.template_renderer.is_dual_bucket_configured', return_value=False):
+            mock_template = Mock()
+            mock_template.render.return_value = "<html>Gallery HTML</html>"
+            
+            with patch.object(renderer.env, 'get_template', return_value=mock_template):
+                photo_data = {"photos": [{"filename": "test.jpg"}]}
+                renderer.render_gallery(photo_data)
+                
+                # Verify PICS_BASE_URL was generated correctly for single bucket
+                call_args = mock_template.render.call_args[0][0]
+                expected_url = "https://galleria-site.fsn1.your-objectstorage.com/pics"
+                assert call_args['PICS_BASE_URL'] == expected_url
