@@ -1,5 +1,22 @@
 # Galleria Changelog
 
+## 2025-11-06
+
+### NormPic Module Extraction for Project Split
+
+- **Module extraction**: Extracted core photo processing modules to `deleteme-normpic-modules/` in preparation for splitting into standalone `normpic` CLI tool
+- **Extracted services**: 
+  - `src/services/exif.py` - EXIF parsing and timestamp handling (467 lines)
+  - `src/services/filename_service.py` - Human-readable filename generation (281 lines) 
+  - `src/services/file_processing.py` - Photo processing pipeline and batch operations (483 lines)
+  - `src/services/s3_storage.py` - S3-compatible storage backend (424 lines)
+  - `src/services/photo_validation.py` - Collection validation utilities (74 lines)
+  - `src/services/fs.py` - Filesystem utilities (20 lines)
+- **Extracted models**: `src/models/photo.py` - Photo data structures and JSON serialization (193 lines)
+- **Extracted tests**: Comprehensive test suite covering all extracted modules (~800 lines of test code)
+- **Project architecture**: Preparing for 3-way split: `normpic` (photo processing), `galleria` (gallery building), and site generation framework
+- **Future work**: The extracted modules will be refactored to remove Django-style settings dependencies and implement TOML-based configuration for standalone CLI operation
+
 ## 2025-11-01
 
 ### TDD Fix: Dynamic Pic URL Generation & Deployment Verification

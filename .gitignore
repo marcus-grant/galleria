@@ -215,3 +215,6 @@ pics-web/
 processed-photos/
 prod/
 output/
+
+# Splitting work - ignore deleteme directories
+*deleteme*
