@@ -10,8 +10,9 @@ Static photo gallery system with Django-style commands and functional paradigms.
 ## Core Documentation
 
 - **[Architecture](architecture/)** - System design and component overview
-- **[Deployment](deployment/)** - Production setup and deployment workflows  
+- **[Deployment](deployment/)** - Production setup and deployment workflows
 - **[Guides](guides/)** - Setup guides for CDN, storage, and development
+- **[Plan](plan/)** - Planning documents beyond current TODO items.
 
 ## Reference
 
@@ -27,4 +28,5 @@ uv run python manage.py build
 uv run python manage.py deploy --setup-cors
 ```
 
-See [deployment/production-setup.md](deployment/production-setup.md) for detailed setup instructions.
+See [deployment/production-setup.md](deployment/production-setup.md)
+for detailed setup instructions.
