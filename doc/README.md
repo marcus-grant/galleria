@@ -17,6 +17,7 @@ Static photo gallery system with Django-style commands and functional paradigms.
 ## Reference
 
 - **[Contributing Guidelines](CONTRIBUTE.md)** - Development workflow and standards
+- **[Quality Assurance](QA.md)** - How changes are verified before submission
 - **[Settings System](settings.md)** - Configuration and environment variables
 
 ## Quick Start
