@@ -86,14 +86,13 @@ A well-formed plan has this shape:
   A later diff that is disproportionate to this is a signal of drift.
 - The change closes with two commits by default: a `Doc:` commit for
   any reference documentation the work added, changed, or invalidated,
-  then a `Pln:` commit updating the task tracker and
-  `doc/CHANGELOG.md`.
+  then a `Pln:` commit updating `doc/plan/TODO.md` and `doc/CHANGELOG.md`.
   Either is skipped when the change genuinely touched nothing in its
   scope, but both are the default and their absence should be
   deliberate.
   The `Pln:` commit is last, leaving the change ready to submit.
 
-When a planned change is recorded in the task tracker, it takes the
+When a planned change is recorded in `doc/plan/TODO.md`, it takes the
 same shape: a branch-named section, a short framing of the work, an
 ordered task list that opens with the branch task, runs the cycles
 through the middle, and closes with the Doc and Pln commits described
@@ -345,7 +344,7 @@ wider ecosystem.
 
 ### Maintaining state during a change
 
-The task tracker and `doc/CHANGELOG.md` are maintained throughout,
+`doc/plan/TODO.md` and `doc/CHANGELOG.md` are maintained throughout,
 treated as append-and-prune.
 Do not read either file end to end to make an edit.
 Find the section with `grep -n`, view a few lines around it, and edit
@@ -363,7 +362,7 @@ writes its CHANGELOG entry once, in the final commit.
 Writing lines only to delete them in the same sitting is churn, not a
 record.
 
-The final commit deletes completed task lines from the tracker rather
-than marking them done.
-The CHANGELOG is the record of what was done; the tracker is the record
-of what remains.
+The final commit deletes completed task lines from `doc/plan/TODO.md`
+rather than marking them done.
+The CHANGELOG is the record of what was done; TODO is the record of
+what remains.
