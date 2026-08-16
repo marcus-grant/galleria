@@ -114,6 +114,15 @@ form one coherent piece of work.
 Build one behavior at a time, in small steps with clear logical breaks.
 Run the relevant tests immediately after each testable addition.
 Broken code is never committed: every commit leaves the suite green.
+Before writing tests, know what already exists.
+Read the `conftest.py` files covering the area you are working in,
+and look at how neighboring test modules are laid out: what is
+grouped into classes, what shares setup, and which helpers or
+factories build the objects under test.
+Fixtures are centralized so they can be reused, and a test that
+rebuilds a fixture's work inline is a duplicate that drifts.
+This costs a couple of minutes and is the difference between adding
+to the suite and growing a parallel one beside it.
 
 ### Front-end work
 

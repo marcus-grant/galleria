@@ -81,6 +81,12 @@ removed token, and the assertions it promised:
   Empty output is the proof.
 - Grep `test/` for the newly introduced symbol to confirm a test
   exercises it, rather than it being defined and never called.
+- Grep the changed test files for hardcoded literals in assertions,
+  particularly numbers and format strings.
+  A literal the test does not actually care about is often a
+  configuration line that has not been written yet: the test asserts
+  400 when it means the configured maximum dimension.
+  Not every literal is one, but the pattern is worth a look.
 
 Use `grep -I --include='*.py'` for Python, widening the include when
 the change is in templates, stylesheets, or scripts.
@@ -187,3 +193,4 @@ A change is signed off when all of the following hold:
 
 Open items go back as specific, surgical requests, not as a direction
 to start over.
+
