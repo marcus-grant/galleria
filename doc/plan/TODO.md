@@ -1,268 +1,310 @@
-# Galleria v0.1 MVP Plan
+# Galleria tasks
 
-Owner: Marcus Grant.
-Status: active.
-This is a provisional, PR-sequenced plan to take the existing Galleria to a
-v0.1 MVP.
-It is a companion to the Galleria near-term design document, which holds the
-scope and non-goals; this document records the current state of the code, the
-order of pull requests to MVP, and the upstream contract dependency that gates
-part of that work.
-It also records cleanup candidates for a future audit.
+Planned, active, and imminent work.
+Completed tasks are deleted from this file; the
+[changelog](../CHANGELOG.md) is the record of what was done.
 
-Galleria is one component of a wider ecosystem.
-It consumes a manifest produced by NormPic and outputs a static gallery that a
-separate composer deploys.
-The whole is more than the sum of its parts, and this Galleria iteration is a
-transitional stepping stone toward a more durable photo-presentation layer.
+Galleria reads two photo manifests produced by NormPic, pairs the
+variants, and generates a static gallery to a local output directory.
+It does not deploy that output and does not process source photos.
 
-## Current state
+The goal this sequence works toward is a presentable wedding gallery
+for a real 645-photo collection.
 
-These are the findings from reading the code, recorded so the implementer
-knows the starting point.
+## Upstream contract
 
-Galleria predates the NormPic split.
-It currently sources photos by scanning filesystem directories, extracts EXIF,
-generates chronological filenames, computes a dual hash (a SHA-256 of the
-original and a SHA-256 of an EXIF-modified copy), creates symlinks, generates
-WEBP thumbnails, writes a gallery-metadata.json, and uploads to remote storage.
+Galleria consumes NormPic's manifest format, currently v0.1.1.
+Field semantics are documented at
+<https://github.com/marcus-grant/normpic/blob/v0.1.1/doc/architecture/manifest-contract.md>.
 
-There is no NormPic manifest consumption today.
-The internal gallery-metadata.json, modelled by the GalleryMetadata dataclass,
-is a pre-split manifest analog.
-Its fields differ from the NormPic v0.1.0 direction: a schema_version rather
-than a version, a dual hash rather than a single content-addressed hash, a
-precomputed file block of full, web, and thumb paths rather than a single
-relative path, and a processing settings block.
+Do not copy that contract into this repository, in code or in
+documentation.
+A copy is a second definition of one thing and it drifts silently.
+Point at the tagged document instead.
 
-The reusable core is the renderer.
-Jinja2 templates iterate a flat list named pics.
-The processing, hashing, and upload code is residue, now owned upstream:
-NormPic processes content, and the composer deploys it.
+Galleria does not validate manifests.
+marcustack runs NormPic and validates its output before handing
+manifests over, so a manifest reaching Galleria has already been
+checked.
+Galleria reads the JSON, uses the fields it needs, and fails clearly
+naming any required field that is missing.
 
-The templates are skeletal.
-base.j2.html wires no stylesheet and no scripts.
-gallery.j2.html and pic-cell.j2.html style with Tailwind utility classes.
-pic-cell wraps each thumbnail in a plain anchor that opens the web image in a
-new tab; there is no preview overlay and no client-side behavior.
+## Working through this sequence
 
-Thumbnail generation resizes to a 400 pixel maximum dimension and saves WEBP at
-quality 85.
-This produces files well below the design document's stated target of about
-240KB, so the target and the implementation disagree and must be reconciled.
+This repository predates the split into NormPic, marcustack, and
+b3c32, and still carries residue from it: modules whose work moved
+upstream, and tests covering behavior the project has shed.
 
-Static asset bundling copies CSS and JS files from a source directory into the
-output.
-This is the mechanism the stylesheet and any scripts flow through.
+Every task below will encounter some.
+Remove it as part of the task when it is adjacent to the work.
+When it is not adjacent, add it here as a standalone task rather
+than leaving it unmentioned.
+This note goes away when the residue does.
 
-## The render seam
+## MVP sequence
 
-The templates consume a single flat list named pics.
-Each entry carries an id, a timestamp, a camera string, and a filename, and the
-templates build photo URLs from a base URL plus a web or thumb path.
-Any data source that produces this pics list can drive the renderer.
-The manifest reader is therefore a new producer of pics, not a rewrite of the
-render path.
+The tasks below are ordered by what unblocks what.
+Each is a separate change with its own plan and sign-off.
 
-## Manifest contract dependency
+### ft/manifest-read-v0-1
 
-Read this before planning the manifest migration.
+Read the two manifests and produce the list of pics the renderer
+consumes.
 
-The NormPic v0.1.0 manifest contract is being formalized in the NormPic
-repository and is not final.
-It will change.
+Keep this module standalone, with no page-generation logic in it.
+NormPic may later expose a shared reading surface that consumers sit
+on top of; a reader entangled with rendering could not adopt it.
 
-What is currently known about the manifest format, including the legacy
-gallery-metadata.json shape described above, is superseded and must not be
-relied on.
+- Read both manifests as plain JSON.
+- Pair full and web variants on `relative_path`.
+  `original_filename` is unpopulated by every producer path and
+  cannot be a key.
+- Refuse a manifest whose `version` major.minor is unrecognized.
+  This is the contract's one consumer MUST that is not validation.
+- Sort explicitly.
+  The `pic` array's order is not semantically meaningful and is
+  known to be unstable on NormPic's cache path.
+- Sort chronologically by `timestamp`, which is optional and
+  nullable.
+  Name the fallback for pics without one; `mtime` is required and is
+  the obvious candidate.
+- Fail clearly on a missing required field, naming the field and the
+  manifest it was missing from.
+- Report back if anything makes the array's original order matter.
+  That would escalate a fix upstream to NormPic.
 
-The implementer of the migration binds against NormPic's published v0.1.0
-contract once it is ready, and confirms every field against it.
+Boundary cases to pin: an empty manifest, a pic present in one
+variant set but not the other, a pic with no timestamp, and a
+manifest at an unrecognized version.
 
-The directional expectations from the design document are expectations to
-verify against the contract, not a specification to implement.
-They are: a single content-addressed hash (BLAKE2b-120, Crockford Base32) with
-a contract-defined prefix, a version field, a per-pic relative path, an
-optional original filename, a reserved tag array, and the removal of the error,
-warning, and processing-status fields.
+Real manifests for the 645-photo collection pair 645/645.
 
-The hash prefix appears in more than one form across sources.
-It is the NormPic contract's to fix, and this plan does not pin it.
+### ft/cli-config
 
-## PR plan
+Give Galleria the interface marcustack calls it through.
 
-A provisional sequence.
-PRs 1 through 5 are unblocked and can proceed now.
-PR 6 is gated on the NormPic contract.
-Tests come first wherever behavior is deterministic: thumbnail sizing, the page
-model and pagination, index generation, and the manifest reader.
-Stylesheet and interaction work is reviewed visually.
+marcustack invokes the CLI, never a task-runner recipe.
+Three paths are required with no defaults: the full-collection
+manifest, the web-collection manifest, and the output directory.
+Separate manifest paths rather than a root with an assumed layout;
+the two manifests may not share a parent.
 
-1. Thumbnail pass.
-   Verify and fix thumbnail generation.
-   Reconcile the output target: the current 400 pixel, quality 85 WEBP falls
-   well below the stated 240KB goal, so decide the real target (larger
-   dimensions, a size-driven encode, or smaller thumbnails accepted) and record
-   it.
-   Surface failures to the log rather than silently returning a false result.
-   Confirm the thumbnail URL extension: cells request a thumb path built from
-   the photo filename while thumbnails are written with a .webp extension, which
-   looks mismatched.
-   Tests first.
+Missing configuration or a missing manifest fails immediately,
+naming what was not found.
 
-2. CSS foundation.
-   Wire an in-repo stylesheet into base.j2.html.
-   Base it on PicoCSS and add BEM classes for the gallery-specific blocks, such
-   as gallery and thumb.
-   Convert the Tailwind utility classes in gallery.j2.html and pic-cell.j2.html
-   to those BEM classes.
-   The stylesheet is an in-repo placeholder until marcus-retro, the provisional
-   name for the shared CSS design system, is ready.
-   The BEM class surface produced here is the list handed to the marcus-retro
-   owner during contract coordination, authored in BEM so that later
-   reconciliation is mostly renaming rather than restructuring.
+- Add the three required paths to `build`, which currently takes no
+  options and hardcodes all three.
+- Emit relative paths in rendered output.
+  Output must be self-contained and portable; a CDN hostname baked
+  into generated HTML is stale the moment anything moves.
+  The relative-path branch in `photo_metadata.py` already exists but
+  is unreachable from the render pipeline.
+- Remove `PICS_BASE_URL`, `SITE_BASE_URL`, and
+  `_generate_pics_base_url()`.
+  The renderer ignores the settings and builds its own URL from S3
+  settings, which is two sources of truth for one value.
+- Decide each existing command's fate: `process-photos`,
+  `upload-photos`, `deploy`, `find-samples`, `collection-stats`.
+  Their work moved to NormPic and marcustack.
+- Remove the modules those commands depend on, and their tests, as
+  they are orphaned: EXIF extraction, filename generation, S3
+  storage, photo validation, and the processing pipeline.
+  Thumbnail generation lives in `file_processing.py` and stays;
+  split it out rather than deleting the file.
+- Remove the S3 settings left unread.
 
-3. Click-to-preview.
-   Replace the plain new-tab anchor in pic-cell with an Alpine.js
-   near-full-page preview overlay.
-   The overlay shows the web-optimized image, a link to the original, caption
-   metadata where the manifest provides it, a close control, and keyboard
-   navigation with the arrow keys and escape.
-   Keep a working anchor as the no-JS fallback.
-   Wire Alpine through the scripts block and the static asset copy.
-   Front-end, reviewed visually.
+This is the largest task in the sequence and the one most likely to
+want per-commit sign-off.
 
-4. Pagination and progressive scroll.
-   Generate paginated pages at a fixed thumbnails-per-page count, with pager
-   links at the foot of each page for the no-JS path.
-   With JS, hide the pager links and lazy-load later pages on scroll until the
-   collection is exhausted.
-   The page model and pagination math are tested first; the scroll behavior is
-   front-end.
-   A photos JSON output already exists and may serve the client-side fetch,
-   while the design document parses the paginated pages; choose one approach in
-   this PR.
+### ft/static-gallery
 
-5. Gallery index.
-   Generate a self-contained index page that lists collections and serves as
-   the entry point for the gallery domain.
-   Light tests on the index model.
+A correct gallery with no JavaScript at all.
 
-6. Manifest contract migration (gated).
-   Implement a reader that parses NormPic's published v0.1.0 manifest into the
-   pics model: validate the version field, carry the single content-addressed
-   hash, resolve the per-pic relative path against the configured destination
-   root, surface the optional original filename, and tolerate the reserved tag
-   array without acting on it.
-   Make this reader the gallery build's data source in place of the legacy
-   gallery-metadata.json and filename-scan producers, leaving the legacy code in
-   place but out of the build flow.
-   Tests first, against fixtures drawn from the real contract.
-   Do not start until the contract exists.
-   This PR may split into a reader-and-mapping PR and a wire-in PR.
+This is the fallback, and it must be right on its own before
+anything enhances it.
 
-## Milestones
+- Thumbnail links the web version.
+- Full resolution reachable by an explicit separate link, never from
+  the thumbnail itself.
+  Originals are often over 20MB.
+- Configurable pagination.
+  None exists today; the template loops over the whole collection
+  unbounded, which for 645 photos is one enormous page.
+- Fixed-dimension containers so images arriving do not reflow the
+  grid.
 
-Going live is gated on PRs 1 through 5, not on NormPic.
-The wedding set can render from the existing legacy producer while the contract
-is formalized, and PR 6 then swaps the data source to the real manifest.
-This keeps the MVP milestone independent of upstream contract work, consistent
-with each component being independently deployable.
-Confirm the legacy producer runs end to end before depending on this path.
+Display order is Galleria's decision, not NormPic's.
+Chronological is the default for a wedding.
 
-## Cleanup candidates and doc realignment
+### ft/dev-loop
 
-This section records candidates for a future cleanup.
-Trimming is out of scope for this work.
-A dedicated audit precedes any removal, and a separate maintainer does that
-pass.
-Code trimming in particular waits until after the manifest migration, because
-the residue pipeline is load-bearing for the interim legacy render path.
+Make iteration on templates and styles fast.
 
-### Code residue (keep for now)
+Most of this exists: `serve --reload` watches `src/template` and
+`static`, and rebuilds through a subprocess.
+Build does no image processing, so it is fast regardless of
+collection size.
 
-The directory scanning, EXIF extraction, dual hashing, EXIF-modified deployment
-hash, remote upload, and deploy code is now owned upstream by NormPic or by the
-composer.
-It stays in the repository and out of the v0.1 gallery build.
-Once the manifest reader replaces the legacy producer it becomes the largest
-trim, so it is a post-migration candidate rather than a current one.
-CDN movement belongs to the composer or to NormPic, not to Galleria; v0.1 ends
-at local output.
+- Wire the static asset copy into `build`.
+  `static_assets.py` has `copy_css_files()` and `copy_js_files()`
+  but nothing calls them.
+- Create the `static` directory the watcher already watches and the
+  build already creates empty output directories for.
+- Make a missing `watchdog` loud.
+  Reload currently catches the ImportError and prints a warning,
+  then silently does not reload, so an edit appears to do nothing
+  and the wrong thing gets debugged.
+- Assemble a small fixture collection for the loop.
+  Iterating against 645 photos is not the working rhythm; the real
+  collection is for acceptance runs.
 
-### File candidates (low risk, decision still belongs to the audit)
+### ft/gallery-styling
 
-- Two settings examples exist, settings.local.example.py and
-  settings.local.py.example; one naming should remain.
-- doc/services/uuid_service.md documents a uuid_service that is absent from src,
-  likely superseded by filename_service; verify, then remove.
+The first stylesheet this project has had.
 
-### Doc realignment
+There is no CSS file anywhere in the repository.
+Styling today is Tailwind utility classes against a CDN script tag,
+which ships a compiler to the browser and is explicitly not a
+production configuration.
 
-The documentation footprint is dominated by the residue pipeline, while the
-renderer is thinly covered.
-The candidates below are lower risk than code trimming but still belong to the
-maintainer's audit.
+- Remove the Tailwind CDN tag and the utility classes.
+  Roughly nine test assertions name Tailwind classes and will need
+  updating.
+- PicoCSS as the base.
+- A simple custom stylesheet over it.
+  No real theming yet.
+- Colors, spacing, and fonts as CSS custom properties at the root,
+  so a later shared theme is an override of variables rather than a
+  rewrite of rules.
+- Conventional BEM block names rather than clever ones, so a second
+  consumer would plausibly arrive at the same words.
 
-- Misleading entry point: the README quick start presents process-photos,
-  build, and deploy as the pipeline.
-  This is the first thing a cold reader sees and misrepresents the
-  renderer-and-manifest direction.
-  It is the highest-priority doc fix.
-- Stale, describe residue: command/deploy, command/process-photos,
-  command/collection-stats, guides/bunnycdn-setup, guides/remote-storage-setup,
-  services/s3_storage, services/deployment, services/exif_modification, the
-  deployment subdirectory, and architecture/metadata-consistency.
-- Reframe for the renderer focus: README, architecture/overview,
-  architecture/static-site-generation, services/file_processing, and
-  settings.md.
-- TODO.md is a pre-split development specification of the steps to MVP; the
-  present plan supersedes much of it, so it needs reconciliation or retirement.
-- Leave as is: changes, old-changelogs, CHANGELOG, and testing.
+Some renaming later is expected and fine.
+Spend no more effort here than that.
 
-Doc staleness above is inferred from titles and the code already read; the
-maintainer confirms by reading before acting.
+### ft/rendition-model
 
-## Conventions
+Make derived image sets configurable rather than hardcoded.
 
-- Task runner: just.
-- Packaging and environment: uv, pyproject.toml, pytest.
-- Tests first wherever behavior is deterministic.
-- Styling: BEM classes on a PicoCSS base.
-- Versioning: semver, v0.x while pre-stable.
+Thumbnails are currently 400px WEBP at quality 85, from module-level
+constants, generated from the web set.
+Derived sets are build output, not content, and are never
+manifested.
 
-## Related projects
+- A rendition spec as data: format, maximum dimension, and a
+  quality-or-byte-budget constraint.
+  The constraint must admit both, even if only quality is
+  implemented now, because a byte budget means iterating encode
+  attempts and an interface taking only quality cannot grow into it.
+- The generator takes a spec instead of reading module constants.
+  Behavior unchanged; the existing values become the default spec.
+- Configuration supplies the specs.
+  One rendition at MVP, more without code changes.
+- Named generator implementations behind one call, so a second
+  format lands without touching callers.
 
-Each piece here sits in the wider ecosystem; the statuses below are current at
-the time of writing.
+Keep WEBP for grid thumbnails.
+It is a good size-to-quality compromise and its incremental decoding
+suits tiles.
 
-- NormPic.
-  Upstream.
-  Owns the manifest contract that the migration PR consumes.
-  Status: design complete; the v0.1.0 contract is being formalized in its own
-  repository and is not final.
-- Composer (marcustack).
-  Orchestrates Galleria's build and handles CDN upload.
-  Status: design complete; awaiting bootstrap.
-- marcus-retro (provisional name).
-  Shared CSS design system.
-  Galleria consumes its bundle at build time once it exists, with in-repo CSS
-  until then.
-  Status: parked pre-bootstrap.
-- personal-site.
-  11ty renderer.
-  Independent of Galleria today; a future 11ty-plugin direction would bring
-  Galleria into its process.
-  Status: design complete; awaiting bootstrap.
-- Future Rust rewrite.
-  Anticipated.
-  Reuses the manifest contract, with Python Galleria as the reference
-  implementation.
-  Status: not designed.
+### ft/preview-modal
 
-## Out of scope for v0.1
+Clicking a thumbnail opens a preview.
 
-The full list is in the Galleria near-term design document.
-In short: tag-driven views, per-collection compression configurability,
-self-managed CDN upload, EXIF display beyond the manifest, the Rust rewrite, and
-11ty plugin packaging.
+- Modal or full-page.
+- Show the scaled-up thumbnail immediately, swap in the web version
+  once loaded.
+- A toggle switches to full resolution.
+- A download button acts on whichever rendition is currently
+  displayed.
+- Keyboard navigation and a working no-JS anchor underneath.
+
+The web set averages 3.5MB per image across 645 photos.
+That is "web" as a photographer means it, sized to survive a social
+network's ingest, not as a browser means it.
+The swap will feel like waiting, which is what the decision after
+this task addresses.
+
+### ft/lazy-scroll
+
+Lazy-loaded infinite scroll, overriding the static pagination.
+
+- Not literally infinite.
+- Configurable.
+- Load ahead of the viewport by a tunable distance.
+- Fixed-dimension containers so arriving images do not reflow.
+
+Blank tiles filling in behind a fast scroll is the failure mode to
+avoid.
+
+### Decision point: progressive thumbnails
+
+Not a task.
+After the preview works, look at it on mobile against the real
+collection.
+
+If the scaled-up WEBP thumbnail is too coarse to sit under while a
+3.5MB image loads, a progressive JPEG rendition lands before MVP as
+a second implementation behind the rendition model.
+If it holds up, this waits until after.
+
+WEBP has incremental decoding, which paints top-to-bottom as bytes
+arrive.
+It does not have progressive decoding, the blurry-whole-image effect
+that makes a good placeholder.
+That is a JPEG feature.
+
+Decide this by looking at it, not by reasoning about it.
+
+### doc/mvp-docs-pass
+
+Reconcile the documentation subdirectories that describe the
+pre-split project.
+
+Left until here because each describes a moving target.
+
+- `doc/architecture/`: rewrite against what Galleria actually is.
+- `doc/command/`: rewrite against the CLI as it ends up.
+- `doc/deployment/`: salvage anything useful to marcustack, then
+  delete.
+- `doc/guides/`: rewrite or delete per guide.
+- Restore a Quick Start to the root README once the CLI is settled.
+
+## Standalone tasks
+
+No ordering constraint; pick these up alongside the sequence.
+
+### fix/template-photos-variable
+
+`index.j2.html` and `navbar.j2.html` access `photos|length`, but the
+render context provides `pics`.
+Jinja renders an undefined variable as empty, so this fails silently.
+A leftover from the photo-to-pic rename.
+
+### tst/fixture-dedup
+
+Roughly seven near-identical "create a JPEG with EXIF" factories are
+scattered across seven test files; only two live in a `conftest.py`.
+Consolidate them.
+
+Worth doing after the module removals in `ft/cli-config`, since some
+of these fixtures serve tests that are being deleted anyway.
+
+### chr/remove-empty-theme
+
+`themes/wedding/` holds two empty directories and nothing else.
+`THEME_DIR` in `settings.py` points at it and is never read.
+Remove both.
+
+## Deferred
+
+Recorded so they are not rediscovered.
+
+- `settings.py` loads local settings with `exec()`.
+  It works, but an executed config file can do anything.
+  Worth revisiting once the settings surface is smaller.
+- The live CDN has no web set, so the deployed gallery serves
+  full-resolution files.
+  Galleria's templates reference the web prefix correctly and the
+  old pipeline did produce it; the upload was full-only.
+  This belongs to marcustack and is reported after MVP.
