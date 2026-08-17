@@ -73,11 +73,24 @@ on top of; a reader entangled with rendering could not adopt it.
 - Report back if anything makes the array's original order matter.
   That would escalate a fix upstream to NormPic.
 
+Assert the expected pair count at build time and fail loudly on a
+mismatch, rather than pairing silently wrong.
+Source filenames are identical across both variants, and same-second
+collisions are disambiguated by an ordinal assigned in processing
+order.
+That ordinal holds only while both collections have identical
+membership, so a count mismatch is the signal that it no longer does.
+Pixel hashing is the durable fix and is post-MVP.
+
 Boundary cases to pin: an empty manifest, a pic present in one
 variant set but not the other, a pic with no timestamp, and a
 manifest at an unrecognized version.
 
-Real manifests for the 645-photo collection pair 645/645.
+Develop against hand-written JSON fixtures in `tmp_path` covering
+those four cases.
+None of them occurs in a real 645-photo manifest, which pairs 645/645.
+One acceptance run against a real manifest before sign-off.
+That path is supplied at invocation and is never a constant here.
 
 ### ft/cli-config
 
@@ -115,6 +128,11 @@ naming what was not found.
 
 This is the largest task in the sequence and the one most likely to
 want per-commit sign-off.
+
+Its module decisions also determine the suite's remaining cost.
+`test_e2e_pipeline.py` and the GPS timezone tests in
+`test_filename_service.py` are nearly all of the current runtime, and
+both cover producer work that leaves with these modules.
 
 ### ft/static-gallery
 
@@ -237,24 +255,47 @@ Lazy-loaded infinite scroll, overriding the static pagination.
 Blank tiles filling in behind a fast scroll is the failure mode to
 avoid.
 
-### Decision point: progressive thumbnails
+### Decision point: what the preview needs
 
 Not a task.
 After the preview works, look at it on mobile against the real
-collection.
+collection and answer two independent questions.
 
-If the scaled-up WEBP thumbnail is too coarse to sit under while a
-3.5MB image loads, a progressive JPEG rendition lands before MVP as
-a second implementation behind the rendition model.
-If it holds up, this waits until after.
+Does the placeholder look acceptable while the larger image loads?
+If not, a progressive JPEG rendition is what fixes it.
+
+Does the larger image arrive fast enough to feel like a swap rather
+than a wait?
+If not, a smaller display rendition between thumbnail and web is what
+fixes it.
+
+Either, both, or neither may be needed for MVP.
+Progressive encoding changes what is seen during a transfer; a smaller
+rendition changes what is transferred.
+They address different complaints and neither substitutes for the
+other.
+
+What this decides is only what ships for MVP, not what exists.
+Both progressive JPEG and WEBP are formats a rendition spec names, and
+both belong in the set of options eventually.
+The rendition model is what makes that true: whichever is not chosen
+here lands later as configuration and a named generator, not as new
+plumbing.
+If adding the other one afterward would mean touching the generator's
+callers or branching on where output is displayed, the abstraction is
+wrong and that is the thing to fix.
 
 WEBP has incremental decoding, which paints top-to-bottom as bytes
 arrive.
 It does not have progressive decoding, the blurry-whole-image effect
 that makes a good placeholder.
-That is a JPEG feature.
+That is a JPEG feature, and it is why the two formats are not
+interchangeable here.
 
 Decide this by looking at it, not by reasoning about it.
+Then ask marcus how to proceed.
+Since both options need to exist, documenting both options' results and
+providing at least high-level planning documentation for both are required.
 
 ### doc/mvp-docs-pass
 
@@ -273,6 +314,45 @@ Left until here because each describes a moving target.
 ## Standalone tasks
 
 No ordering constraint; pick these up alongside the sequence.
+
+### chr/report-salvage
+
+`salvage/` holds modules pulled out of the tree and held for a
+decision, inventoried in its README.
+Report that inventory to the maintainer, who decides per module
+whether it is migrated, documented, or deleted.
+The directory empties as those decisions land, and this task closes
+when it is gone.
+
+### tst/soup-assertion-helpers
+
+The template tests carry file-level pyright suppressions because
+BeautifulSoup's annotations reject callable `class_` predicates and
+return an optional attribute value from `get()`.
+Replace them with typed assertion helpers that narrow once.
+Every template test added from here hits the same thing.
+
+### tst/fakefs-fixture
+
+Three test modules suppress the same finding: pyfakefs types
+`Patcher.fs` as optional, so every call through it reports.
+Replace the suppressions with a fixture that asserts it once.
+
+### ref/path-typed-interfaces
+
+`fs.py` declares path parameters as optional strings and then rebinds
+them to `Path`.
+Rewrite it, and audit for other interfaces taking an optional string
+where they mean a path.
+An absent value collapsing into a wrong-typed one is the shape to look
+for.
+
+### chr/format-sweep
+
+No formatter has run across this repository.
+Diffs are dominated by incidental reformatting whenever a file is
+touched, which hides what actually changed.
+Run one sweep, then keep it in the gate.
 
 ### fix/template-photos-variable
 
@@ -308,3 +388,15 @@ Recorded so they are not rediscovered.
   Galleria's templates reference the web prefix correctly and the
   old pipeline did produce it; the upload was full-only.
   This belongs to marcustack and is reported after MVP.
+- `manage.py` as the CLI entry point.
+  The name follows a Django convention this project does not
+  otherwise follow.
+  What replaces it is a contract with marcustack, so it settles in
+  `ft/cli-config` rather than separately.
+- CONTRIBUTE forbids batching questions.
+  Independent questions batch fine and doing so saves exchanges; the
+  rule means only that a question must not be buried in prose.
+  Reword it.
+- `pyright` and `beautifulsoup4` are unpinned.
+  Both changed their finding sets materially across recent versions,
+  so a fresh environment can re-red a green gate.
