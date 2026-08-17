@@ -41,6 +41,66 @@ When it is not adjacent, add it here as a standalone task rather
 than leaving it unmentioned.
 This note goes away when the residue does.
 
+The entries below record what has been found so far.
+Each is a discovery about the current state of this repository, not a
+lasting fact about the project, so each has an expiry.
+When a task resolves one, delete it in the same `Pln:` commit that
+deletes the task, the way completed task lines are deleted.
+An entry that outlives what it describes is worse than no entry: it
+sends a reader looking for a problem that is no longer there.
+
+### What has been found
+
+**A test that asserts nothing can still pass.**
+A batch-ordering test in `test_filename_service.py` looped over a list
+of expected values with `pass` as the body.
+The loop was removed and its intent recorded as a comment.
+The same shape is worth watching for elsewhere: an unused local in a
+test is often a call whose result was never asserted on.
+Eleven test modules were also found to contain no `pytest.raises` at
+all, so error paths in the code they cover are unexercised.
+
+**`file_processing.py` cannot simply be deleted.**
+It holds thumbnail generation, which Galleria keeps, alongside dual
+collection processing, which moved upstream.
+Its imports of `exif`, `filename_service`, `photo_validation`, and
+`s3_storage` are function-local rather than at module top, so grepping
+the import block understates what depends on what.
+
+**The renderer reaches storage settings.**
+`template_renderer.py` and `photo_metadata.py` both import
+`is_dual_bucket_configured` from `s3_storage.py`, which is why storage
+code cannot leave while the render path still calls it.
+
+**`manage.py` is invoked as a subprocess by two test modules.**
+Removing a command's import without removing its registration breaks
+those tests and nothing else, which makes the failure look unrelated to
+the change that caused it.
+
+**Empty scaffolding directories exist and are referenced by nothing.**
+`sample-photos/` and `sample-pics/` are tracked and empty.
+`cache/`, `content/`, and `temp_test/` are untracked working
+directories.
+
+**Three settings are set and never read.**
+`PICS_BASE_URL`, `SITE_BASE_URL`, and `THEME_DIR`.
+The renderer composes its own URL rather than reading the first two.
+
+**A relative-path code path exists but is unreachable.**
+`photo_metadata.py` contains it; nothing in the render pipeline calls
+it.
+
+**Two spellings of the local settings example coexist.**
+`settings.local.example.py` and `settings.local.py.example`.
+One is stale; which has not been determined.
+
+**Not chased.**
+The `realworld` pytest marker was defined and never applied to the
+real-photo tests, which guard on a settings path instead.
+It moved to `salvage/` with them.
+`debug/template_debug.py` and its test remain, exercising a debugging
+helper rather than the project.
+
 ## MVP sequence
 
 The tasks below are ordered by what unblocks what.
@@ -124,7 +184,24 @@ naming what was not found.
   storage, photo validation, and the processing pipeline.
   Thumbnail generation lives in `file_processing.py` and stays;
   split it out rather than deleting the file.
-- Remove the S3 settings left unread.
+  - What that removal is walking into, found by reading rather than
+grepping:
+
+    - `process_photos.py` is the only caller of the dual-collection
+      processing path, but five test modules reach it: its own,
+      `test_e2e_pipeline.py`, `test_batch_metadata_efficiency.py`,
+      `test_file_processing_dual.py`, and `test_photo_metadata.py`.
+      The last two are named for services rather than for the command, so
+      the coupling is not visible from their filenames.
+    - `file_processing.py` imports its dependencies inside functions rather
+      than at module top.
+      A grep of import blocks will show fewer dependents than exist.
+    - `link_photo_with_filename` raises rather than returning an error
+      value, so its callers correctly ignore its return.
+      Worth knowing before treating those as defects.
+    - The thumbnail generation to split out is generated from the web
+      variant, not the full one.
+    - Remove the S3 settings left unread.
 
 This is the largest task in the sequence and the one most likely to
 want per-commit sign-off.

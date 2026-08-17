@@ -103,3 +103,21 @@ several need a real collection and one takes 44 seconds.
 
 The synthetic-JPEG fixtures these modules rely on may be worth
 extracting on their own, independent of the tests around them.
+## Where the inventory understates the call
+
+Two entries rested on more than their line says.
+
+`test_complete_metadata_pipeline.py` was nearly kept.
+Its name suggests general pipeline coverage, and the function it
+exercises is called `process_dual_photo_collection`, which reads like
+the full and web variant pairing Galleria does need.
+It is not.
+That function walks two source directories and creates symlinks and
+thumbnails, which is producer work.
+The distinction matters because Galleria pairs manifest entries, never
+source files.
+
+`test_file_processing.py` passes on some machines and not others.
+Its one live test reads a production metadata file from a configured
+path, so its result depends on what is on disk rather than on the code.
+That, not its runtime, is why it left.
