@@ -1,4 +1,4 @@
-# pyright: reportArgumentType=false, reportOptionalMemberAccess=false, reportOptionalIterable=false, reportCallIssue=false
+# pyright: reportArgumentType=false, reportOptionalMemberAccess=false, reportOptionalIterable=false, reportCallIssue=false, reportOperatorIssue=false
 from bs4 import BeautifulSoup
 from src.services.template_renderer import TemplateRenderer
 
@@ -88,4 +88,3 @@ def test_pic_grid_component_is_configurable():
     assert "grid-cols-3" in container_classes
     assert "gap-2" in container_classes
     assert "p-2" in container_classes
-

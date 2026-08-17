@@ -11,7 +11,9 @@ LEXICAL_BASE32 = "0123456789ABCDEFGHIJKLMNOPQRSTUV"
 
 
 def generate_photo_filename(
-    photo: ProcessedPhoto, collection: str = "gallery", existing_filenames: set = None
+    photo: ProcessedPhoto,
+    collection: str = "gallery",
+    existing_filenames: set | None = None,
 ) -> str:
     """Generate chronological filename from photo metadata.
 
@@ -88,7 +90,8 @@ def get_timezone_from_gps(
 
     tz = ZoneInfo(tz_name)
     localized_dt = timestamp.replace(tzinfo=tz)
-    offset_seconds = localized_dt.utcoffset().total_seconds()
+    offset = localized_dt.utcoffset()
+    offset_seconds = offset.total_seconds() if offset else 0.0
 
     # Convert to ±HHMM format
     offset_hours = int(offset_seconds / 3600)
@@ -293,4 +296,3 @@ def get_camera_code(camera_info: CameraInfo) -> str:
     # Remove spaces and take first 3 alphanumeric characters
     clean = "".join(c for c in combined_lower if c.isalnum())
     return (clean[:3] or "unk").ljust(3, "x")[:3]
-

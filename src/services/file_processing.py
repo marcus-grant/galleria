@@ -1,3 +1,5 @@
+# EXIF modification moves upstream when the command surface is reworked.
+# pyright: reportArgumentType=false
 """File processing service for photo operations."""
 
 import json
@@ -631,4 +633,3 @@ def process_dual_photo_collection(
         save_gallery_metadata(metadata, output_dir)
 
     return results
-

@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 import sys
+from typing import ClassVar
 
 
 class DevServer:
@@ -94,11 +95,11 @@ class DevServer:
 
                 def on_modified(self, event):
                     if not event.is_directory:
+                        # watchdog types src_path as bytes or str
+                        src_path = str(event.src_path)
                         # Watch for template, CSS, JS changes
-                        if any(
-                            ext in event.src_path for ext in [".j2.html", ".css", ".js"]
-                        ):
-                            self.dev_server.on_file_changed(event.src_path)
+                        if any(ext in src_path for ext in [".j2.html", ".css", ".js"]):
+                            self.dev_server.on_file_changed(src_path)
 
             observer = Observer()
 
@@ -121,6 +122,10 @@ class DevServer:
 class CustomHTTPRequestHandler(SimpleHTTPRequestHandler):
     """Custom HTTP handler that implements routing logic"""
 
+    # Set on the class by DevServer before the server starts.
+    # Nothing in this handler reads it yet.
+    dev_server: ClassVar[object] = None
+
     def log_error(self, format, *args):
         # Suppress broken pipe errors in logs
         if "Broken pipe" in str(args):
@@ -139,6 +144,8 @@ class CustomHTTPRequestHandler(SimpleHTTPRequestHandler):
                 return
 
         # Handle /photos/* and photos/* routes - serve from prod/pics/
+        # The pics location is hardcoded relative to the served directory.
+        # It needs to come from the output directory configuration.
         elif self.path.startswith("/photos/") or self.path.startswith("photos/"):
             # Map /photos/thumb/file.webp -> prod/pics/thumb/file.webp
             # Also handle photos/thumb/file.webp -> prod/pics/thumb/file.webp
@@ -179,4 +186,3 @@ class CustomHTTPRequestHandler(SimpleHTTPRequestHandler):
 
         # Let SimpleHTTPRequestHandler handle the rest
         super().do_GET()
-
