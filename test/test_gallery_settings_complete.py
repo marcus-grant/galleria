@@ -1,5 +1,4 @@
 """Unit tests for complete GallerySettings dataclass."""
-import pytest
 from src.models.photo import GallerySettings
 
 

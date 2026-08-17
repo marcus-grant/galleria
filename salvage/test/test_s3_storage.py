@@ -1,7 +1,5 @@
 """Tests for S3 storage operations."""
 import pytest
-from pathlib import Path
-from unittest.mock import Mock
 from datetime import datetime
 import hashlib
 import io

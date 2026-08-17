@@ -5,11 +5,9 @@ Analyzes photo collections for timing, file size, and camera information.
 """
 import click
 from pathlib import Path
-from typing import Optional, Dict, List
+from typing import Optional, Dict
 import statistics
-from collections import defaultdict, Counter
-from datetime import datetime
-import sys
+from collections import Counter
 
 from src.services.exif import get_datetime_taken, get_camera_info, get_timezone_info
 

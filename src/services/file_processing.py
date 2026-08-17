@@ -1,10 +1,9 @@
 """File processing service for photo operations."""
 
-import shutil
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Dict, List
+from typing import List
 from src.models.photo import ProcessedPhoto, GalleryMetadata, PhotoMetadata, MetadataExifData, MetadataFileData, GallerySettings
 import settings
 
@@ -412,7 +411,7 @@ def process_dual_photo_collection(
     Returns:
         Dictionary with processing results and any errors
     """
-    from src.services import fs, exif
+    from src.services import exif
     from src.services.filename_service import generate_photo_filename
     from src.services.photo_validation import get_matched_photo_pairs, validate_matching_collections
     from src.services.s3_storage import calculate_file_checksum

@@ -1,12 +1,9 @@
 """Tests for photo validation services."""
-import pytest
-from pathlib import Path
 from PIL import Image
 
 from src.services.photo_validation import (
     get_photo_filename_mapping,
-    validate_matching_collections,
-    get_matched_photo_pairs
+    validate_matching_collections
 )
 
 

@@ -1,5 +1,4 @@
 """Tests for site generator service."""
-import pytest
 from pathlib import Path
 
 

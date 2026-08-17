@@ -2,7 +2,6 @@
 import pytest
 import sys
 import json
-from pathlib import Path
 from unittest.mock import Mock, patch
 from click.testing import CliRunner
 
@@ -181,7 +180,7 @@ class TestDeployCommandEnhanced:
     def test_load_local_gallery_metadata_success(self, tmp_path):
         """Test loading gallery metadata from local file system."""
         from src.command.deploy import load_local_gallery_metadata
-        from src.models.photo import GalleryMetadata, GallerySettings, PhotoMetadata, MetadataExifData, MetadataFileData
+        from src.models.photo import GalleryMetadata, GallerySettings
         
         # Create test metadata file
         prod_dir = tmp_path / "prod" / "pics"

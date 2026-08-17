@@ -1,6 +1,6 @@
 """Photo collection validation services."""
 from pathlib import Path
-from typing import Dict, List, Tuple, Set
+from typing import Dict, List, Tuple
 
 
 def get_photo_filename_mapping(directory: Path) -> Dict[str, Path]:

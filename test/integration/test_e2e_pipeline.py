@@ -2,11 +2,9 @@
 import pytest
 import json
 import time
-from pathlib import Path
 from PIL import Image
 import piexif
 from datetime import datetime
-from unittest.mock import patch
 from click.testing import CliRunner
 
 from src.command.process_photos import process_photos

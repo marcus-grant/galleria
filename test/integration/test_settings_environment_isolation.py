@@ -1,8 +1,6 @@
 """Integration test for settings isolation in different environments."""
-import pytest
 import sys
 import os
-from pathlib import Path
 from unittest.mock import patch
 from pyfakefs.fake_filesystem_unittest import Patcher
 

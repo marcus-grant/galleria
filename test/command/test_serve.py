@@ -1,8 +1,4 @@
-import tempfile
-import os
-from pathlib import Path
-from unittest.mock import patch, Mock, MagicMock
-import pytest
+from unittest.mock import patch, Mock
 from click.testing import CliRunner
 from src.command.serve import serve
 

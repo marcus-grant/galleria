@@ -5,7 +5,7 @@ from typing import Optional, Callable, Dict, Any, List
 from botocore.exceptions import ClientError
 
 from .s3_storage import upload_directory_to_s3
-from ..models.photo import GalleryMetadata, PhotoMetadata
+from ..models.photo import GalleryMetadata
 
 
 def deploy_directory_to_s3(

@@ -1,6 +1,5 @@
 """Integration test for dual-hash system with EXIF modification."""
 import pytest
-from pathlib import Path
 from datetime import datetime
 import settings
 from PIL import Image
