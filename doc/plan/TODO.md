@@ -134,6 +134,11 @@ Its module decisions also determine the suite's remaining cost.
 `test_filename_service.py` are nearly all of the current runtime, and
 both cover producer work that leaves with these modules.
 
+Removing this code also removes the pyright suppressions covering it.
+`template_renderer.py` and `file_processing.py` each carry a file-level
+suppression with the reason stated above the directive.
+Neither should survive the code it covers.
+
 ### ft/static-gallery
 
 A correct gallery with no JavaScript at all.
