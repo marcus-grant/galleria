@@ -6,7 +6,6 @@ Entry point for all command-line operations.
 """
 
 import click
-from src.command.upload_photos import upload_photos
 from src.command.process_photos import process_photos
 from src.command.build import build
 from src.command.serve import serve
@@ -19,7 +18,6 @@ def cli():
 
 
 # Register commands
-cli.add_command(upload_photos, name="upload-photos")
 cli.add_command(process_photos, name="process-photos")
 cli.add_command(build, name="build")
 cli.add_command(serve, name="serve")
