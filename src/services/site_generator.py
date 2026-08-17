@@ -62,5 +62,5 @@ def create_output_directory_structure(base_dir: Path) -> Dict[str, any]:
     
     return {
         'created': True,
-        'message': f'Created output directory: prod/site'
+        'message': 'Created output directory: prod/site'
     }
