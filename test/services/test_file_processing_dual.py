@@ -1,6 +1,5 @@
 """Tests for dual photo collection processing."""
 import pytest
-from pathlib import Path
 from PIL import Image
 import piexif
 

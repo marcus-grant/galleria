@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch, call
+from unittest.mock import Mock, patch
 from src.services.static_assets import StaticAssetService
 
 

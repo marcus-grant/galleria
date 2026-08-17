@@ -1,5 +1,4 @@
 """Tests for deploy command settings migration from S3_PUBLIC_*/S3_SITE_* to S3_SITE_*/S3_PICS_*."""
-import pytest
 from unittest.mock import Mock, patch
 from click.testing import CliRunner
 

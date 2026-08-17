@@ -1,7 +1,6 @@
 """Integration test for complete metadata recording in gallery pipeline."""
 import pytest
 import json
-from pathlib import Path
 from PIL import Image
 import piexif
 from datetime import datetime

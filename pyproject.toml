@@ -29,4 +29,15 @@ dev = [
 
 [tool.ruff]
 line-length = 88
+extend-exclude = ["salvage"]
 target-version = "py312"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+include = ["src", "test", "manage.py"]
+exclude = ["salvage", "**/__pycache__"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+pythonpath = ["."]

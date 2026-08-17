@@ -191,5 +191,4 @@ The command uses these settings:
 ## Related Documentation
 
 - [File Processing Service](../services/file_processing.md) - Implementation details
-- [deploy Command](deploy.md) - Next step in the pipeline
 - [Settings](../settings.md) - Configuration options

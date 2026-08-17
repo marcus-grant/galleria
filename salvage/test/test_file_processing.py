@@ -3,10 +3,7 @@ import pytest
 import json
 import hashlib
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
-from src.services.file_processing import generate_gallery_metadata
-from src.models.photo import PhotoMetadata, GalleryMetadata
 
 
 class TestBatchMetadataGeneration:

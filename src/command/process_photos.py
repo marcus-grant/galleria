@@ -91,7 +91,7 @@ def process_photos(
         sys.exit(1)
     
     # Show configuration
-    click.echo(f"Processing photo collections:")
+    click.echo("Processing photo collections:")
     click.echo(f"  Full resolution: {full_dir}")
     click.echo(f"  Web optimized:   {web_dir}")
     click.echo(f"  Output:          {output_dir}")
@@ -154,9 +154,9 @@ def process_photos(
         click.echo(f"\nWould process {len(matched)} matching photos.")
         click.echo("Output structure:")
         click.echo(f"  {output_dir}/")
-        click.echo(f"    full/     # Symlinks to full resolution photos")
-        click.echo(f"    web/      # Symlinks to web-optimized photos") 
-        click.echo(f"    thumb/    # Generated WebP thumbnails")
+        click.echo("    full/     # Symlinks to full resolution photos")
+        click.echo("    web/      # Symlinks to web-optimized photos") 
+        click.echo("    thumb/    # Generated WebP thumbnails")
         return
     
     # Process collections
@@ -171,7 +171,7 @@ def process_photos(
     )
     
     # Show results
-    click.echo(f"\nProcessing complete:")
+    click.echo("\nProcessing complete:")
     click.echo(f"  Photos processed: {result['total_processed']}")
     click.echo(f"  Photos skipped:   {result.get('total_skipped', 0)}")
     click.echo(f"  Errors:          {len(result['errors'])}")

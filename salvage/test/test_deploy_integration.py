@@ -2,8 +2,7 @@
 import pytest
 import json
 import sys
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from click.testing import CliRunner
 
 from src.command.deploy import deploy

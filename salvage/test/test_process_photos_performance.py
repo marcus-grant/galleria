@@ -1,7 +1,6 @@
 """Integration test for process-photos performance and memory management."""
 import pytest
 import time
-from pathlib import Path
 from PIL import Image
 import piexif
 from datetime import datetime
