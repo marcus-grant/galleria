@@ -1,3 +1,4 @@
+# pyright: reportOptionalMemberAccess=false
 import os
 import sys
 import pytest
@@ -6,10 +7,10 @@ from unittest.mock import patch
 import settings
 
 
-@pytest.fixture(autouse=True) 
+@pytest.fixture(autouse=True)
 def reset_timestamp_offset(monkeypatch):
     """Reset TIMESTAMP_OFFSET_HOURS to 0 for all tests unless explicitly overridden"""
-    monkeypatch.setattr(settings, 'TIMESTAMP_OFFSET_HOURS', 0)
+    monkeypatch.setattr(settings, "TIMESTAMP_OFFSET_HOURS", 0)
 
 
 # Test fixtures
@@ -62,9 +63,12 @@ class TestSettingsHierarchy:
             # Create the settings module structure
             # Get the path where settings.py would be
             import pathlib
-            settings_path = pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+
+            settings_path = (
+                pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+            )
             base_dir = settings_path.parent
-            
+
             # Create settings.local.py in the same directory as settings.py
             local_settings_path = base_dir / "settings.local.py"
             fs.create_file(
@@ -96,10 +100,13 @@ class TestSettingsHierarchy:
             fs.create_file("settings/local.py", contents=TEST_LOCAL_SETTINGS_CONTENT)
 
             # Mock dotenv and set env var before importing
-            with patch.dict(os.environ, {
-                "GALLERIA_PIC_SOURCE_PATH_FULL": "/env/pics",
-                "GALLERIA_PIC_SOURCE_PATH_WEB": "/env/pics-web"
-            }):
+            with patch.dict(
+                os.environ,
+                {
+                    "GALLERIA_PIC_SOURCE_PATH_FULL": "/env/pics",
+                    "GALLERIA_PIC_SOURCE_PATH_WEB": "/env/pics-web",
+                },
+            ):
                 with patch("dotenv.load_dotenv"):
                     import settings as test_settings
 
@@ -122,20 +129,20 @@ class TestSettingsHierarchy:
             if "settings" in sys.modules:
                 del sys.modules["settings"]
             import settings as test_settings
-        
+
         # All S3 settings should default to None
         assert test_settings.S3_ARCHIVE_ENDPOINT is None
         assert test_settings.S3_ARCHIVE_ACCESS_KEY is None
         assert test_settings.S3_ARCHIVE_SECRET_KEY is None
         assert test_settings.S3_ARCHIVE_BUCKET is None
         assert test_settings.S3_ARCHIVE_REGION is None
-        
+
         assert test_settings.S3_SITE_ENDPOINT is None
         assert test_settings.S3_SITE_ACCESS_KEY is None
         assert test_settings.S3_SITE_SECRET_KEY is None
         assert test_settings.S3_SITE_BUCKET is None
         assert test_settings.S3_SITE_REGION is None
-        
+
         assert test_settings.S3_PICS_ENDPOINT is None
         assert test_settings.S3_PICS_ACCESS_KEY is None
         assert test_settings.S3_PICS_SECRET_KEY is None
@@ -158,33 +165,36 @@ S3_SITE_SECRET_KEY = 'test-site-secret'
 S3_SITE_BUCKET = 'test-site-bucket'
 S3_SITE_REGION = 'test-site-region'
 """
-        
+
         with Patcher(modules_to_reload=[]) as patcher:
             fs = patcher.fs
-            
+
             # Create local settings with S3 configuration
             import pathlib
-            settings_path = pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+
+            settings_path = (
+                pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+            )
             base_dir = settings_path.parent
             local_settings_path = base_dir / "settings.local.py"
-            
+
             fs.create_file(str(local_settings_path), contents=s3_local_settings)
-            
+
             with patch("dotenv.load_dotenv"):
                 import settings as test_settings
-            
+
             # Verify local settings override defaults
-            assert test_settings.S3_ARCHIVE_ENDPOINT == 'test-archive-endpoint.com'
-            assert test_settings.S3_ARCHIVE_ACCESS_KEY == 'test-archive-key'
-            assert test_settings.S3_ARCHIVE_SECRET_KEY == 'test-archive-secret'
-            assert test_settings.S3_ARCHIVE_BUCKET == 'test-archive-bucket'
-            assert test_settings.S3_ARCHIVE_REGION == 'test-archive-region'
-            
-            assert test_settings.S3_SITE_ENDPOINT == 'test-site-endpoint.com'
-            assert test_settings.S3_SITE_ACCESS_KEY == 'test-site-key'
-            assert test_settings.S3_SITE_SECRET_KEY == 'test-site-secret'
-            assert test_settings.S3_SITE_BUCKET == 'test-site-bucket'
-            assert test_settings.S3_SITE_REGION == 'test-site-region'
+            assert test_settings.S3_ARCHIVE_ENDPOINT == "test-archive-endpoint.com"
+            assert test_settings.S3_ARCHIVE_ACCESS_KEY == "test-archive-key"
+            assert test_settings.S3_ARCHIVE_SECRET_KEY == "test-archive-secret"
+            assert test_settings.S3_ARCHIVE_BUCKET == "test-archive-bucket"
+            assert test_settings.S3_ARCHIVE_REGION == "test-archive-region"
+
+            assert test_settings.S3_SITE_ENDPOINT == "test-site-endpoint.com"
+            assert test_settings.S3_SITE_ACCESS_KEY == "test-site-key"
+            assert test_settings.S3_SITE_SECRET_KEY == "test-site-secret"
+            assert test_settings.S3_SITE_BUCKET == "test-site-bucket"
+            assert test_settings.S3_SITE_REGION == "test-site-region"
 
     def test_s3_settings_env_vars_override_locals(self):
         """Test that environment variables override S3 local settings."""
@@ -195,35 +205,38 @@ S3_ARCHIVE_ACCESS_KEY = 'local-archive-key'
 S3_SITE_ENDPOINT = 'local-site-endpoint.com'
 S3_SITE_ACCESS_KEY = 'local-site-key'
 """
-        
+
         with Patcher(modules_to_reload=[]) as patcher:
             fs = patcher.fs
-            
+
             # Create local settings
             import pathlib
-            settings_path = pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+
+            settings_path = (
+                pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+            )
             base_dir = settings_path.parent
             local_settings_path = base_dir / "settings.local.py"
-            
+
             fs.create_file(str(local_settings_path), contents=s3_local_settings)
-            
+
             # Set environment variables that should override local settings
             env_overrides = {
-                'GALLERIA_S3_ARCHIVE_ENDPOINT': 'env-archive-endpoint.com',
-                'GALLERIA_S3_ARCHIVE_ACCESS_KEY': 'env-archive-key',
-                'GALLERIA_S3_SITE_ENDPOINT': 'env-site-endpoint.com',
-                'GALLERIA_S3_SITE_ACCESS_KEY': 'env-site-key',
+                "GALLERIA_S3_ARCHIVE_ENDPOINT": "env-archive-endpoint.com",
+                "GALLERIA_S3_ARCHIVE_ACCESS_KEY": "env-archive-key",
+                "GALLERIA_S3_SITE_ENDPOINT": "env-site-endpoint.com",
+                "GALLERIA_S3_SITE_ACCESS_KEY": "env-site-key",
             }
-            
+
             with patch.dict(os.environ, env_overrides):
                 with patch("dotenv.load_dotenv"):
                     import settings as test_settings
-                
+
                 # Verify environment variables override local settings
-                assert test_settings.S3_ARCHIVE_ENDPOINT == 'env-archive-endpoint.com'
-                assert test_settings.S3_ARCHIVE_ACCESS_KEY == 'env-archive-key'
-                assert test_settings.S3_SITE_ENDPOINT == 'env-site-endpoint.com'
-                assert test_settings.S3_SITE_ACCESS_KEY == 'env-site-key'
+                assert test_settings.S3_ARCHIVE_ENDPOINT == "env-archive-endpoint.com"
+                assert test_settings.S3_ARCHIVE_ACCESS_KEY == "env-archive-key"
+                assert test_settings.S3_SITE_ENDPOINT == "env-site-endpoint.com"
+                assert test_settings.S3_SITE_ACCESS_KEY == "env-site-key"
 
     def test_s3_settings_precedence_transitive(self):
         """Test complete S3 settings precedence: defaults -> locals -> env vars."""
@@ -233,34 +246,43 @@ S3_ARCHIVE_ENDPOINT = 'local-endpoint.com'
 S3_ARCHIVE_ACCESS_KEY = 'local-key'
 S3_ARCHIVE_BUCKET = 'local-bucket'
 """
-        
+
         with Patcher(modules_to_reload=[]) as patcher:
             fs = patcher.fs
-            
+
             # Create local settings
             import pathlib
-            settings_path = pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+
+            settings_path = (
+                pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+            )
             base_dir = settings_path.parent
             local_settings_path = base_dir / "settings.local.py"
-            
+
             fs.create_file(str(local_settings_path), contents=s3_local_settings)
-            
+
             # Set only one environment variable to override local setting
-            env_overrides = {'GALLERIA_S3_ARCHIVE_ENDPOINT': 'env-endpoint.com'}
-            
+            env_overrides = {"GALLERIA_S3_ARCHIVE_ENDPOINT": "env-endpoint.com"}
+
             with patch.dict(os.environ, env_overrides):
                 with patch("dotenv.load_dotenv"):
                     import settings as test_settings
-                
+
                 # Verify precedence:
                 # - ENDPOINT: env var overrides local setting
                 # - ACCESS_KEY: local setting overrides default (None)
                 # - SECRET_KEY: default (None) because not set in local or env
                 # - BUCKET: local setting overrides default (None)
-                assert test_settings.S3_ARCHIVE_ENDPOINT == 'env-endpoint.com'  # env > local
-                assert test_settings.S3_ARCHIVE_ACCESS_KEY == 'local-key'       # local > default
-                assert test_settings.S3_ARCHIVE_SECRET_KEY is None              # default
-                assert test_settings.S3_ARCHIVE_BUCKET == 'local-bucket'        # local > default
+                assert (
+                    test_settings.S3_ARCHIVE_ENDPOINT == "env-endpoint.com"
+                )  # env > local
+                assert (
+                    test_settings.S3_ARCHIVE_ACCESS_KEY == "local-key"
+                )  # local > default
+                assert test_settings.S3_ARCHIVE_SECRET_KEY is None  # default
+                assert (
+                    test_settings.S3_ARCHIVE_BUCKET == "local-bucket"
+                )  # local > default
 
     def test_pic_source_path_web_precedence(self):
         """Test PIC_SOURCE_PATH_WEB follows same precedence as other path settings."""
@@ -269,37 +291,44 @@ from pathlib import Path
 PIC_SOURCE_PATH_WEB = Path('/local/web-pics')
 PIC_SOURCE_PATH_FULL = Path('/local/full-pics')
 """
-        
+
         with Patcher(modules_to_reload=[]) as patcher:
             fs = patcher.fs
-            
+
             # Create local settings
             import pathlib
-            settings_path = pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+
+            settings_path = (
+                pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+            )
             base_dir = settings_path.parent
             local_settings_path = base_dir / "settings.local.py"
-            
+
             fs.create_file(str(local_settings_path), contents=web_path_local_settings)
-            
+
             # Set only web path env var to test precedence
-            env_overrides = {'GALLERIA_PIC_SOURCE_PATH_WEB': '/env/web-pics'}
-            
+            env_overrides = {"GALLERIA_PIC_SOURCE_PATH_WEB": "/env/web-pics"}
+
             with patch.dict(os.environ, env_overrides):
                 with patch("dotenv.load_dotenv"):
                     import settings as test_settings
-                
+
                 # Verify precedence:
                 # - WEB: env var overrides local setting
                 # - FULL: local setting overrides default
-                assert str(test_settings.PIC_SOURCE_PATH_WEB) == '/env/web-pics'  # env > local
-                assert str(test_settings.PIC_SOURCE_PATH_FULL) == '/local/full-pics'  # local > default
+                assert (
+                    str(test_settings.PIC_SOURCE_PATH_WEB) == "/env/web-pics"
+                )  # env > local
+                assert (
+                    str(test_settings.PIC_SOURCE_PATH_FULL) == "/local/full-pics"
+                )  # local > default
 
     def test_timestamp_offset_setting_default(self, monkeypatch):
         """Test that TIMESTAMP_OFFSET_HOURS has a default value."""
         # Explicitly set to 0 to test default behavior
-        monkeypatch.setattr(settings, 'TIMESTAMP_OFFSET_HOURS', 0)
-        
-        assert hasattr(settings, 'TIMESTAMP_OFFSET_HOURS')
+        monkeypatch.setattr(settings, "TIMESTAMP_OFFSET_HOURS", 0)
+
+        assert hasattr(settings, "TIMESTAMP_OFFSET_HOURS")
         assert settings.TIMESTAMP_OFFSET_HOURS == 0
 
     def test_timestamp_offset_local_override(self):
@@ -308,20 +337,23 @@ PIC_SOURCE_PATH_FULL = Path('/local/full-pics')
 from pathlib import Path
 TIMESTAMP_OFFSET_HOURS = -6
 """
-        
+
         with Patcher(modules_to_reload=[]) as patcher:
             fs = patcher.fs
-            
+
             import pathlib
-            settings_path = pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+
+            settings_path = (
+                pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+            )
             base_dir = settings_path.parent
             local_settings_path = base_dir / "settings.local.py"
-            
+
             fs.create_file(str(local_settings_path), contents=offset_local_settings)
-            
+
             with patch("dotenv.load_dotenv"):
                 import settings as test_settings
-            
+
             assert test_settings.TIMESTAMP_OFFSET_HOURS == -6
 
     def test_timestamp_offset_env_override(self):
@@ -330,31 +362,34 @@ TIMESTAMP_OFFSET_HOURS = -6
 from pathlib import Path
 TIMESTAMP_OFFSET_HOURS = -6
 """
-        
+
         with Patcher(modules_to_reload=[]) as patcher:
             fs = patcher.fs
-            
+
             import pathlib
-            settings_path = pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+
+            settings_path = (
+                pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+            )
             base_dir = settings_path.parent
             local_settings_path = base_dir / "settings.local.py"
-            
+
             fs.create_file(str(local_settings_path), contents=offset_local_settings)
-            
-            env_overrides = {'GALLERIA_TIMESTAMP_OFFSET_HOURS': '-2'}
-            
+
+            env_overrides = {"GALLERIA_TIMESTAMP_OFFSET_HOURS": "-2"}
+
             with patch.dict(os.environ, env_overrides):
                 with patch("dotenv.load_dotenv"):
                     import settings as test_settings
-                
+
                 assert test_settings.TIMESTAMP_OFFSET_HOURS == -2
 
     def test_target_timezone_offset_setting_default(self, monkeypatch):
         """Test that TARGET_TIMEZONE_OFFSET_HOURS has a default value of 13."""
-        # Explicitly set to 13 to test default behavior  
-        monkeypatch.setattr(settings, 'TARGET_TIMEZONE_OFFSET_HOURS', 13)
-        
-        assert hasattr(settings, 'TARGET_TIMEZONE_OFFSET_HOURS')
+        # Explicitly set to 13 to test default behavior
+        monkeypatch.setattr(settings, "TARGET_TIMEZONE_OFFSET_HOURS", 13)
+
+        assert hasattr(settings, "TARGET_TIMEZONE_OFFSET_HOURS")
         assert settings.TARGET_TIMEZONE_OFFSET_HOURS == 13
 
     def test_target_timezone_offset_local_override(self):
@@ -363,20 +398,23 @@ TIMESTAMP_OFFSET_HOURS = -6
 from pathlib import Path
 TARGET_TIMEZONE_OFFSET_HOURS = 2
 """
-        
+
         with Patcher(modules_to_reload=[]) as patcher:
             fs = patcher.fs
-            
+
             import pathlib
-            settings_path = pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+
+            settings_path = (
+                pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+            )
             base_dir = settings_path.parent
             local_settings_path = base_dir / "settings.local.py"
-            
+
             fs.create_file(str(local_settings_path), contents=timezone_local_settings)
-            
+
             with patch("dotenv.load_dotenv"):
                 import settings as test_settings
-            
+
             assert test_settings.TARGET_TIMEZONE_OFFSET_HOURS == 2
 
     def test_target_timezone_offset_env_override(self):
@@ -385,23 +423,26 @@ TARGET_TIMEZONE_OFFSET_HOURS = 2
 from pathlib import Path
 TARGET_TIMEZONE_OFFSET_HOURS = 2
 """
-        
+
         with Patcher(modules_to_reload=[]) as patcher:
             fs = patcher.fs
-            
+
             import pathlib
-            settings_path = pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+
+            settings_path = (
+                pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+            )
             base_dir = settings_path.parent
             local_settings_path = base_dir / "settings.local.py"
-            
+
             fs.create_file(str(local_settings_path), contents=timezone_local_settings)
-            
-            env_overrides = {'GALLERIA_TARGET_TIMEZONE_OFFSET_HOURS': '-5'}
-            
+
+            env_overrides = {"GALLERIA_TARGET_TIMEZONE_OFFSET_HOURS": "-5"}
+
             with patch.dict(os.environ, env_overrides):
                 with patch("dotenv.load_dotenv"):
                     import settings as test_settings
-                
+
                 assert test_settings.TARGET_TIMEZONE_OFFSET_HOURS == -5
 
     def test_target_timezone_offset_special_value_13(self):
@@ -411,18 +452,21 @@ TARGET_TIMEZONE_OFFSET_HOURS = 2
 from pathlib import Path
 TARGET_TIMEZONE_OFFSET_HOURS = 13
 """
-        
+
         with Patcher(modules_to_reload=[]) as patcher:
             fs = patcher.fs
-            
+
             import pathlib
-            settings_path = pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+
+            settings_path = (
+                pathlib.Path(__file__).resolve().parent.parent / "settings.py"
+            )
             base_dir = settings_path.parent
             local_settings_path = base_dir / "settings.local.py"
-            
+
             fs.create_file(str(local_settings_path), contents=timezone_local_settings)
-            
+
             with patch("dotenv.load_dotenv"):
                 import settings as test_settings
-            
+
             assert test_settings.TARGET_TIMEZONE_OFFSET_HOURS == 13
