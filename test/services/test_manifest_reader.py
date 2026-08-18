@@ -1,0 +1,148 @@
+# test/services/test_manifest_reader.py
+"""
+Tests for reading a NormPic manifest into pic records.
+
+Author: Marcus Grant
+Created: 2026-08-17
+License: AGPL-3.0-or-later
+"""
+
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+
+import pytest
+
+from src.services.manifest_reader import (
+    _manifest_from_json,
+    _pic_from_entry,
+    ManifestError,
+    read_manifest,
+)
+
+_UTC = timezone.utc
+_OMIT = object()
+
+
+def _make_pic_dict(**overrides) -> dict:
+    """Creates a default test pic dict, overridden per keyword given."""
+    defaults = {
+        "hash": "b3c32:NW9MKEFNZ6GTD8209QN3DQ69",
+        "relative_path": "2026/one.jpg",
+        "size_bytes": 1024,
+        "mtime": "2026-08-17T08:00:00Z",
+    }
+    return {**defaults, **overrides}
+
+
+class TestPicFromEntry:
+    """Tests for _pic_from_entry."""
+
+    def test_carries_required_fields_onto_the_record(self):
+        """The record carries hash, relative_path, size_bytes and mtime."""
+        entry = _make_pic_dict()
+        pic = _pic_from_entry(entry, Path("manifest.json"), 0)
+        assert pic.hash == entry["hash"]
+        assert pic.relative_path == Path(entry["relative_path"])
+        assert pic.size_bytes == entry["size_bytes"]
+        assert pic.mtime == datetime(2026, 8, 17, 8, 0, tzinfo=timezone.utc)
+
+    @pytest.mark.parametrize("field", ["hash", "relative_path", "size_bytes", "mtime"])
+    def test_raises_naming_the_missing_field(self, field):
+        """An entry missing a required field raises, naming that field."""
+        del (entry := _make_pic_dict())[field]
+        with pytest.raises(ManifestError, match=field):
+            _pic_from_entry(entry, Path("manifest.json"), 0)
+
+    def test_tolerates_an_unknown_field(self):
+        """An unrecognized field on an entry does not prevent building."""
+        entry = _make_pic_dict()
+        unknown = _make_pic_dict(foobar=42)
+        expect = _pic_from_entry(entry, Path("manifest.json"), 0)
+        assert _pic_from_entry(unknown, Path("manifest.json"), 0) == expect
+
+
+class TestManifestFromJson:
+    """Tests for _manifest_from_json."""
+
+    def _make_manifest_dict(self, overrides: dict | None = None) -> dict:
+        """Creates default test manifest dict with default pics list.
+        Allows overrides of pics and manifest top level fields"""
+        overrides = overrides if overrides is not None else {}
+        default = {
+            "version": "0.1.0",
+            "collection_name": "wedding-full",
+            "generated_at": "2026-08-17T09:00:00Z",
+            "collection_root": ".",
+            "pic": [],
+        }
+        return {**default, **overrides}
+
+    def test_carries_top_level_fields_onto_the_record(self):
+        """The record carries version, collection_name and generated_at."""
+        expect = self._make_manifest_dict()
+        result = _manifest_from_json(expect, Path("."), pics=[])
+        assert result.version == expect["version"]
+        assert result.collection_name == expect["collection_name"]
+        assert result.generated_at == datetime(2026, 8, 17, 9, 0, tzinfo=_UTC)
+        assert result.pics == []
+
+    @pytest.mark.parametrize("root", [None, ".", _OMIT])
+    def test_defaults_an_absent_collection_root(self, root):
+        """An absent or null collection_root reads as the current directory."""
+        man_dict = self._make_manifest_dict(overrides={"collection_root": root})
+        if root == _OMIT:
+            del man_dict["collection_root"]
+        assert _manifest_from_json(man_dict, Path("/"), []).collection_root == Path(".")
+
+    @pytest.mark.parametrize("f", ["version", "collection_name", "generated_at"])
+    def test_raises_naming_the_missing_field(self, f):
+        """A manifest missing a required field raises, naming that field."""
+        del (bad_manifest := self._make_manifest_dict())[f]
+        with pytest.raises(ManifestError, match=rf"t\.json.*{f}"):
+            _manifest_from_json(bad_manifest, Path("t.json"), [])
+
+    def test_tolerates_an_unknown_field(self):
+        """An unrecognized top-level field does not prevent building."""
+        bad, args = self._make_manifest_dict({"foobar": 42}), (Path("/"), [])
+        strict = self._make_manifest_dict()
+        unknown = self._make_manifest_dict(overrides=bad)
+        assert _manifest_from_json(strict, *args) == _manifest_from_json(unknown, *args)
+
+
+class TestReadManifest:
+    """Tests for read_manifest."""
+
+    def _write_manifest(self, tmp_path, manifest: dict) -> Path:
+        """Writes a manifest dict to tmp_path and returns its path."""
+        (path := tmp_path / "manifest.json").write_text(json.dumps(manifest))
+        return path
+
+    def _make_manifest_dict(self, pic: list[dict] | None = None) -> dict:
+        """Creates a default test manifest dict with a two pic array."""
+        return {
+            "version": "0.1.0",
+            "collection_name": "wedding-full",
+            "generated_at": "2026-08-17T09:00:00Z",
+            "collection_root": ".",
+            "pic": [_make_pic_dict(), _make_pic_dict(relative_path="2026/two.png")]
+            if pic is None
+            else pic,
+        }
+
+    def test_returns_a_record_per_pic_entry(self, tmp_path):
+        """A manifest with two pics reads into two records."""
+        manifest = self._make_manifest_dict()
+        path = self._write_manifest(tmp_path, manifest)
+        assert len(read_manifest(path).pics) == len(manifest["pic"])
+
+    def test_reads_an_empty_pic_array(self, tmp_path):
+        """A manifest with no pics reads into an empty collection."""
+        path = self._write_manifest(tmp_path, self._make_manifest_dict(pic=[]))
+        assert read_manifest(path).pics == []
+
+    def test_raises_naming_a_missing_pic_array(self, tmp_path):
+        """A manifest with no pic array raises, naming the field."""
+        del (bad := self._make_manifest_dict())["pic"]
+        with pytest.raises(ManifestError, match=r"manifest\.json.*pic"):
+            read_manifest(self._write_manifest(tmp_path, bad))
