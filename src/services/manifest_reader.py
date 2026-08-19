@@ -13,19 +13,34 @@ from pathlib import Path
 
 from src.models.normpic import NormpicManifest, Pic
 
+SUPPORTED_VERSION = "0.1"  # The only major.minor version we support
 
+
+# Errors the manifest reader can raise
 class ManifestError(Exception):
-    """Raised when a manifest cannot be read as a conformant NormPic manifest."""
+    """Base for failures reading a manifest, carrying the manifest's path."""
+
+    def __init__(self, path: Path, detail: str) -> None:
+        super().__init__(f"Manifest at {path} {detail}")
+
+
+class MissingField(ManifestError):
+    """Raised when a required field is absent from a manifest."""
 
     def __init__(self, path: Path, field: str, index: int | None = None) -> None:
-        msg = f"Manifest at {path} "
-        if index is None:
-            msg += f"is missing required field '{field}'"
-        else:
-            msg += f"has a 'pic' of index {index} missing required field '{field}'"
-        super().__init__(msg)
+        where = "" if index is None else f" in pic {index}"
+        super().__init__(path, f"missing required field '{field}'{where}")
 
 
+class UnsupportedVersion(ManifestError):
+    """Raised when a manifest's major.minor is not the supported one."""
+
+    def __init__(self, path: Path, version: str) -> None:
+        msg = f"has version {version}, expected {SUPPORTED_VERSION}.x"
+        super().__init__(path, msg)
+
+
+# Helpers the reader uses to deserialize the manifest into a NormpicManifest
 def _pic_from_entry(entry: dict, path: Path, index: int) -> Pic:
     """Build a Pic from one entry of a manifest's pic array."""
     try:
@@ -36,7 +51,7 @@ def _pic_from_entry(entry: dict, path: Path, index: int) -> Pic:
             mtime=datetime.fromisoformat(entry["mtime"]),
         )
     except KeyError as err:
-        raise ManifestError(path, err.args[0], index) from err
+        raise MissingField(path, err.args[0], index) from err
     return pic
 
 
@@ -51,7 +66,7 @@ def _manifest_from_json(data: dict, path: Path, pics: list[Pic]) -> NormpicManif
             generated_at=datetime.fromisoformat(data["generated_at"]),
         )
     except KeyError as err:  # Raise on missing requireds
-        raise ManifestError(path, err.args[0]) from err
+        raise MissingField(path, err.args[0]) from err
     return result
 
 
@@ -59,6 +74,6 @@ def read_manifest(path: Path) -> NormpicManifest:
     """Read the manifest at path into a Collection of Pic records."""
     json_manifest = json.loads(path.read_text())  # Parse the JSON data
     if "pic" not in json_manifest:  # Raise if no 'pic' field
-        raise ManifestError(path, "pic")
+        raise MissingField(path, "pic")
     pics = [_pic_from_entry(x, path, i) for i, x in enumerate(json_manifest["pic"])]
     return _manifest_from_json(json_manifest, path, pics)

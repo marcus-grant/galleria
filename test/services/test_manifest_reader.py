@@ -17,8 +17,36 @@ from src.services.manifest_reader import (
     _manifest_from_json,
     _pic_from_entry,
     ManifestError,
+    MissingField,
+    UnsupportedVersion,
     read_manifest,
 )
+
+
+class TestManifestErrors:
+    """Tests for the manifest error types."""
+
+    def test_missing_field_names_the_path_and_field(self):
+        """The message carries the manifest path and the missing field."""
+        assert "t.json" in str(err := MissingField(Path("t.json"), "version"))
+        assert all(s in str(err) for s in ["version", "missing", "field", "required"])
+
+    def test_missing_field_names_the_pic_index(self):
+        """An indexed missing field names the pic it was missing from."""
+        assert "t.json" in str(err := MissingField(Path("t.json"), "hash", 3))
+        assert all(s in str(err) for s in ["hash", "missing", "field", "pic 3"])
+
+    def test_unsupported_version_names_the_path_and_version(self):
+        """The message carries the manifest path and the rejected version."""
+        assert "t.json" in str(err := UnsupportedVersion(Path("t.json"), "0.2.0"))
+        assert all(s in str(err) for s in ["0.2.0", "version", "expected", "0.1"])
+
+    @pytest.mark.parametrize("error", [MissingField, UnsupportedVersion])
+    def test_subclasses_are_catchable_as_manifest_error(self, error):
+        """Each subclass is catchable as ManifestError."""
+        with pytest.raises(ManifestError):
+            raise error(Path("t.json"), "detail")
+
 
 _UTC = timezone.utc
 _OMIT = object()
@@ -51,7 +79,7 @@ class TestPicFromEntry:
     def test_raises_naming_the_missing_field(self, field):
         """An entry missing a required field raises, naming that field."""
         del (entry := _make_pic_dict())[field]
-        with pytest.raises(ManifestError, match=field):
+        with pytest.raises(MissingField, match=field):
             _pic_from_entry(entry, Path("manifest.json"), 0)
 
     def test_tolerates_an_unknown_field(self):
@@ -99,7 +127,7 @@ class TestManifestFromJson:
     def test_raises_naming_the_missing_field(self, f):
         """A manifest missing a required field raises, naming that field."""
         del (bad_manifest := self._make_manifest_dict())[f]
-        with pytest.raises(ManifestError, match=rf"t\.json.*{f}"):
+        with pytest.raises(MissingField, match=rf"t\.json.*{f}"):
             _manifest_from_json(bad_manifest, Path("t.json"), [])
 
     def test_tolerates_an_unknown_field(self):
