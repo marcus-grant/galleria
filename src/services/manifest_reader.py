@@ -55,12 +55,21 @@ def _pic_from_entry(entry: dict, path: Path, index: int) -> Pic:
     return pic
 
 
+def _checked_version(version: str, path: Path) -> str:
+    """Return version if its major.minor is the supported one,
+    else raise UnsupportedVersion"""
+    parts = version.split(".")
+    if len(parts) != 3 or ".".join(parts[:2]) != SUPPORTED_VERSION:
+        raise UnsupportedVersion(path, version)
+    return version
+
+
 def _manifest_from_json(data: dict, path: Path, pics: list[Pic]) -> NormpicManifest:
     """Build a NormPicManifest from a manifest's top-level fields."""
     try:
         result = NormpicManifest(
             pics=pics,
-            version=data["version"],
+            version=_checked_version(data["version"], path),
             collection_name=data["collection_name"],
             collection_root=Path(data.get("collection_root") or "."),
             generated_at=datetime.fromisoformat(data["generated_at"]),

@@ -10,10 +10,12 @@ License: AGPL-3.0-or-later
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import re
 
 import pytest
 
 from src.services.manifest_reader import (
+    _checked_version,
     _manifest_from_json,
     _pic_from_entry,
     ManifestError,
@@ -46,6 +48,22 @@ class TestManifestErrors:
         """Each subclass is catchable as ManifestError."""
         with pytest.raises(ManifestError):
             raise error(Path("t.json"), "detail")
+
+
+class TestCheckedVersion:
+    """Tests for _check_version."""
+
+    @pytest.mark.parametrize("version", ["0.1.0", "0.1.7"])
+    def test_accepts_any_patch_of_the_supported_major_minor(self, version):
+        """Any patch level within the supported major.minor is accepted."""
+        _checked_version(version, Path("/foo.json"))
+
+    @pytest.mark.parametrize("version", ["0.2.0", "1.0.0", "0.1"])
+    def test_refuses_an_unrecognized_version(self, version):
+        """A version outside the supported major.minor raises, naming it."""
+        match = rf"foo\.json.*{re.escape(version)}"
+        with pytest.raises(UnsupportedVersion, match=match):
+            _checked_version(version, Path("foo.json"))
 
 
 _UTC = timezone.utc
@@ -136,6 +154,12 @@ class TestManifestFromJson:
         strict = self._make_manifest_dict()
         unknown = self._make_manifest_dict(overrides=bad)
         assert _manifest_from_json(strict, *args) == _manifest_from_json(unknown, *args)
+
+    def test_refuses_an_unsupported_version(self):
+        """A manifest at an unrecognized version raises, naming it."""
+        bad = self._make_manifest_dict({"version": "2.0.1"})
+        with pytest.raises(UnsupportedVersion, match="2.0.1"):
+            _manifest_from_json(bad, Path("/"), [])
 
 
 class TestReadManifest:
