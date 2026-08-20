@@ -20,6 +20,13 @@ class Pic:
     relative_path: Path
     size_bytes: int
     mtime: datetime
+    timestamp: datetime | None = None
+    timestamp_source: str | None = None
+
+    @property
+    def taken_at(self) -> datetime:
+        """The best available capture time, falling back to mtime."""
+        return self.timestamp or self.mtime
 
 
 @dataclass

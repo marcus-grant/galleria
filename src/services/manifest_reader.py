@@ -13,6 +13,8 @@ from pathlib import Path
 
 from src.models.normpic import NormpicManifest, Pic
 
+dt_from_iso = datetime.fromisoformat  # Shorter alias
+
 SUPPORTED_VERSION = "0.1"  # The only major.minor version we support
 
 
@@ -40,17 +42,46 @@ class UnsupportedVersion(ManifestError):
         super().__init__(path, msg)
 
 
-# Helpers the reader uses to deserialize the manifest into a NormpicManifest
+class MalformedField(ManifestError):
+    """Raised when a field's value violates the contract's canonical form."""
+
+    def __init__(
+        self, path: Path, field: str, value: str, index: int | None = None
+    ) -> None:
+        where = "" if index is None else f" in pic {index}"
+        super().__init__(path, f"has malformed field '{field}': '{value}'{where}")
+
+
+def _optional_timestamp(
+    entry: dict, field: str, path: Path, index: int | None = None
+) -> datetime | None:
+    """Return entry's field as a timestamp, or None when absent or null."""
+    if not (ts := entry.get(field)):
+        return None
+    return _checked_timestamp(ts, path, field, index)
+
+
+def _checked_timestamp(
+    value: str, path: Path, field: str, index: int | None = None
+) -> datetime:
+    """Return value parsed as an RFC 3339 UTC timestamp, raise if malformed."""
+    if not value.endswith("Z"):
+        raise MalformedField(path, field, value, index)
+    return dt_from_iso(value)
+
+
 def _pic_from_entry(entry: dict, path: Path, index: int) -> Pic:
     """Build a Pic from one entry of a manifest's pic array."""
-    try:
+    try:  # Assign and ensure required fields are present
         pic = Pic(
             hash=entry["hash"],
             relative_path=Path(entry["relative_path"]),
             size_bytes=entry["size_bytes"],
-            mtime=datetime.fromisoformat(entry["mtime"]),
+            mtime=_checked_timestamp(entry["mtime"], path, "mtime", index),
+            timestamp=_optional_timestamp(entry, "timestamp", path, index),
+            timestamp_source=entry.get("timestamp_source"),
         )
-    except KeyError as err:
+    except KeyError as err:  # Raise on missing required fields
         raise MissingField(path, err.args[0], index) from err
     return pic
 
@@ -66,15 +97,15 @@ def _checked_version(version: str, path: Path) -> str:
 
 def _manifest_from_json(data: dict, path: Path, pics: list[Pic]) -> NormpicManifest:
     """Build a NormPicManifest from a manifest's top-level fields."""
-    try:
+    try:  # Assign and ensure required fields are present
         result = NormpicManifest(
             pics=pics,
             version=_checked_version(data["version"], path),
             collection_name=data["collection_name"],
             collection_root=Path(data.get("collection_root") or "."),
-            generated_at=datetime.fromisoformat(data["generated_at"]),
+            generated_at=_checked_timestamp(data["generated_at"], path, "generated_at"),
         )
-    except KeyError as err:  # Raise on missing requireds
+    except KeyError as err:  # Raise on missing required fields
         raise MissingField(path, err.args[0]) from err
     return result
 

@@ -14,11 +14,13 @@ import re
 
 import pytest
 
+from src.models.normpic import Pic
 from src.services.manifest_reader import (
     _checked_version,
     _manifest_from_json,
     _pic_from_entry,
     ManifestError,
+    MalformedField,
     MissingField,
     UnsupportedVersion,
     read_manifest,
@@ -48,6 +50,18 @@ class TestManifestErrors:
         """Each subclass is catchable as ManifestError."""
         with pytest.raises(ManifestError):
             raise error(Path("t.json"), "detail")
+
+    def test_malformed_field_names_the_path_field_and_value(self):
+        """The message carries the manifest path, the field and its value."""
+        p, f, ts = "t.json", "mtime", "2026-08-17T08:00:00+01:00"
+        assert "t.json" in str(err := MalformedField(Path(p), f, ts))
+        assert all(s in str(err) for s in [f, ts, "malformed", "field"])
+
+    def test_malformed_field_names_the_pic_index(self):
+        """An indexed malformed field names the pic it was found in."""
+        p, f, ts, i = "t.json", "mtime", "2026-08-17T08:00:00+01:00", 3
+        assert "t.json" in str(err := MalformedField(Path(p), f, ts, i))
+        assert all(s in str(err) for s in [f, ts, "malformed", "field", "pic 3"])
 
 
 class TestCheckedVersion:
@@ -107,6 +121,51 @@ class TestPicFromEntry:
         expect = _pic_from_entry(entry, Path("manifest.json"), 0)
         assert _pic_from_entry(unknown, Path("manifest.json"), 0) == expect
 
+    @pytest.mark.parametrize("field", ["timestamp", "timestamp_source"])
+    @pytest.mark.parametrize("value", [None, _OMIT])
+    def test_absent_or_null_optional_scalars_read_as_none(self, field, value):
+        """An absent or null optional scalar field reads as None."""
+        entry = _make_pic_dict() if value is _OMIT else _make_pic_dict(**{field: None})
+        assert getattr(_pic_from_entry(entry, Path("foo.json"), 0), field) is None
+
+    def test_carries_optional_scalars_when_present(self):
+        """A present timestamp parses to a datetime, its source stays a string."""
+        ts = "2026-08-17T07:45:12.001Z"
+        d = _make_pic_dict(timestamp=ts, timestamp_source="exif")
+        expect = datetime(2026, 8, 17, 7, 45, 12, microsecond=1000, tzinfo=_UTC)
+        assert (p := _pic_from_entry(d, Path("t.json"), 0)).timestamp == expect
+        assert p.timestamp_source == "exif"
+
+    @pytest.mark.parametrize("field", ["mtime", "timestamp"])
+    def test_refuses_an_offset_timestamp(self, field):
+        """A timestamp with a numeric offset rather than Z raises."""
+        bad = _make_pic_dict(**{field: "2026-08-17T08:00:00+01:00"})
+        with pytest.raises(MalformedField, match=rf"t\.json.*{field}"):
+            _pic_from_entry(bad, Path("t.json"), 0)
+
+
+class TestPic:
+    """Tests for the Pic record."""
+
+    def _make_pic(self, **overrides) -> Pic:
+        """Creates a default test Pic, overridden per keyword given."""
+        defaults = {
+            "hash": "b3c32:NW9MKEFNZ6GTD8209QN3DQ69",
+            "relative_path": Path("2026/one.jpg"),
+            "size_bytes": 1024,
+            "mtime": datetime(2026, 8, 17, 8, 0, tzinfo=_UTC),
+        }
+        return Pic(**{**defaults, **overrides})
+
+    def test_taken_at_prefers_the_timestamp(self):
+        """A pic with a timestamp reports it as the capture time."""
+        pic = self._make_pic(timestamp=datetime(2026, 8, 17, 7, 45, 12, tzinfo=_UTC))
+        assert pic.taken_at == datetime(2026, 8, 17, 7, 45, 12, tzinfo=_UTC)
+
+    def test_taken_at_falls_back_to_mtime(self):
+        """A pic with no timestamp reports mtime as the capture time."""
+        assert self._make_pic().taken_at == datetime(2026, 8, 17, 8, 0, tzinfo=_UTC)
+
 
 class TestManifestFromJson:
     """Tests for _manifest_from_json."""
@@ -160,6 +219,12 @@ class TestManifestFromJson:
         bad = self._make_manifest_dict({"version": "2.0.1"})
         with pytest.raises(UnsupportedVersion, match="2.0.1"):
             _manifest_from_json(bad, Path("/"), [])
+
+    def test_refuses_an_offset_generated_at(self):
+        """A generated_at with a numeric offset rather than Z raises."""
+        bad = self._make_manifest_dict({"generated_at": "2026-08-17T09:00:00+01:00"})
+        with pytest.raises(MalformedField, match="generated_at"):
+            _manifest_from_json(bad, Path("foo.json"), [])
 
 
 class TestReadManifest:
