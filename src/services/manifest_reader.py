@@ -95,11 +95,16 @@ def _checked_version(version: str, path: Path) -> str:
     return version
 
 
+def _sorted_pics(pics: list[Pic]) -> list[Pic]:
+    """Return pics ordered by capture time then normpic ordered relative path."""
+    return sorted(pics, key=lambda p: (p.taken_at, p.relative_path))
+
+
 def _manifest_from_json(data: dict, path: Path, pics: list[Pic]) -> NormpicManifest:
     """Build a NormPicManifest from a manifest's top-level fields."""
     try:  # Assign and ensure required fields are present
         result = NormpicManifest(
-            pics=pics,
+            pics=_sorted_pics(pics),
             version=_checked_version(data["version"], path),
             collection_name=data["collection_name"],
             collection_root=Path(data.get("collection_root") or "."),

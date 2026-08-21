@@ -19,6 +19,7 @@ from src.services.manifest_reader import (
     _checked_version,
     _manifest_from_json,
     _pic_from_entry,
+    _sorted_pics,
     ManifestError,
     MalformedField,
     MissingField,
@@ -88,7 +89,7 @@ def _make_pic_dict(**overrides) -> dict:
     """Creates a default test pic dict, overridden per keyword given."""
     defaults = {
         "hash": "b3c32:NW9MKEFNZ6GTD8209QN3DQ69",
-        "relative_path": "2026/one.jpg",
+        "relative_path": "2026/a.jpg",
         "size_bytes": 1024,
         "mtime": "2026-08-17T08:00:00Z",
     }
@@ -144,27 +145,28 @@ class TestPicFromEntry:
             _pic_from_entry(bad, Path("t.json"), 0)
 
 
+def _make_pic(**overrides) -> Pic:
+    """Creates a default test Pic, overridden per keyword given."""
+    defaults = {
+        "hash": "b3c32:NW9MKEFNZ6GTD8209QN3DQ69",
+        "relative_path": Path("2026/one.jpg"),
+        "size_bytes": 1024,
+        "mtime": datetime(2026, 8, 17, 8, 0, tzinfo=_UTC),
+    }
+    return Pic(**{**defaults, **overrides})
+
+
 class TestPic:
     """Tests for the Pic record."""
 
-    def _make_pic(self, **overrides) -> Pic:
-        """Creates a default test Pic, overridden per keyword given."""
-        defaults = {
-            "hash": "b3c32:NW9MKEFNZ6GTD8209QN3DQ69",
-            "relative_path": Path("2026/one.jpg"),
-            "size_bytes": 1024,
-            "mtime": datetime(2026, 8, 17, 8, 0, tzinfo=_UTC),
-        }
-        return Pic(**{**defaults, **overrides})
-
     def test_taken_at_prefers_the_timestamp(self):
         """A pic with a timestamp reports it as the capture time."""
-        pic = self._make_pic(timestamp=datetime(2026, 8, 17, 7, 45, 12, tzinfo=_UTC))
+        pic = _make_pic(timestamp=datetime(2026, 8, 17, 7, 45, 12, tzinfo=_UTC))
         assert pic.taken_at == datetime(2026, 8, 17, 7, 45, 12, tzinfo=_UTC)
 
     def test_taken_at_falls_back_to_mtime(self):
         """A pic with no timestamp reports mtime as the capture time."""
-        assert self._make_pic().taken_at == datetime(2026, 8, 17, 8, 0, tzinfo=_UTC)
+        assert _make_pic().taken_at == datetime(2026, 8, 17, 8, 0, tzinfo=_UTC)
 
 
 class TestManifestFromJson:
@@ -227,6 +229,25 @@ class TestManifestFromJson:
             _manifest_from_json(bad, Path("foo.json"), [])
 
 
+class TestSortedPics:
+    """Tests for _sorted_pics."""
+
+    def test_orders_by_capture_time(self):
+        """Pics are returned oldest first regardless of input order."""
+        a = _make_pic(timestamp=datetime(2026, 1, 1, 1, 1, tzinfo=_UTC))
+        b = _make_pic(timestamp=datetime(2026, 1, 1, 1, 1, microsecond=1, tzinfo=_UTC))
+        c = _make_pic(mtime=datetime(2026, 8, 17, 7, 45, microsecond=2, tzinfo=_UTC))
+        assert _sorted_pics([c, b, a]) == [a, b, c]
+
+    def test_breaks_ties_on_relative_path(self):
+        """Pics sharing a capture time order by relative path."""
+        dt_a, p_a = datetime(2026, 1, 1, 1, 1, tzinfo=_UTC), Path("2026/1.jpg")
+        dt_b, p_b = datetime(2026, 1, 1, 1, 1, tzinfo=_UTC), Path("2026/2.jpg")
+        a = _make_pic(timestamp=dt_a, relative_path=p_a)
+        b = _make_pic(timestamp=dt_b, relative_path=p_b)
+        assert _sorted_pics([b, a]) == [a, b]
+
+
 class TestReadManifest:
     """Tests for read_manifest."""
 
@@ -242,7 +263,7 @@ class TestReadManifest:
             "collection_name": "wedding-full",
             "generated_at": "2026-08-17T09:00:00Z",
             "collection_root": ".",
-            "pic": [_make_pic_dict(), _make_pic_dict(relative_path="2026/two.png")]
+            "pic": [_make_pic_dict(), _make_pic_dict(relative_path="2026/b.png")]
             if pic is None
             else pic,
         }
@@ -263,3 +284,10 @@ class TestReadManifest:
         del (bad := self._make_manifest_dict())["pic"]
         with pytest.raises(ManifestError, match=r"manifest\.json.*pic"):
             read_manifest(self._write_manifest(tmp_path, bad))
+
+    def test_returns_pics_in_capture_order(self, tmp_path):
+        """A manifest whose pic array is out of order reads back sorted."""
+        (manifest := self._make_manifest_dict())["pic"].reverse()
+        path = self._write_manifest(tmp_path, manifest)
+        expect = [Path("2026/a.jpg"), Path("2026/b.png")]
+        assert [p.relative_path for p in read_manifest(path).pics] == expect
