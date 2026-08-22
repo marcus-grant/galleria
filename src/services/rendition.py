@@ -23,5 +23,4 @@ def merge_variants(
         pic_o, pic_d = dict_o.get(path), dict_d.get(path)
         rendition = PicRenditions(relative_path=path, original=pic_o, display=pic_d)
         renditions.append(rendition)
-    # return renditions
     return sorted(renditions, key=(lambda p: (p.taken_at, p.relative_path)))
