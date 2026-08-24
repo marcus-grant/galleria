@@ -1,5 +1,5 @@
 from unittest.mock import Mock, patch
-from src.services.static_assets import StaticAssetService
+from galleria.services.static_assets import StaticAssetService
 
 
 def test_static_asset_service_copies_css_files():
@@ -7,8 +7,8 @@ def test_static_asset_service_copies_css_files():
     service = StaticAssetService()
     
     # Mock file operations
-    with patch('src.services.static_assets.Path') as mock_path_class:
-        with patch('src.services.static_assets.shutil.copy2') as mock_copy:
+    with patch('galleria.services.static_assets.Path') as mock_path_class:
+        with patch('galleria.services.static_assets.shutil.copy2') as mock_copy:
             # Set up mock paths
             mock_source = Mock()
             mock_output = Mock()

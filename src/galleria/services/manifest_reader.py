@@ -11,7 +11,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from src.models.normpic import NormpicManifest, Pic
+from galleria.models.normpic import NormpicManifest, Pic
 
 dt_from_iso = datetime.fromisoformat  # Shorter alias
 

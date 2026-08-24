@@ -1,7 +1,7 @@
 from unittest.mock import patch, MagicMock
 import json
 
-from src.services.photo_metadata import PhotoMetadataService
+from galleria.services.photo_metadata import PhotoMetadataService
 
 
 def test_photo_metadata_service_scans_prod_pics_directory():
@@ -144,7 +144,7 @@ def test_photo_metadata_service_reads_from_json_metadata(tmp_path):
 
 def test_integration_photo_processing_to_metadata_service(tmp_path):
     """Integration test: process photos -> generate metadata -> read metadata"""
-    from src.services.file_processing import process_dual_photo_collection
+    from galleria.services.file_processing import process_dual_photo_collection
     from PIL import Image
     import piexif
     

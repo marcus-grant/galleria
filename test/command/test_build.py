@@ -7,7 +7,7 @@ from unittest.mock import patch, Mock
 
 def test_build_command_exists_and_outputs_status():
     """Test that build command exists and outputs status messages."""
-    from manage import cli
+    from galleria.cli import cli
 
     runner = CliRunner()
     result = runner.invoke(cli, ["build"])
@@ -23,7 +23,7 @@ def test_build_command_exists_and_outputs_status():
 
 def test_build_reports_directory_status():
     """Test that build command reports on directory status."""
-    from manage import cli
+    from galleria.cli import cli
 
     runner = CliRunner()
     with runner.isolated_filesystem():
@@ -40,7 +40,7 @@ def test_build_reports_directory_status():
 
 def test_build_reports_missing_source_directory():
     """Test that build command reports when source directory doesn't exist."""
-    from manage import cli
+    from galleria.cli import cli
 
     runner = CliRunner()
     with runner.isolated_filesystem():
@@ -57,7 +57,7 @@ def test_build_reports_missing_source_directory():
 
 def test_build_creates_output_directory_structure():
     """Test that build command creates output directory structure."""
-    from manage import cli
+    from galleria.cli import cli
 
     runner = CliRunner()
     with runner.isolated_filesystem():
@@ -86,7 +86,7 @@ def test_build_creates_output_directory_structure():
 
 def test_build_command_calls_build_gallery_function():
     """Test that build command calls the build_gallery function properly."""
-    from manage import cli
+    from galleria.cli import cli
     from unittest.mock import patch
 
     runner = CliRunner()
@@ -99,11 +99,11 @@ def test_build_command_calls_build_gallery_function():
     }
 
     with patch(
-        "src.command.build.build_gallery", return_value=mock_build_result
+        "galleria.command.build.build_gallery", return_value=mock_build_result
     ) as mock_build_gallery:
-        with patch("src.command.build.check_source_directory", return_value=True):
+        with patch("galleria.command.build.check_source_directory", return_value=True):
             with patch(
-                "src.command.build.check_source_subdirectories", return_value={}
+                "galleria.command.build.check_source_subdirectories", return_value={}
             ):
                 result = runner.invoke(cli, ["build"])
 
@@ -119,7 +119,7 @@ def test_build_command_calls_build_gallery_function():
 
 def test_build_gallery_function_orchestrates_services():
     """Test that build_gallery function calls correct services with proper orchestration."""
-    from src.command.build import build_gallery
+    from galleria.command.build import build_gallery
 
     # Mock pic data that PhotoMetadataService would return
     mock_pic_data = {
@@ -129,10 +129,10 @@ def test_build_gallery_function_orchestrates_services():
         "total_count": 1,
     }
 
-    with patch("src.command.build.PhotoMetadataService") as mock_metadata_service:
-        with patch("src.command.build.TemplateRenderer") as mock_renderer_class:
+    with patch("galleria.command.build.PhotoMetadataService") as mock_metadata_service:
+        with patch("galleria.command.build.TemplateRenderer") as mock_renderer_class:
             with patch(
-                "src.command.build.create_output_directory_structure"
+                "galleria.command.build.create_output_directory_structure"
             ) as mock_create_dir:
                 with patch("pathlib.Path.exists", return_value=True):
                     # Setup mocks
@@ -187,14 +187,14 @@ def test_build_gallery_function_orchestrates_services():
 
 def test_build_gallery_function_handles_no_pics():
     """Test that build_gallery function handles case when no pics are found."""
-    from src.command.build import build_gallery
+    from galleria.command.build import build_gallery
 
     # Mock empty pic data
     mock_pic_data = {"pics": [], "total_count": 0}
 
-    with patch("src.command.build.PhotoMetadataService") as mock_metadata_service:
+    with patch("galleria.command.build.PhotoMetadataService") as mock_metadata_service:
         with patch(
-            "src.command.build.create_output_directory_structure"
+            "galleria.command.build.create_output_directory_structure"
         ) as mock_create_dir:
             with patch("pathlib.Path.exists", return_value=False):
                 # Setup mocks

@@ -5,8 +5,8 @@ import settings
 from PIL import Image
 import piexif
 
-from src.services.file_processing import generate_gallery_metadata
-from src.models.photo import ProcessedPhoto, CameraInfo, ExifData
+from galleria.services.file_processing import generate_gallery_metadata
+from galleria.models.photo import ProcessedPhoto, CameraInfo, ExifData
 
 
 @pytest.fixture(autouse=True)

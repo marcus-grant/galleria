@@ -14,8 +14,8 @@ import re
 
 import pytest
 
-from src.models.normpic import Pic
-from src.services.manifest_reader import (
+from galleria.models.normpic import Pic
+from galleria.services.manifest_reader import (
     _checked_version,
     _manifest_from_json,
     _pic_from_entry,

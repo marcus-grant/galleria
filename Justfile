@@ -15,7 +15,7 @@ test-file FILE:
     uv run pytest {{FILE}} -v
 
 serve:
-    uv run python manage.py serve --reload
+    uv run python -m galleria serve --reload
 
 build:
-    uv run python manage.py build
+    uv run python -m galleria build

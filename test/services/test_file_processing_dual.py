@@ -3,8 +3,8 @@ import pytest
 from PIL import Image
 import piexif
 
-from src.services.file_processing import process_dual_photo_collection
-from src.services.s3_storage import calculate_file_checksum
+from galleria.services.file_processing import process_dual_photo_collection
+from galleria.services.s3_storage import calculate_file_checksum
 import settings
 
 

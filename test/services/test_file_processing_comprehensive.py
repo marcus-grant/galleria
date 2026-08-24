@@ -3,13 +3,13 @@
 import pytest
 from pathlib import Path
 from PIL import Image
-from src.services.file_processing import (
+from galleria.services.file_processing import (
     link_photo_with_filename, 
     create_thumbnail,
     process_photo_collection,
     THUMBNAIL_SIZE
 )
-from src.models.photo import ProcessedPhoto, CameraInfo, ExifData
+from galleria.models.photo import ProcessedPhoto, CameraInfo, ExifData
 from datetime import datetime
 
 

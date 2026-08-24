@@ -1,7 +1,7 @@
 import re
 import json
 from pathlib import Path
-from src.models.photo import GalleryMetadata
+from galleria.models.photo import GalleryMetadata
 import settings
 
 
@@ -16,7 +16,7 @@ class PhotoMetadataService:
             Complete URL for the photo
         """
         # Determine if we're in dual bucket mode
-        from src.services.s3_storage import is_dual_bucket_configured
+        from galleria.services.s3_storage import is_dual_bucket_configured
         is_dual_mode = is_dual_bucket_configured()
         
         # Check if we have a pics base URL configured

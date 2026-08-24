@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Optional
 import sys
 
-from src.services.file_processing import process_dual_photo_collection
-from src.services.photo_validation import validate_matching_collections
+from galleria.services.file_processing import process_dual_photo_collection
+from galleria.services.photo_validation import validate_matching_collections
 
 
 @click.command()

@@ -1,6 +1,6 @@
 # pyright: reportArgumentType=false, reportOptionalMemberAccess=false, reportOptionalIterable=false, reportCallIssue=false, reportOperatorIssue=false
 from bs4 import BeautifulSoup
-from src.services.template_renderer import TemplateRenderer
+from galleria.services.template_renderer import TemplateRenderer
 
 
 def test_pic_grid_component_renders_container():
@@ -30,10 +30,10 @@ def test_pic_grid_component_renders_pic_cells():
 
     with (
         patch(
-            "src.services.template_renderer.is_dual_bucket_configured",
+            "galleria.services.template_renderer.is_dual_bucket_configured",
             return_value=True,
         ),
-        patch("src.services.template_renderer.settings") as mock_settings,
+        patch("galleria.services.template_renderer.settings") as mock_settings,
     ):
         mock_settings.S3_PICS_ENDPOINT = "https://pics.example.com"
         mock_settings.S3_PICS_BUCKET = "test-bucket"

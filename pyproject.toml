@@ -27,6 +27,13 @@ dev = [
     "watchdog>=6.0.0",
 ]
 
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.ruff]
 line-length = 88
 extend-exclude = ["salvage"]
@@ -35,9 +42,9 @@ target-version = "py312"
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
-include = ["src", "test", "manage.py"]
+include = ["src/galleria", "test", "manage.py"]
 exclude = ["salvage", "**/__pycache__"]
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
-pythonpath = ["."]
+pythonpath = ["src", "."]

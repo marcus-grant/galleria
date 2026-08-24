@@ -5,13 +5,13 @@ Generates static website from processed photos.
 """
 import click
 from pathlib import Path
-from src.services.site_generator import (
+from galleria.services.site_generator import (
     check_source_directory, 
     check_source_subdirectories,
     create_output_directory_structure
 )
-from src.services.photo_metadata import PhotoMetadataService
-from src.services.template_renderer import TemplateRenderer
+from galleria.services.photo_metadata import PhotoMetadataService
+from galleria.services.template_renderer import TemplateRenderer
 
 
 def build_gallery():
@@ -44,14 +44,14 @@ def build_gallery():
         renderer = TemplateRenderer()
         
         # Generate gallery page
-        gallery_template = Path("src/template/gallery.j2.html")
+        gallery_template = Path("src/galleria/template/gallery.j2.html")
         if gallery_template.exists():
             gallery_html = renderer.render("gallery.j2.html", pic_data)
             renderer.save_html(gallery_html, "prod/site/gallery.html")
             gallery_generated = True
         
         # Generate index page  
-        index_template = Path("src/template/index.j2.html")
+        index_template = Path("src/galleria/template/index.j2.html")
         if index_template.exists():
             index_html = renderer.render("index.j2.html", pic_data)
             renderer.save_html(index_html, "prod/site/index.html")

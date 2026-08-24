@@ -1,6 +1,6 @@
 from unittest.mock import patch, Mock
 from click.testing import CliRunner
-from src.command.serve import serve
+from galleria.command.serve import serve
 
 
 def test_serve_command_exists():
@@ -17,7 +17,7 @@ def test_serve_command_starts_http_server():
     """Test that serve command starts an HTTP server"""
     runner = CliRunner()
 
-    with patch("src.command.serve.DevServer") as mock_dev_server:
+    with patch("galleria.command.serve.DevServer") as mock_dev_server:
         mock_server_instance = Mock()
         mock_dev_server.return_value = mock_server_instance
 
@@ -33,7 +33,7 @@ def test_serve_command_accepts_port_option():
     """Test that serve command accepts --port option"""
     runner = CliRunner()
 
-    with patch("src.command.serve.DevServer") as mock_dev_server:
+    with patch("galleria.command.serve.DevServer") as mock_dev_server:
         mock_server_instance = Mock()
         mock_dev_server.return_value = mock_server_instance
 
@@ -49,7 +49,7 @@ def test_serve_command_accepts_reload_option():
     """Test that serve command accepts --reload option"""
     runner = CliRunner()
 
-    with patch("src.command.serve.DevServer") as mock_dev_server:
+    with patch("galleria.command.serve.DevServer") as mock_dev_server:
         mock_server_instance = Mock()
         mock_dev_server.return_value = mock_server_instance
 
@@ -65,7 +65,7 @@ def test_serve_command_serves_from_prod_site():
     """Test that serve command serves from prod/site directory"""
     runner = CliRunner()
 
-    with patch("src.command.serve.DevServer") as mock_dev_server:
+    with patch("galleria.command.serve.DevServer") as mock_dev_server:
         mock_server_instance = Mock()
         mock_dev_server.return_value = mock_server_instance
 

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from PIL import Image
 
-from src.services.file_processing import process_dual_photo_collection
+from galleria.services.file_processing import process_dual_photo_collection
 
 
 class TestBatchMetadataEfficiency:

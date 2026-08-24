@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from src.models.normpic import Pic
+from galleria.models.normpic import Pic
 
 
 @dataclass

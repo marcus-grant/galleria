@@ -1,17 +1,17 @@
 # pyright: reportArgumentType=false, reportOptionalMemberAccess=false, reportOptionalIterable=false, reportCallIssue=false
 from bs4 import BeautifulSoup
 from unittest.mock import patch
-from src.services.template_renderer import TemplateRenderer
+from galleria.services.template_renderer import TemplateRenderer
 
 
 def test_pic_cell_component_renders_basic_structure():
     """Test that pic-cell component renders with basic thumbnail structure"""
     with (
         patch(
-            "src.services.template_renderer.is_dual_bucket_configured",
+            "galleria.services.template_renderer.is_dual_bucket_configured",
             return_value=True,
         ),
-        patch("src.services.template_renderer.settings") as mock_settings,
+        patch("galleria.services.template_renderer.settings") as mock_settings,
     ):
         mock_settings.S3_PICS_ENDPOINT = "https://pics.example.com"
         mock_settings.S3_PICS_BUCKET = "test-bucket"
@@ -49,10 +49,10 @@ def test_pic_cell_component_has_proper_alt_text():
     """Test that pic-cell has accessible alt text"""
     with (
         patch(
-            "src.services.template_renderer.is_dual_bucket_configured",
+            "galleria.services.template_renderer.is_dual_bucket_configured",
             return_value=True,
         ),
-        patch("src.services.template_renderer.settings") as mock_settings,
+        patch("galleria.services.template_renderer.settings") as mock_settings,
     ):
         mock_settings.S3_PICS_ENDPOINT = "https://pics.example.com"
         mock_settings.S3_PICS_BUCKET = "test-bucket"
@@ -74,10 +74,10 @@ def test_pic_cell_component_includes_responsive_classes():
     """Test that pic-cell includes Tailwind responsive classes"""
     with (
         patch(
-            "src.services.template_renderer.is_dual_bucket_configured",
+            "galleria.services.template_renderer.is_dual_bucket_configured",
             return_value=True,
         ),
-        patch("src.services.template_renderer.settings") as mock_settings,
+        patch("galleria.services.template_renderer.settings") as mock_settings,
     ):
         mock_settings.S3_PICS_ENDPOINT = "https://pics.example.com"
         mock_settings.S3_PICS_BUCKET = "test-bucket"
