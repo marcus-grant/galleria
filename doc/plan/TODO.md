@@ -106,52 +106,6 @@ helper rather than the project.
 The tasks below are ordered by what unblocks what.
 Each is a separate change with its own plan and sign-off.
 
-### ft/manifest-read-v0-1
-
-Read the two manifests and produce the list of pics the renderer
-consumes.
-
-Keep this module standalone, with no page-generation logic in it.
-NormPic may later expose a shared reading surface that consumers sit
-on top of; a reader entangled with rendering could not adopt it.
-
-- Read both manifests as plain JSON.
-- Pair full and web variants on `relative_path`.
-  `original_filename` is unpopulated by every producer path and
-  cannot be a key.
-- Refuse a manifest whose `version` major.minor is unrecognized.
-  This is the contract's one consumer MUST that is not validation.
-- Sort explicitly.
-  The `pic` array's order is not semantically meaningful and is
-  known to be unstable on NormPic's cache path.
-- Sort chronologically by `timestamp`, which is optional and
-  nullable.
-  Name the fallback for pics without one; `mtime` is required and is
-  the obvious candidate.
-- Fail clearly on a missing required field, naming the field and the
-  manifest it was missing from.
-- Report back if anything makes the array's original order matter.
-  That would escalate a fix upstream to NormPic.
-
-Assert the expected pair count at build time and fail loudly on a
-mismatch, rather than pairing silently wrong.
-Source filenames are identical across both variants, and same-second
-collisions are disambiguated by an ordinal assigned in processing
-order.
-That ordinal holds only while both collections have identical
-membership, so a count mismatch is the signal that it no longer does.
-Pixel hashing is the durable fix and is post-MVP.
-
-Boundary cases to pin: an empty manifest, a pic present in one
-variant set but not the other, a pic with no timestamp, and a
-manifest at an unrecognized version.
-
-Develop against hand-written JSON fixtures in `tmp_path` covering
-those four cases.
-None of them occurs in a real 645-photo manifest, which pairs 645/645.
-One acceptance run against a real manifest before sign-off.
-That path is supplied at invocation and is never a constant here.
-
 ### ft/cli-config
 
 Give Galleria the interface marcustack calls it through.
@@ -172,6 +126,12 @@ naming what was not found.
   into generated HTML is stale the moment anything moves.
   The relative-path branch in `photo_metadata.py` already exists but
   is unreachable from the render pipeline.
+- Decide what the CLI does with a photo present in only one variant
+  set.
+  `merge_variants` reports these as records with a missing variant and
+  never fails on its own.
+  Options are a warning, a threshold, generating the missing rendition,
+  or refusing to build.
 - Remove `PICS_BASE_URL`, `SITE_BASE_URL`, and
   `_generate_pics_base_url()`.
   The renderer ignores the settings and builds its own URL from S3
@@ -202,6 +162,11 @@ grepping:
     - The thumbnail generation to split out is generated from the web
       variant, not the full one.
     - Remove the S3 settings left unread.
+    - Remove the dependencies those modules were the only users of:
+      `exifread`, `timezonefinder`, and `boto3`.
+      Grep before removing; `pillow` stays with thumbnail generation.
+      Run `uv sync` and commit `uv.lock` alongside the
+      `pyproject.toml` edit.
 
 This is the largest task in the sequence and the one most likely to
 want per-commit sign-off.
@@ -232,6 +197,16 @@ anything enhances it.
   unbounded, which for 645 photos is one enormous page.
 - Fixed-dimension containers so images arriving do not reflow the
   grid.
+- Generate thumbnails from the display variant.
+  This is the first derived rendition, and it raises a model question
+  to settle before writing it: a generated rendition carries the same
+  fields as a manifested one, so decide whether `Pic` serves both
+  rather than adding a parallel record.
+  If it does, the container tracks which renditions were manifested
+  and which were generated, since the type no longer says.
+- Decide how the no-JavaScript page offers original, display and
+  thumbnail without a viewer to switch between them.
+  Deferred until the static page exists to look at.
 
 Display order is Galleria's decision, not NormPic's.
 Chronological is the default for a wedding.
@@ -287,7 +262,7 @@ Spend no more effort here than that.
 Make derived image sets configurable rather than hardcoded.
 
 Thumbnails are currently 400px WEBP at quality 85, from module-level
-constants, generated from the web set.
+constants, generated from the display variant.
 Derived sets are build output, not content, and are never
 manifested.
 
@@ -302,10 +277,26 @@ manifested.
   One rendition at MVP, more without code changes.
 - Named generator implementations behind one call, so a second
   format lands without touching callers.
+- Settle whether a generated rendition is a `Pic`.
+  It carries the same fields, so a parallel record is duplication, but
+  reusing `Pic` loses the manifested-versus-generated distinction and
+  the container has to track it instead.
+- The fidelity chain in ROADMAP is what makes named slots insufficient
+  eventually.
+  Not MVP work; noted here so the spec shape does not foreclose it.
 
-Keep WEBP for grid thumbnails.
-It is a good size-to-quality compromise and its incremental decoding
-suits tiles.
+Thumbnail format is unsettled.
+WEBP is a good size-to-quality compromise, but it has no progressive
+mode: it decodes top-to-bottom rather than coarse-to-fine, so a larger
+progressive JPEG may read better on a grid despite the extra bytes.
+Settle it cheaply before MVP: generate a grid in each format and look
+at both over a throttled connection.
+The point is a decision, not a benchmark.
+The winner becomes the default and the loser stays reachable.
+Before MVP, do only the abstraction that makes swapping formats a
+configuration change rather than a rewrite: format as a field on the
+spec, and the generator dispatching on it.
+Everything else in this section is post-MVP.
 
 ### ft/preview-modal
 
@@ -413,6 +404,25 @@ BeautifulSoup's annotations reject callable `class_` predicates and
 return an optional attribute value from `get()`.
 Replace them with typed assertion helpers that narrow once.
 Every template test added from here hits the same thing.
+
+### chr/orphaned-test-fixtures
+
+`test/conftest.py` holds two fixtures building JPEG files with optional
+EXIF, `create_test_images` and `create_fake_photo_with_exif`.
+Both are producer-side work that moved to NormPic.
+
+They stay while any test module still requests them, so this runs after
+`ft/cli-config` removes the modules that do.
+
+- Grep `test/` for each fixture name and confirm no requester remains.
+  An orphaned fixture raises no failure, so the grep is the only
+  signal.
+- Move the orphaned fixtures to `salvage/` with the modules that used
+  them.
+- Drop the `piexif` import guard and the file-level pyright suppression
+  at the top of `test/conftest.py` if nothing needing them remains.
+- Remove `piexif` from the dev dependency group once no test imports
+  it, running `uv sync` and committing `uv.lock` in the same commit.
 
 ### tst/fakefs-fixture
 

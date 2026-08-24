@@ -53,6 +53,32 @@ No implementation begins before the plan is reviewed and signed off.
 The plan is also the baseline that review grades against, so the
 effort spent making it precise is repaid at review time.
 
+### Which workflow is in use
+
+The roles above are held by whoever the maintainer assigns, and two
+arrangements are in regular use.
+The maintainer picks one at the start of a change and says so.
+
+In the review workflow, an author and a reviewer are separate parties.
+The author plans, implements, and reports a per-commit summary; the
+reviewer signs off the plan and runs quality assurance against the
+repository.
+`doc/QA.md` describes this arrangement.
+
+In the stub workflow, the maintainer holds author and maintainer both,
+and the collaborator holds reviewer.
+The collaborator supplies stubs, edit guidance, and diagnosis; the
+maintainer writes every test body and implementation.
+A stub is a signature, a docstring, and nothing else: an implementation
+stub has no body, and a test stub has no assertions.
+Pre-filling either hands back code that must be deleted and rewritten.
+One atomic step per exchange, confirmed before the next begins.
+
+The plan-first rule, the pre-commit gate, commit sizing and message
+format, the style rules, the documentation discipline, and the manual
+acceptance run apply in both.
+What differs is only who fills the bodies and how sign-off is reported.
+
 ## Planning
 
 A change begins as a written plan: an ordered task list precise enough
@@ -77,9 +103,10 @@ A well-formed plan has this shape:
   boundary test is what allows the plan to be evaluated and what
   review verifies directly.
 - The plan cites the spec source each cycle satisfies.
-  For manifest consumption that source is the installed NormPic
-  package: its shipped JSON schema and its contract document, read
-  from the installed distribution rather than from a checkout path.
+  For manifest consumption that source is NormPic's contract document at
+  the tagged URL recorded in `doc/plan/TODO.md`.
+  Galleria takes no NormPic dependency, so there is no installed package
+  to read from.
   It is never a copy of those facts held in this repository.
 - The plan states scope concretely: which files change and roughly how
   much.
@@ -95,10 +122,23 @@ A well-formed plan has this shape:
 When a planned change is recorded in `doc/plan/TODO.md`, it takes the
 same shape: a branch-named section, a short framing of the work, an
 ordered task list that opens with the branch task, runs the cycles
-through the middle, and closes with the Doc and Pln commits described
-above.
+through the middle, and closes with the `Doc` and `Pln` commits described above.
 A reader should be able to execute the section without reconstructing
 the plan.
+
+### Two signals a plan has the wrong units
+
+A plan whose cycles all land in one function is wrong about its units.
+Decompose before writing tests: three units get three small factories,
+where one unit grows a helper stack serving unrelated cases.
+Getting this wrong is paid twice, restructuring the tests and then the
+code they pin.
+
+A parameter that exists only to select between message shapes or to
+branch behavior is a missing type.
+Widening its annotation compounds the churn.
+Reach for a second type instead, with a base class where the two share
+state.
 
 ## Test-driven development
 

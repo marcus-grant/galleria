@@ -31,6 +31,17 @@ already exist.
 Open question: where the configuration lives (manifest extension, sidecar, or
 Galleria-side config).
 
+Beyond configurability, renditions generalize into an ordered fidelity
+chain rather than named slots.
+Derivation flows downward only: a rendition is generated from the
+nearest higher-fidelity one available, and a missing higher-fidelity
+rendition can only alias to what exists, by metadata rather than by
+copying bytes.
+MVP does not attempt this.
+It assumes both manifested variants are present, which the production
+collection satisfies, and does only the abstraction that keeps the
+generalization cheap later.
+
 ### 11ty plugin packaging
 
 Package Galleria as an 11ty plugin: read a NormPic manifest into the 11ty data

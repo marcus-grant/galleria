@@ -8,8 +8,8 @@ lint:
 typecheck:
     uv run pyright
 
-test:
-    uv run pytest
+test *ARGS:
+    uv run pytest {{ARGS}}
 
 test-file FILE:
     uv run pytest {{FILE}} -v
