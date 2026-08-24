@@ -5,6 +5,34 @@ Pre-split history is archived under [changelog/](changelog/).
 
 ## 2026-08-24
 
+### ref/module-layout
+
+Move the source tree under a package and replace the entry point.
+
+- Moved `src/` to `src/galleria/` so the package name matches the
+  project name.
+  Imports, patch targets, and hardcoded path literals follow.
+- Replaced `manage.py` with `galleria/cli.py` and
+  `galleria/__main__.py`.
+  Invocation becomes `python -m galleria`, and the Justfile recipes
+  and development server subprocess follow.
+- Added a setuptools build backend and package discovery, with an
+  editable install so the package resolves outside the test suite.
+  No console script and no distribution metadata: the package is
+  importable, not yet distributable.
+- Rewrote `doc/command/README.md` for the current command surface.
+- Moved `doc/deployment/`, `doc/guides/bunnycdn-setup.md`, and
+  `doc/command/collection-stats.md` to `salvage/`.
+  Deployment and CDN work is owned by the composer project.
+- Recorded the production rendition values before the settings module
+  holding them is removed: web variants at 2048x2048, thumbnails at
+  400x400, quality 85 for both JPEG and WebP.
+
+The suite is unchanged at 254 passed and 3 skipped, matching the
+baseline taken before the move.
+
+### ft/manifest-reader-v01
+
 Read NormPic manifests and merge variants into renditions.
 
 - Added `read_manifest`, building typed records from one manifest.

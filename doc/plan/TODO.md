@@ -142,6 +142,17 @@ naming what was not found.
   - What that removal is walking into, found by reading rather than
 grepping:
 
+    - Delete root-level `settings.py`.
+      Three test modules go wholesale, since they test the deleted
+      mechanism: `test_settings.py`, `test_settings_isolation_fix.py`,
+      and `test_gallery_settings_complete.py`.
+      Remaining dependents get `pytest.mark.skip` with a reason naming
+      the item that restores them.
+    - Verify `python -m galleria build` runs from a directory that is not
+      the repository root.
+      Running from the root can succeed because the current directory is
+      on the path, which is how a package that cannot actually run passes
+      its own check.
     - `process_photos.py` is the only caller of the dual-collection
       processing path, but five test modules reach it: its own,
       `test_e2e_pipeline.py`, `test_batch_metadata_efficiency.py`,
@@ -279,6 +290,18 @@ manifested.
 - The fidelity chain in ROADMAP is what makes named slots insufficient
   eventually.
   Not MVP work; noted here so the spec shape does not foreclose it.
+- Production rendition values, recovered from the deleted settings
+  file and the only record of what the deployed gallery was built
+  with.
+  `WEB_SIZE = (2048, 2048)` is the `display` rendition under the
+  settled variant names.
+  `THUMB_SIZE = (400, 400)` is the hardcoded 400 that `doc/QA.md`
+  cites as its example of a literal standing in for unwritten
+  configuration.
+  `JPEG_QUALITY = 85` and `WEBP_QUALITY = 85`.
+- `doc/command/process-photos.md` documents a command this item may
+  rename or delete.
+  Its fate follows the module's.
 
 Thumbnail format is unsettled.
 WEBP is a good size-to-quality compromise, but it has no progressive

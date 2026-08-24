@@ -42,6 +42,26 @@ It assumes both manifested variants are present, which the production
 collection satisfies, and does only the abstraction that keeps the
 generalization cheap later.
 
+The values the production gallery was built with are recorded in the
+changelog: web variants at 2048x2048, thumbnails at 400x400, and
+quality 85 for both JPEG and WebP.
+They answer the size, quality, and format question with real numbers
+rather than assumptions.
+
+### Module organization
+
+Revisit the package layout once the CLI is no longer the only adaptor.
+Questions it has to answer, rather than answers already chosen:
+
+- Whether `command/` survives once the CLI is one adaptor among
+  several.
+  NormPic uses `manager/` for the same role, and ecosystem
+  consistency probably decides it.
+- Whether grouping directories earn their place at this size, or
+  whether flat modules under `galleria/` read better.
+- `models/` and `util/` are plural against the singular convention.
+  `util/` is empty and likely just goes.
+
 ### 11ty plugin packaging
 
 Package Galleria as an 11ty plugin: read a NormPic manifest into the 11ty data
@@ -79,3 +99,28 @@ falling outside the project's scope.
   It decides whether the thumbnail-to-web swap feels immediate or
   feels like waiting, and it is the input to any future decision about
   an additional rendition.
+
+### Configuration precedence
+
+Galleria resolves configuration from program defaults and CLI
+arguments only.
+A general solution belongs to a separate library, with Galleria as its
+first consumer.
+
+`salvage/settings.py` is a working precedent for it: four ordered
+layers, poorly organized and not generalized at all.
+What transfers is the shape rather than the code.
+
+- Four layers: program defaults, config directory resolution, a local
+  settings file, then per-key environment overrides.
+- ALL_CAPS as the public-key convention.
+- Uniform prefixing of environment variable names with the project
+  name, applied across roughly twenty keys without exception.
+  Derived keys are excluded from environment visibility, which is the
+  rule a prefix convention needs alongside it.
+- A test-mode escape hatch skipping the local file layer.
+- Keys need declared types.
+  The precedent coerces paths by matching `_PATH` and `_DIR` name
+  suffixes, which is type information smuggled into a naming
+  convention because there is no schema.
+  That is the part not to repeat.
