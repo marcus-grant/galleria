@@ -37,10 +37,6 @@ those, and links the standing documents that live at this level.
   Test infrastructure, fixtures, and patterns.
 - [Guides](guides/).
   Setup and configuration walkthroughs.
-- [Deployment](deployment/).
-  Deployment procedures.
-  Superseded in part: marcustack now owns deploy and CDN upload, and
-  this material is being reconciled against that.
 - [Utilities](util/).
   Utility functions, implementation notes, and technical research.
 - [Changelog archive](changelog/).

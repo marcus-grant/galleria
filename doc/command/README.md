@@ -1,63 +1,44 @@
 # Command Documentation
 
-This directory contains detailed documentation for Galleria's command-line interface. Each command is documented with usage examples, options, and common workflows.
+This directory contains detailed documentation for Galleria's
+command-line interface.
+Each command is documented with usage examples, options, and common
+workflows.
 
 ## Available Commands
 
-### Analysis & Development
+- **[process-photos](process-photos.md)** - Legacy photo processing.
+  Superseded by NormPic; retained as a stub.
+- **build** - Generate the static gallery from NormPic manifests.
+- **serve** - Development server with reload for template work.
 
-- **[collection-stats](collection-stats.md)** - Analyze photo collections for timing, file sizes, and camera patterns
+## Development Workflow
 
-### Photo Processing
-
-- **find-samples** - Find sample photos for testing and development
-- **[process-photos](process-photos.md)** - Process original photos into web-ready formats with chronological filenames, batch processing, and crash recovery
-- **upload-photos** - Upload processed photos to cloud storage
-
-### Site Generation & Deployment
-
-- **build** - Generate static website from processed photos
-- **serve** - Development server with hot-reload for template development
-
-## Command Categories
-
-### Development Workflow
 ```bash
-# Analyze your photo collection
-python manage.py collection-stats
-
-# Process photos for development
-python manage.py process-photos --source ./sample-photos
-
-# Build and serve locally
-python manage.py build
-python manage.py serve --reload
-```
-
-### Production Workflow
-```bash
-# Full production pipeline
-python manage.py process-photos
-python manage.py build
-python manage.py deploy
+python -m galleria build
+python -m galleria serve --reload
 ```
 
 ## Getting Help
 
 For detailed help on any command:
+
 ```bash
-python manage.py COMMAND --help
+python -m galleria COMMAND --help
 ```
 
 For general help:
+
 ```bash
-python manage.py --help
+python -m galleria --help
 ```
 
 ## Contributing
 
 When adding new commands, please:
-1. Add documentation in this directory following the naming pattern `command-name.md`
+
+1. Add documentation in this directory following the naming pattern
+   `command-name.md`
 2. Update this README with the new command
 3. Include usage examples and common use cases
 4. Document all CLI options and their purposes

@@ -72,11 +72,6 @@ the import block understates what depends on what.
 `is_dual_bucket_configured` from `s3_storage.py`, which is why storage
 code cannot leave while the render path still calls it.
 
-**`manage.py` is invoked as a subprocess by two test modules.**
-Removing a command's import without removing its registration breaks
-those tests and nothing else, which makes the failure look unrelated to
-the change that caused it.
-
 **Empty scaffolding directories exist and are referenced by nothing.**
 `sample-photos/` and `sample-pics/` are tracked and empty.
 `cache/`, `content/`, and `temp_test/` are untracked working
@@ -480,11 +475,6 @@ Recorded so they are not rediscovered.
   Galleria's templates reference the web prefix correctly and the
   old pipeline did produce it; the upload was full-only.
   This belongs to marcustack and is reported after MVP.
-- `manage.py` as the CLI entry point.
-  The name follows a Django convention this project does not
-  otherwise follow.
-  What replaces it is a contract with marcustack, so it settles in
-  `ft/cli-config` rather than separately.
 - CONTRIBUTE forbids batching questions.
   Independent questions batch fine and doing so saves exchanges; the
   rule means only that a question must not be buried in prose.
