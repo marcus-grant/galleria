@@ -1,4 +1,4 @@
-# src/services/rendition.py
+# src/galleria/services/rendition.py
 """
 Merge variant manifests into per photo rendition records.
 

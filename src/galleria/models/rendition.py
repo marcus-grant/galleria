@@ -1,4 +1,4 @@
-# src/models/rendition.py
+# src/galleria/models/rendition.py
 """
 Records for a photo's renditions.
 

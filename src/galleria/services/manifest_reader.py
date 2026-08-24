@@ -1,4 +1,4 @@
-# src/services/manifest_reader.py
+# src/galleria/services/manifest_reader.py
 """
 Read a NormPic manifest into pic records.
 
