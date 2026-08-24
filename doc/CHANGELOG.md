@@ -3,6 +3,32 @@
 Most recent first.
 Pre-split history is archived under [changelog/](changelog/).
 
+## 2026-08-24
+
+Read NormPic manifests and merge variants into renditions.
+
+- Added `read_manifest`, building typed records from one manifest.
+  Timestamps parse at read time and an absent `collection_root`
+  defaults to the current directory.
+- Refused a manifest outside the supported major.minor, accepting any
+  patch level within it.
+- Refused a timestamp carrying a numeric offset rather than `Z`, per
+  the contract's canonical form.
+- Added `merge_variants`, pairing on `relative_path` and ordering by
+  capture time across both manifests.
+- Renamed the manifested variants from full and web to original and
+  display.
+  Original is accurate for an untouched source, and marcustack's
+  routing prefixes should follow.
+- Settled that both variant manifests share one `collection_name`,
+  distinguished by their roots rather than by name.
+- Verified against the production collection: 645 pics, pairing
+  645/645, none falling back to `mtime`, ordering monotonic.
+
+Manifest errors are typed: `ManifestError` carries the manifest path,
+with `MissingField`, `UnsupportedVersion`, and `MalformedField` under
+it.
+
 ## 2026-08-17
 
 Migrated to a new remote and brought the gate to green.
@@ -38,4 +64,3 @@ Migrated to a new remote and brought the gate to green.
   version rather than by date.
 - Archived all pre-split history as `doc/changelog/v0.0.md`.
 - Rewrote `doc/README.md` as an index with a Related projects section.
-
