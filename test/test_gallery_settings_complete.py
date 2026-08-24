@@ -1,7 +1,7 @@
 # pyright: reportArgumentType=false, reportOptionalMemberAccess=false, reportOptionalIterable=false, reportCallIssue=false
 """Unit tests for complete GallerySettings dataclass."""
 
-from src.models.photo import GallerySettings
+from galleria.models.photo import GallerySettings
 
 
 class TestGallerySettingsComplete:

@@ -2,7 +2,7 @@
 from click.testing import CliRunner
 from PIL import Image
 
-from src.command.process_photos import process_photos
+from galleria.command.process_photos import process_photos
 
 
 class TestProcessPhotosCommand:

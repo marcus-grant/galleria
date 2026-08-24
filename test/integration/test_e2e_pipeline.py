@@ -7,7 +7,7 @@ import piexif
 from datetime import datetime
 from click.testing import CliRunner
 
-from src.command.process_photos import process_photos
+from galleria.command.process_photos import process_photos
 
 
 @pytest.fixture

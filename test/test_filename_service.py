@@ -3,14 +3,14 @@
 from datetime import datetime
 from pathlib import Path
 
-from src.services.filename_service import (
+from galleria.services.filename_service import (
     generate_photo_filename,
     get_timezone_from_gps,
     format_iso_timestamp,
     get_camera_code,
     generate_batch_filenames,
 )
-from src.models.photo import ProcessedPhoto, CameraInfo, ExifData
+from galleria.models.photo import ProcessedPhoto, CameraInfo, ExifData
 
 
 class TestFilenameGeneration:
@@ -321,7 +321,7 @@ class TestBurstSequenceHandling:
 
     def test_generate_unique_sequence_numbers(self):
         """Test that burst photos get unique sequence numbers."""
-        from src.services.filename_service import generate_photo_filename
+        from galleria.services.filename_service import generate_photo_filename
 
         # Create photos with same timestamp (burst mode)
         camera = CameraInfo(make="Canon", model="EOS R5")

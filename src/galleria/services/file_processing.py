@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
-from src.models.photo import (
+from galleria.models.photo import (
     ProcessedPhoto,
     GalleryMetadata,
     PhotoMetadata,
@@ -104,10 +104,10 @@ def process_photo_collection(
     Returns:
         Dictionary with processing results and any errors
     """
-    from src.services import fs, exif
-    from src.services.filename_service import generate_photo_filename
-    from src.services.s3_storage import calculate_file_checksum
-    from src.models.photo import photo_from_exif_service
+    from galleria.services import fs, exif
+    from galleria.services.filename_service import generate_photo_filename
+    from galleria.services.s3_storage import calculate_file_checksum
+    from galleria.models.photo import photo_from_exif_service
 
     results = {"total_processed": 0, "errors": [], "photos": []}
 
@@ -293,7 +293,7 @@ def generate_gallery_metadata(
                 with open(photo.path, "rb") as f:
                     original_image_bytes = f.read()
 
-                from src.services.s3_storage import modify_exif_in_memory
+                from galleria.services.s3_storage import modify_exif_in_memory
 
                 # Use corrected timestamp for EXIF modification
                 modified_image_bytes = modify_exif_in_memory(
@@ -440,14 +440,14 @@ def process_dual_photo_collection(
     Returns:
         Dictionary with processing results and any errors
     """
-    from src.services import exif
-    from src.services.filename_service import generate_photo_filename
-    from src.services.photo_validation import (
+    from galleria.services import exif
+    from galleria.services.filename_service import generate_photo_filename
+    from galleria.services.photo_validation import (
         get_matched_photo_pairs,
         validate_matching_collections,
     )
-    from src.services.s3_storage import calculate_file_checksum
-    from src.models.photo import photo_from_exif_service
+    from galleria.services.s3_storage import calculate_file_checksum
+    from galleria.models.photo import photo_from_exif_service
 
     results = {
         "total_processed": 0,
@@ -540,7 +540,7 @@ def process_dual_photo_collection(
                             original_image_bytes = f.read()
 
                         # Import here to avoid circular imports
-                        from src.services.s3_storage import modify_exif_in_memory
+                        from galleria.services.s3_storage import modify_exif_in_memory
 
                         # Get target timezone setting
                         target_timezone_offset_hours = getattr(

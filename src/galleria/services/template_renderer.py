@@ -3,12 +3,12 @@
 from jinja2 import Environment, FileSystemLoader
 from pathlib import Path
 import settings
-from src.services.s3_storage import is_dual_bucket_configured
+from galleria.services.s3_storage import is_dual_bucket_configured
 
 
 class TemplateRenderer:
     def __init__(self):
-        template_dir = Path("src/template")
+        template_dir = Path("src/galleria/template")
         self.env = Environment(loader=FileSystemLoader(str(template_dir)))
 
     def render(self, template_path, context):

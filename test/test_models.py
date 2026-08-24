@@ -12,7 +12,7 @@ class TestCameraInfo:
     
     def test_camera_info_creation(self):
         """Test creating CameraInfo with make and model."""
-        from src.models.photo import CameraInfo
+        from galleria.models.photo import CameraInfo
         
         camera = CameraInfo(make="Canon", model="EOS 5D")
         assert camera.make == "Canon"
@@ -20,7 +20,7 @@ class TestCameraInfo:
     
     def test_camera_info_none_values(self):
         """Test CameraInfo with None values."""
-        from src.models.photo import CameraInfo
+        from galleria.models.photo import CameraInfo
         
         camera = CameraInfo(make=None, model=None)
         assert camera.make is None
@@ -28,7 +28,7 @@ class TestCameraInfo:
     
     def test_camera_info_to_dict(self):
         """Test converting CameraInfo to dict for JSON."""
-        from src.models.photo import CameraInfo
+        from galleria.models.photo import CameraInfo
         
         camera = CameraInfo(make="Nikon", model="D850")
         camera_dict = asdict(camera)
@@ -44,7 +44,7 @@ class TestExifData:
     
     def test_exif_data_creation(self):
         """Test creating ExifData with all fields."""
-        from src.models.photo import ExifData
+        from galleria.models.photo import ExifData
         
         timestamp = datetime(2024, 10, 5, 14, 30, 45)
         exif = ExifData(
@@ -63,7 +63,7 @@ class TestExifData:
     
     def test_exif_data_optional_fields(self):
         """Test ExifData with None values."""
-        from src.models.photo import ExifData
+        from galleria.models.photo import ExifData
         
         exif = ExifData(
             timestamp=None,
@@ -81,7 +81,7 @@ class TestExifData:
     
     def test_exif_data_to_dict(self):
         """Test converting ExifData to dict with datetime handling."""
-        from src.models.photo import ExifData
+        from galleria.models.photo import ExifData
         
         timestamp = datetime(2024, 10, 5, 14, 30, 45)
         exif = ExifData(
@@ -107,7 +107,7 @@ class TestProcessedPhoto:
     
     def test_processed_photo_creation(self):
         """Test creating complete ProcessedPhoto."""
-        from src.models.photo import ProcessedPhoto, CameraInfo, ExifData
+        from galleria.models.photo import ProcessedPhoto, CameraInfo, ExifData
         
         camera = CameraInfo(make="Canon", model="EOS R5")
         exif = ExifData(
@@ -136,7 +136,7 @@ class TestProcessedPhoto:
     
     def test_processed_photo_with_collection(self):
         """Test ProcessedPhoto with collection field."""
-        from src.models.photo import ProcessedPhoto, CameraInfo, ExifData
+        from galleria.models.photo import ProcessedPhoto, CameraInfo, ExifData
         
         camera = CameraInfo(make=None, model=None)
         exif = ExifData(timestamp=None, subsecond=None, 
@@ -156,7 +156,7 @@ class TestProcessedPhoto:
     
     def test_processed_photo_to_dict(self):
         """Test converting ProcessedPhoto to dict for JSON."""
-        from src.models.photo import ProcessedPhoto, CameraInfo, ExifData
+        from galleria.models.photo import ProcessedPhoto, CameraInfo, ExifData
         
         camera = CameraInfo(make="Sony", model="A7III")
         exif = ExifData(
@@ -198,7 +198,7 @@ class TestModelHelpers:
     
     def test_photo_from_exif_service_data(self):
         """Test creating ProcessedPhoto from exif service output."""
-        from src.models.photo import ProcessedPhoto, photo_from_exif_service
+        from galleria.models.photo import ProcessedPhoto, photo_from_exif_service
         
         # Simulate exif service data structure
         photo_path = Path("/pics/IMG_123.jpg")
@@ -228,8 +228,8 @@ class TestModelHelpers:
     
     def test_json_serialization_helpers(self):
         """Test JSON serialization helper functions."""
-        from src.models.photo import ProcessedPhoto, CameraInfo, ExifData
-        from src.models.photo import photo_to_json, photo_from_json
+        from galleria.models.photo import ProcessedPhoto, CameraInfo, ExifData
+        from galleria.models.photo import photo_to_json, photo_from_json
         
         # Create a photo
         photo = ProcessedPhoto(
@@ -266,7 +266,7 @@ class TestPhotoMetadata:
     
     def test_photo_metadata_creation_with_dual_hashes(self):
         """Test creating PhotoMetadata with both original and deployment file hashes."""
-        from src.models.photo import PhotoMetadata, MetadataExifData, MetadataFileData
+        from galleria.models.photo import PhotoMetadata, MetadataExifData, MetadataFileData
         
         exif_data = MetadataExifData(
             original_timestamp="2024-08-10T18:30:45",
@@ -297,7 +297,7 @@ class TestPhotoMetadata:
     
     def test_photo_metadata_serialization_with_dual_hashes(self):
         """Test that PhotoMetadata with dual hashes serializes correctly."""
-        from src.models.photo import PhotoMetadata, MetadataExifData, MetadataFileData
+        from galleria.models.photo import PhotoMetadata, MetadataExifData, MetadataFileData
         
         exif_data = MetadataExifData(
             original_timestamp="2024-08-10T18:30:45",
@@ -337,7 +337,7 @@ class TestPhotoMetadata:
     
     def test_gallery_metadata_with_dual_hash_photos(self):
         """Test that GalleryMetadata handles photos with dual hashes correctly."""
-        from src.models.photo import (
+        from galleria.models.photo import (
             GalleryMetadata, GallerySettings, PhotoMetadata, 
             MetadataExifData, MetadataFileData
         )

@@ -1,4 +1,4 @@
-# src/models/normpic.py
+# src/galleria/models/normpic.py
 """
 Records for pics read from a NormPic manifest.
 

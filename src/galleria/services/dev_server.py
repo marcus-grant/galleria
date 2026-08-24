@@ -49,7 +49,7 @@ class DevServer:
         """Rebuild the site using build command"""
         print("Rebuilding site...")
         result = subprocess.run(
-            [sys.executable, "manage.py", "build"], capture_output=True, text=True
+            [sys.executable, "-m", "galleria", "build"], capture_output=True, text=True
         )
 
         if result.returncode == 0:
@@ -104,7 +104,7 @@ class DevServer:
             observer = Observer()
 
             # Only watch directories that exist
-            watch_dirs = ["src/template", "static"]
+            watch_dirs = ["src/galleria/template", "static"]
             for watch_dir in watch_dirs:
                 if Path(watch_dir).exists():
                     observer.schedule(ChangeHandler(self), watch_dir, recursive=True)

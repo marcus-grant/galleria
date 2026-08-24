@@ -10,8 +10,8 @@ License: AGPL-3.0-or-later
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.models.normpic import NormpicManifest, Pic
-from src.services.rendition import merge_variants
+from galleria.models.normpic import NormpicManifest, Pic
+from galleria.services.rendition import merge_variants
 
 _UTC = timezone.utc
 _DEFAULT_PATH = Path("2026/a.jpg")

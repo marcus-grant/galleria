@@ -1,4 +1,4 @@
-# src/services/rendition.py
+# src/galleria/services/rendition.py
 """
 Merge variant manifests into per photo rendition records.
 
@@ -7,8 +7,8 @@ Created: 2026-08-21
 License: AGPL-3.0-or-later
 """
 
-from src.models.normpic import NormpicManifest
-from src.models.rendition import PicRenditions
+from galleria.models.normpic import NormpicManifest
+from galleria.models.rendition import PicRenditions
 
 
 def merge_variants(

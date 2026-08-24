@@ -4,7 +4,7 @@ from datetime import datetime
 from timezonefinder import TimezoneFinder
 from zoneinfo import ZoneInfo
 
-from src.models.photo import ProcessedPhoto, CameraInfo
+from galleria.models.photo import ProcessedPhoto, CameraInfo
 
 # Lexically-ordered base32 alphabet for counter system
 LEXICAL_BASE32 = "0123456789ABCDEFGHIJKLMNOPQRSTUV"

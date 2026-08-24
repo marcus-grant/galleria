@@ -1,6 +1,6 @@
 # pyright: reportArgumentType=false, reportOptionalMemberAccess=false, reportOptionalIterable=false, reportCallIssue=false
 from bs4 import BeautifulSoup
-from src.services.template_renderer import TemplateRenderer
+from galleria.services.template_renderer import TemplateRenderer
 
 
 def test_base_template_includes_tailwind_cdn():

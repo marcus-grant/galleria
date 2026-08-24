@@ -1,4 +1,4 @@
-# src/models/rendition.py
+# src/galleria/models/rendition.py
 """
 Records for a photo's renditions.
 
@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from src.models.normpic import Pic
+from galleria.models.normpic import Pic
 
 
 @dataclass

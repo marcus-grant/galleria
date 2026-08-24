@@ -2,7 +2,7 @@
 from pathlib import Path
 from unittest.mock import patch
 from pyfakefs.fake_filesystem_unittest import Patcher
-from src.services.fs import ls_full
+from galleria.services.fs import ls_full
 
 
 class TestLsFull:
@@ -19,7 +19,7 @@ class TestLsFull:
             fs.create_file("/pics/photo3.png")
             fs.create_file("/pics/document.txt")  # Should be ignored
 
-            with patch("src.services.fs.settings.PIC_SOURCE_PATH_FULL", "/pics"):
+            with patch("galleria.services.fs.settings.PIC_SOURCE_PATH_FULL", "/pics"):
                 result = ls_full()
 
             assert len(result) == 3
@@ -38,7 +38,7 @@ class TestLsFull:
             fs.create_file("/custom_path/override_photo.jpg")
 
             with patch(
-                "src.services.fs.settings.PIC_SOURCE_PATH_FULL", "/settings_path"
+                "galleria.services.fs.settings.PIC_SOURCE_PATH_FULL", "/settings_path"
             ):
                 result = ls_full("/custom_path")
 

@@ -12,7 +12,7 @@ def get_photo_filename_mapping(directory: Path) -> Dict[str, Path]:
     Returns:
         Dict mapping filename stems to full paths
     """
-    from src.services import fs
+    from galleria.services import fs
     
     photos = fs.ls_full(str(directory))
     mapping = {}

@@ -1,7 +1,7 @@
 """Tests for photo validation services."""
 from PIL import Image
 
-from src.services.photo_validation import (
+from galleria.services.photo_validation import (
     get_photo_filename_mapping,
     validate_matching_collections
 )

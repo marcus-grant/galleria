@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from PIL import Image
 import piexif
-from src.services import exif
+from galleria.services import exif
 import settings
 
 

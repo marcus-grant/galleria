@@ -1,5 +1,5 @@
 import click
-from src.services.dev_server import DevServer
+from galleria.services.dev_server import DevServer
 
 
 @click.command()

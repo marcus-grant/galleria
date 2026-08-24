@@ -4,7 +4,7 @@ from pathlib import Path
 
 def test_check_source_directory_exists():
     """Test checking if source directory exists."""
-    from src.services.site_generator import check_source_directory
+    from galleria.services.site_generator import check_source_directory
     
     # Create a temporary directory
     import tempfile
@@ -26,7 +26,7 @@ def test_check_source_directory_exists():
 
 def test_check_source_subdirectories():
     """Test checking if source subdirectories exist."""
-    from src.services.site_generator import check_source_subdirectories
+    from galleria.services.site_generator import check_source_subdirectories
     
     import tempfile
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -56,7 +56,7 @@ def test_check_source_subdirectories():
 
 def test_create_output_directory_structure():
     """Test creating output directory structure."""
-    from src.services.site_generator import create_output_directory_structure
+    from galleria.services.site_generator import create_output_directory_structure
     
     import tempfile
     with tempfile.TemporaryDirectory() as tmpdir:
