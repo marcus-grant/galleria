@@ -10,7 +10,6 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 
-import pytest
 from click.testing import CliRunner
 
 from galleria.command.validate import missing_pics_for, missing_pic_paths, validate
@@ -84,46 +83,18 @@ class TestMissingPicPaths:
         assert results == [display_root / names[0]]
 
 
-def _write_manifest(manifest_path: Path, root: Path, names: list[Path]) -> Path:
-    """Write a manifest describing the named pics under root.
-
-    Local to this module deliberately: the reader and models leave for
-    a normpic-owned package post-MVP, which will ship its own test
-    factories. A factory here would be a second definition of a
-    contract this project does not own.
-    """
-    manifest = {
-        "version": "0.1.0",
-        "collection_name": "wedding",
-        "generated_at": "2026-08-17T09:00:00Z",
-        "collection_root": str(root),
-        "pic": [
-            {
-                "hash": "b3c32:NW9MKEFNZ6GTD8209QN3DQ69",
-                "relative_path": str(n),
-                "size_bytes": 1024,
-                "mtime": "2026-08-17T08:00:00Z",
-            }
-            for n in names
-        ],
-    }
-    manifest_path.write_text(json.dumps(manifest))
-    return manifest_path
-
-
-def _make_manifest(root: Path, names: list[Path]) -> NormpicManifest:
-    """Build a manifest record for the named pics under root."""
-    return NormpicManifest(
-        version="0.1.0",
-        collection_name="wedding",
-        collection_root=root,
-        generated_at=datetime(2026, 8, 17, 9, 0, tzinfo=timezone.utc),
-        pics=[make_pic(relative_path=n) for n in names],
-    )
-
-
 class TestMissingPicsFor:
     """Report manifest-described pics with no file behind them."""
+
+    def _make_manifest(self, root: Path, names: list[Path]) -> NormpicManifest:
+        """Build a manifest record for the named pics under root."""
+        return NormpicManifest(
+            version="0.1.0",
+            collection_name="wedding",
+            collection_root=root,
+            generated_at=datetime(2026, 8, 17, 9, 0, tzinfo=timezone.utc),
+            pics=[make_pic(relative_path=n) for n in names],
+        )
 
     def test_checks_paths_under_each_manifest_root(self, tmp_path: Path):
         """Roots come from the manifests, so each variant is checked
@@ -133,8 +104,8 @@ class TestMissingPicsFor:
         display_root = tmp_path / "display"
         _write_pic_files(original_root, names)  # NOTE: Only writing to original root
         results = missing_pics_for(
-            _make_manifest(original_root, names),
-            _make_manifest(display_root, names),
+            self._make_manifest(original_root, names),
+            self._make_manifest(display_root, names),
         )
         assert results == [display_root / names[0]]
 
@@ -142,7 +113,7 @@ class TestMissingPicsFor:
         """The full gap, not the first failure."""
         names = [Path("2026/a.jpg"), Path("2026/b.jpg")]
         root = tmp_path / "original"
-        results = missing_pics_for(_make_manifest(root, names), None)
+        results = missing_pics_for(self._make_manifest(root, names), None)
         assert results == [root / n for n in names]
 
     def test_single_manifest_is_sufficient(self, tmp_path: Path):
@@ -150,30 +121,69 @@ class TestMissingPicsFor:
         builds."""
         names = [Path("2026/a.jpg")]
         root = tmp_path / "original"
-        results = missing_pics_for(_make_manifest(root, names), None)
+        results = missing_pics_for(self._make_manifest(root, names), None)
         assert results == [root / names[0]]
 
 
-@pytest.mark.skip
 class TestValidateCommand:
     """The command's output contract."""
 
+    def _write_manifest(
+        self, manifest_path: Path, root: Path, names: list[Path]
+    ) -> Path:
+        """Write a manifest describing the named pics under root.
+
+        Local to this module deliberately: the reader and models leave for
+        a normpic-owned package post-MVP, which will ship its own test
+        factories. A factory here would be a second definition of a
+        contract this project does not own.
+        """
+        manifest = {
+            "version": "0.1.0",
+            "collection_name": "wedding",
+            "generated_at": "2026-08-17T09:00:00Z",
+            "collection_root": str(root),
+            "pic": [
+                {
+                    "hash": "b3c32:NW9MKEFNZ6GTD8209QN3DQ69",
+                    "relative_path": str(n),
+                    "size_bytes": 1024,
+                    "mtime": "2026-08-17T08:00:00Z",
+                }
+                for n in names
+            ],
+        }
+        manifest_path.write_text(json.dumps(manifest))
+        return manifest_path
+
     def test_success_is_quiet_and_zero(self, tmp_path: Path):
-        """One summary line naming collection, count, and paths
-        verified."""
-        names, root = [Path("2026/a.jpg")], tmp_path / "original"
+        """One summary line naming the collection and the pic count."""
+        names = [Path("2026/a.jpg"), Path("2026/b.png")]
+        root = tmp_path / "original"
         _write_pic_files(root, names)
-        path_man = _write_manifest(tmp_path / "original.json", root, names)
+        path_man = self._write_manifest(tmp_path / "original.json", root, names)
         result = CliRunner().invoke(validate, ["--original-manifest", str(path_man)])
         assert result.exit_code == 0
         assert "wedding" in result.output
-        assert "1" in result.output
+        assert "2 pic" in result.output
 
-    @pytest.mark.skip
     def test_failure_exits_non_zero(self, tmp_path: Path):
-        """A missing path is a failed validation."""
+        """A pic with no file behind it fails the run and is named."""
+        names, root = [Path("2026/a.jpg")], tmp_path / "original"
+        path_man = self._write_manifest(tmp_path / "original.json", root, names)
+        result = CliRunner().invoke(validate, ["--original-manifest", str(path_man)])
+        assert result.exit_code != 0
+        assert "2026/a.jpg\n" in result.output
 
-    @pytest.mark.skip
-    def test_failure_output_is_bounded(self, tmp_path: Path):
-        """Many missing paths summarize by kind with examples, rather
-        than one line each."""
+    def test_failure_names_the_manifest_each_pic_is_missing_from(self, tmp_path: Path):
+        """A miss under one collection root is reported as that
+        variant's, since the two are separate collections."""
+        tp = tmp_path
+        original_root, display_root = tp / "original", tp / "display"
+        path_o = self._write_manifest(tp / "orig", original_root, [Path("2026/a.jpg")])
+        path_d = self._write_manifest(tp / "disp", display_root, [Path("2026/b.jpg")])
+        argv = ["--original-manifest", str(path_o), "--display-manifest", str(path_d)]
+        result = CliRunner().invoke(validate, argv)
+        assert result.exit_code != 0
+        assert "2026/a.jpg" in result.output
+        assert "2026/b.jpg" in result.output
