@@ -73,3 +73,11 @@ class TestMergeVariants:
             Path("2026/b.png"),
             Path("2026/a.jpg"),
         ]
+
+    def test_absent_variant_manifest_yields_one_sided_records(self):
+        """Either variant alone builds, so a None manifest merges as
+        an empty set rather than failing."""
+        manifest = _make_manifest()
+        renditions = merge_variants(manifest, None)
+        assert all(r.display is None for r in renditions)
+        assert all(r.original is not None for r in renditions)
