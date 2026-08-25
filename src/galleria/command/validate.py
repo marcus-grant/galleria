@@ -10,6 +10,7 @@ from pathlib import Path
 
 import click
 
+from galleria.command.option import manifest_options
 from galleria.config import Config, MissingConfigError
 from galleria.services.manifest_reader import (
     ManifestError,
@@ -25,8 +26,7 @@ def _read_if_set(path: Path | None) -> NormpicManifest | None:
 
 
 @click.command()
-@click.option("--original-manifest", type=click.Path(exists=True, path_type=Path))
-@click.option("--display-manifest", type=click.Path(exists=True, path_type=Path))
+@manifest_options
 def validate(original_manifest: Path | None, display_manifest: Path | None) -> None:
     """Verify a build's inputs without generating anything."""
     cli_overrides = {
