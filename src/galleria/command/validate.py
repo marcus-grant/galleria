@@ -8,7 +8,11 @@ License: AGPL-3.0-or-later
 
 from pathlib import Path
 
+import click
+
 from galleria.models.rendition import PicRenditions
+from galleria.services.manifest_reader import NormpicManifest
+from galleria.services.rendition import merge_variants
 
 
 def _missing_under(
@@ -43,3 +47,26 @@ def missing_pic_paths(
     missing_originals = _missing_under(pics, original_root, "original")
     missing_displays = _missing_under(pics, display_root, "display")
     return [*missing_originals, *missing_displays]
+
+
+def missing_pics_for(
+    original: NormpicManifest | None, display: NormpicManifest | None
+) -> list[Path]:
+    """Return every pic path that does not resolve on disk.
+
+    Each variant is checked against its own collection root. Reports
+    rather than raises, so one run names the full gap.
+    """
+    renditions = merge_variants(original, display)
+    return missing_pic_paths(
+        renditions,
+        original.collection_root if original else None,
+        display.collection_root if display else None,
+    )
+
+
+@click.command()
+@click.option("--original-manifest", type=click.Path(exists=True, path_type=Path))
+@click.option("--display-manifest", type=click.Path(exists=True, path_type=Path))
+def validate(original_manifest: Path | None, display_manifest: Path | None) -> None:
+    """Verify a build's inputs without generating anything."""
