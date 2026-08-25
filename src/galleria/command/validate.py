@@ -26,7 +26,9 @@ def _read_if_set(path: Path | None) -> NormpicManifest | None:
 
 
 def resolve_inputs(
-    original_manifest: Path | None, display_manifest: Path | None
+    original_manifest: Path | None,
+    display_manifest: Path | None,
+    output_dir: Path | None = None,
 ) -> tuple[Config, NormpicManifest | None, NormpicManifest | None]:
     """Resolve config and read the manifests it names.
 
@@ -36,6 +38,7 @@ def resolve_inputs(
     cli_overrides = {
         "original_manifest": original_manifest,
         "display_manifest": display_manifest,
+        "output_dir": output_dir,
     }
     try:
         cfg = Config.from_overrides(**cli_overrides)

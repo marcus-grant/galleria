@@ -6,6 +6,9 @@ Generates static website from processed photos.
 
 import click
 from pathlib import Path
+
+from galleria.command.option import manifest_options
+from galleria.command.validate import resolve_inputs
 from galleria.services.site_generator import (
     check_source_directory,
     check_source_subdirectories,
@@ -59,8 +62,19 @@ def build_gallery():
 
 
 @click.command()
-def build():
+@manifest_options
+@click.option("--output-dir", type=click.Path(path_type=Path))
+def build(
+    original_manifest: Path | None,
+    display_manifest: Path | None,
+    output_dir: Path | None,
+) -> None:
     """Build static photo gallery site from processed photos."""
+    cfg, manifest_o, manifest_d = resolve_inputs(
+        original_manifest, display_manifest, output_dir
+    )
+    click.echo("Generating static site...")
+    build_gallery()
     click.echo("Generating static site...")
 
     # Check source directory
@@ -94,5 +108,4 @@ def build():
         click.echo("Build complete!")
     else:
         click.echo("Build failed!")
-        return 1
-
+        SystemExit(1)
