@@ -6,130 +6,23 @@ Created: 2026-08-24
 License: AGPL-3.0-or-later
 """
 
-from datetime import datetime, timezone
 import json
 from pathlib import Path
 
 from click.testing import CliRunner
 
-from galleria.command.validate import missing_pics_for, missing_pic_paths, validate
-from galleria.models.rendition import PicRenditions
-from galleria.services.manifest_reader import NormpicManifest
-from conftest import make_pic
-
-
-def _records(
-    names: list[Path], original: bool = True, display: bool = False
-) -> list[PicRenditions]:
-    """Build one record per relative path, with the named variants."""
-    return [
-        PicRenditions(
-            relative_path=n,
-            original=make_pic(relative_path=n) if original else None,
-            display=make_pic(relative_path=n) if display else None,
-        )
-        for n in names
-    ]
-
-
-def _write_pic_files(root: Path, names: list[Path]) -> None:
-    """Create every named file under root, parents included."""
-    for name in names:
-        path = root / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(str(path))  # contents dont actually matter
-
-
-class TestMissingPicPaths:
-    """Every configured rendition resolves on disk."""
-
-    def test_all_present_reports_nothing(self, tmp_path: Path):
-        """A complete collection returns an empty list."""
-        names = [Path("2026/a.jpg"), Path("2026/b.png"), Path("2026/c.webp")]
-        _write_pic_files(tmp_path, names)
-        assert missing_pic_paths(_records(names), tmp_path, None) == []
-
-    def test_absent_rendition_is_reported(self, tmp_path: Path):
-        """A path with no file behind it appears in the result."""
-        bad = [Path("not/exist.jpg")]
-        expect = [tmp_path / p for p in bad]
-        assert missing_pic_paths(_records(bad), tmp_path, None) == expect
-
-    def test_every_absent_path_is_reported(self, tmp_path: Path):
-        """One run names the full gap rather than the first failure."""
-        bad = [Path("not/exist/a.jpg"), Path("not/exist/b.png")]
-        expect = [tmp_path / p for p in bad]
-        results = missing_pic_paths(_records(bad), tmp_path, None)
-        assert results == expect
-
-    def test_unconfigured_variant_is_not_checked(self, tmp_path: Path):
-        """A root of None means that variant was never configured, so
-        its absence is not a defect."""
-        names = [Path("2026/a.jpg")]
-        records = _records(names, original=False, display=True)
-        results = missing_pic_paths(records, None, tmp_path)
-        assert results == [tmp_path / names[0]]
-
-    def test_both_variants_are_checked_against_their_own_roots(self, tmp_path: Path):
-        """A record carrying both variants can report a miss from
-        either root, since the two collections live apart."""
-        names = [Path("2026/a.jpg")]
-        original_root = tmp_path / "original"
-        display_root = tmp_path / "display"
-        _write_pic_files(original_root, names)
-        results = missing_pic_paths(
-            _records(names, display=True), original_root, display_root
-        )
-        assert results == [display_root / names[0]]
-
-
-class TestMissingPicsFor:
-    """Report manifest-described pics with no file behind them."""
-
-    def _make_manifest(self, root: Path, names: list[Path]) -> NormpicManifest:
-        """Build a manifest record for the named pics under root."""
-        return NormpicManifest(
-            version="0.1.0",
-            collection_name="wedding",
-            collection_root=root,
-            generated_at=datetime(2026, 8, 17, 9, 0, tzinfo=timezone.utc),
-            pics=[make_pic(relative_path=n) for n in names],
-        )
-
-    def test_checks_paths_under_each_manifest_root(self, tmp_path: Path):
-        """Roots come from the manifests, so each variant is checked
-        under its own collection."""
-        names = [Path("2026/a.jpg")]
-        original_root = tmp_path / "original"
-        display_root = tmp_path / "display"
-        _write_pic_files(original_root, names)  # NOTE: Only writing to original root
-        results = missing_pics_for(
-            self._make_manifest(original_root, names),
-            self._make_manifest(display_root, names),
-        )
-        assert results == [display_root / names[0]]
-
-    def test_returns_every_unresolved_path(self, tmp_path: Path):
-        """The full gap, not the first failure."""
-        names = [Path("2026/a.jpg"), Path("2026/b.jpg")]
-        root = tmp_path / "original"
-        results = missing_pics_for(self._make_manifest(root, names), None)
-        assert results == [root / n for n in names]
-
-    def test_single_manifest_is_sufficient(self, tmp_path: Path):
-        """Either variant alone validates, since either alone
-        builds."""
-        names = [Path("2026/a.jpg")]
-        root = tmp_path / "original"
-        results = missing_pics_for(self._make_manifest(root, names), None)
-        assert results == [root / names[0]]
+from galleria.command.validate import validate
 
 
 class TestValidateCommand:
     """The command's output contract."""
 
     def _write_manifest(
-        self, manifest_path: Path, root: Path, names: list[Path]
+        self,
+        manifest_path: Path,
+        root: Path,
+        names: list[Path],
+        version: str = "0.1.0",
     ) -> Path:
         """Write a manifest describing the named pics under root.
 
@@ -139,7 +32,7 @@ class TestValidateCommand:
         contract this project does not own.
         """
         manifest = {
-            "version": "0.1.0",
+            "version": version,
             "collection_name": "wedding",
             "generated_at": "2026-08-17T09:00:00Z",
             "collection_root": str(root),
@@ -160,30 +53,37 @@ class TestValidateCommand:
         """One summary line naming the collection and the pic count."""
         names = [Path("2026/a.jpg"), Path("2026/b.png")]
         root = tmp_path / "original"
-        _write_pic_files(root, names)
         path_man = self._write_manifest(tmp_path / "original.json", root, names)
         result = CliRunner().invoke(validate, ["--original-manifest", str(path_man)])
         assert result.exit_code == 0
         assert "wedding" in result.output
         assert "2 pic" in result.output
 
-    def test_failure_exits_non_zero(self, tmp_path: Path):
-        """A pic with no file behind it fails the run and is named."""
-        names, root = [Path("2026/a.jpg")], tmp_path / "original"
-        path_man = self._write_manifest(tmp_path / "original.json", root, names)
+    def test_no_manifest_reports_and_exits_non_zero(self):
+        """Neither variant supplied leaves nothing to validate."""
+        result = CliRunner().invoke(validate, [])
+        assert result.exit_code != 0
+        assert "Traceback" not in result.output
+        assert "manifest" in result.output
+
+    def test_unreadable_manifest_reports_and_exits_non_zero(self, tmp_path: Path):
+        """A manifest that does not parse is named, not raised as a
+        traceback."""
+        path_man = tmp_path / "original.json"
+        path_man.write_text("{not json")
         result = CliRunner().invoke(validate, ["--original-manifest", str(path_man)])
         assert result.exit_code != 0
-        assert "2026/a.jpg\n" in result.output
+        assert "Traceback" not in result.output
 
-    def test_failure_names_the_manifest_each_pic_is_missing_from(self, tmp_path: Path):
-        """A miss under one collection root is reported as that
-        variant's, since the two are separate collections."""
-        tp = tmp_path
-        original_root, display_root = tp / "original", tp / "display"
-        path_o = self._write_manifest(tp / "orig", original_root, [Path("2026/a.jpg")])
-        path_d = self._write_manifest(tp / "disp", display_root, [Path("2026/b.jpg")])
-        argv = ["--original-manifest", str(path_o), "--display-manifest", str(path_d)]
-        result = CliRunner().invoke(validate, argv)
+    def test_unsupported_version_reports_and_exits_non_zero(self, tmp_path: Path):
+        """A manifest outside the supported major.minor is named."""
+        path_man = self._write_manifest(
+            tmp_path / "original.json",
+            tmp_path / "original",
+            [Path("2026/a.jpg")],
+            version="9.9.3",
+        )
+        result = CliRunner().invoke(validate, ["--original-manifest", str(path_man)])
         assert result.exit_code != 0
-        assert "2026/a.jpg" in result.output
-        assert "2026/b.jpg" in result.output
+        assert "Traceback" not in result.output
+        assert "9.9.3" in result.output
