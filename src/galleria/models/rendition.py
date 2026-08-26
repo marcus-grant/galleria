@@ -4,14 +4,36 @@ Records for a photo's renditions.
 
 Author: Marcus Grant
 Created: 2026-08-21
+Revisions: [2026-08-26]
 License: AGPL-3.0-or-later
 """
 
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
+from functools import total_ordering
 from pathlib import Path
 
 from galleria.models.normpic import Pic
+
+
+@total_ordering
+class Derivation(Enum):
+    """Rendition kinds ordered by derivation, source first.
+
+    Ordering is by derivation depth: ORIGINAL is the archive and each
+    later member derives from a shallower one. Members are always
+    truthy, so a guard cannot silently skip the archive.
+    """
+
+    ORIGINAL = 1
+    DISPLAY = 2
+    PREVIEW = 3
+    THUMB = 4
+
+    def __lt__(self, other: "Derivation") -> bool:
+        """Order by derivation depth, shallower first."""
+        return self.value < other.value
 
 
 @dataclass
