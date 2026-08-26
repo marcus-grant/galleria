@@ -10,22 +10,11 @@ License: AGPL-3.0-or-later
 from datetime import datetime, timezone
 from pathlib import Path
 
-from galleria.models.normpic import NormpicManifest, Pic
+from galleria.models.normpic import NormpicManifest
 from galleria.services.rendition import merge_variants
+from conftest import make_pic
 
 _UTC = timezone.utc
-_DEFAULT_PATH = Path("2026/a.jpg")
-
-
-def _make_pic(**overrides) -> Pic:
-    """Creates a default test Pic, overridden per keyword given."""
-    defaults = {
-        "hash": "b3c32:NW9MKEFNZ6GTD8209QN3DQ69",
-        "relative_path": _DEFAULT_PATH,
-        "size_bytes": 1024,
-        "mtime": datetime(2026, 8, 17, 8, 0, tzinfo=_UTC),
-    }
-    return Pic(**{**defaults, **overrides})
 
 
 def _make_manifest(**overrides) -> NormpicManifest:
@@ -35,7 +24,7 @@ def _make_manifest(**overrides) -> NormpicManifest:
         "collection_name": "wedding",
         "collection_root": Path("."),
         "generated_at": datetime(2026, 8, 17, 9, 0, tzinfo=_UTC),
-        "pics": [_make_pic()],
+        "pics": [make_pic()],
     }
     return NormpicManifest(**{**defaults, **overrides})
 
@@ -45,7 +34,7 @@ class TestMergeVariants:
 
     def test_merges_a_photo_present_in_both(self):
         """A relative path in both manifests yields one record with both."""
-        a, b = _make_manifest(), _make_manifest(pics=[_make_pic(size_bytes=5000)])
+        a, b = _make_manifest(), _make_manifest(pics=[make_pic(size_bytes=5000)])
         rendition = (renditions := merge_variants(a, b))[0]
         assert len(renditions) == 1
         assert rendition.original is not None
@@ -55,7 +44,7 @@ class TestMergeVariants:
 
     def test_carries_a_photo_missing_its_display(self):
         """A relative path only in the original manifest has no display."""
-        a_pic, b_pic = _make_pic(), _make_pic(relative_path=Path("2026/b.png"))
+        a_pic, b_pic = make_pic(), make_pic(relative_path=Path("2026/b.png"))
         a, b = _make_manifest(pics=[a_pic, b_pic]), _make_manifest(pics=[a_pic])
         assert len(renditions := merge_variants(a, b)) == 2
         by_path = {r.relative_path: r for r in renditions}
@@ -64,7 +53,7 @@ class TestMergeVariants:
 
     def test_carries_a_photo_missing_its_original(self):
         """A relative path only in the display manifest has no original."""
-        a_pic, b_pic = _make_pic(), _make_pic(relative_path=Path("2026/b.png"))
+        a_pic, b_pic = make_pic(), make_pic(relative_path=Path("2026/b.png"))
         a, b = _make_manifest(pics=[a_pic]), _make_manifest(pics=[a_pic, b_pic])
         assert len(renditions := merge_variants(a, b)) == 2
         by_path = {r.relative_path: r for r in renditions}
@@ -73,14 +62,22 @@ class TestMergeVariants:
 
     def test_returns_records_in_capture_order(self):
         """Records are ordered by capture time across both manifests."""
-        early = _make_pic(
+        early = make_pic(
             relative_path=Path("2026/b.png"),
             timestamp=datetime(2026, 8, 17, 6, 0, tzinfo=_UTC),
         )
-        late = _make_pic(timestamp=datetime(2026, 8, 17, 10, 0, tzinfo=_UTC))
+        late = make_pic(timestamp=datetime(2026, 8, 17, 10, 0, tzinfo=_UTC))
         a, b = _make_manifest(pics=[late]), _make_manifest(pics=[early])
         renditions = merge_variants(a, b)
         assert [r.relative_path for r in renditions] == [
             Path("2026/b.png"),
             Path("2026/a.jpg"),
         ]
+
+    def test_absent_variant_manifest_yields_one_sided_records(self):
+        """Either variant alone builds, so a None manifest merges as
+        an empty set rather than failing."""
+        manifest = _make_manifest()
+        renditions = merge_variants(manifest, None)
+        assert all(r.display is None for r in renditions)
+        assert all(r.original is not None for r in renditions)

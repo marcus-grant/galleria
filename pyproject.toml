@@ -42,7 +42,7 @@ target-version = "py312"
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
-include = ["src/galleria", "test", "manage.py"]
+include = ["src/galleria", "test"]
 exclude = ["salvage", "**/__pycache__"]
 
 [tool.pytest.ini_options]

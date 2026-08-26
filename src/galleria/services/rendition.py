@@ -12,11 +12,14 @@ from galleria.models.rendition import PicRenditions
 
 
 def merge_variants(
-    original: NormpicManifest, display: NormpicManifest
+    original: NormpicManifest | None, display: NormpicManifest | None
 ) -> list[PicRenditions]:
     """Merge two variant manifests into one record per relative path."""
-    dict_o = {pic.relative_path: pic for pic in original.pics}
-    dict_d = {pic.relative_path: pic for pic in display.pics}
+    dict_o, dict_d = {}, {}
+    if original is not None:
+        dict_o = {pic.relative_path: pic for pic in original.pics}
+    if display is not None:
+        dict_d = {pic.relative_path: pic for pic in display.pics}
     paths = dict_o.keys() | dict_d.keys()
     renditions = []
     for path in paths:

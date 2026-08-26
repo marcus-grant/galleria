@@ -3,6 +3,41 @@
 Most recent first.
 Pre-split history is archived under [changelog/](changelog/).
 
+## 2026-08-25
+
+### ft/cli-config
+
+Give Galleria the interface its caller invokes it through.
+
+- Added a frozen `Config` carrying the manifest paths and the output
+  directory, constructed at the CLI boundary and passed down rather
+  than reached for as global state.
+- Added a program-default layer in `galleria/config/default.py`.
+  Overrides layer over it, with an unset CLI option treated as absent.
+- Settled that inputs have no defaults and outputs do.
+  A wrong input guess reads the wrong collection silently; a wrong
+  output guess writes a directory you delete.
+  `OUTPUT_DIR` defaults to `_build`.
+- Raised `MissingConfigError` when neither manifest is configured.
+  Either variant alone builds, so either alone validates.
+- Widened `merge_variants` to accept an absent variant manifest.
+- Added `resolve_inputs`, shared by both commands: it resolves
+  config, reads the manifests config names, and reports through the
+  CLI rather than raising into its caller.
+- Added the `validate` command.
+  Quiet on success with one line naming the collection and pic count;
+  non-zero and named on failure.
+- Gave `build` the shared manifest options and `--output-dir`, and
+  had it resolve its inputs before building.
+- Settled that each stage validates its own outputs and trusts its
+  inputs.
+  Checking that manifested files exist is NormPic verifying its own
+  output, done a second time by a consumer that did not write them.
+- Deleted `photo_metadata.py` and its tests.
+  The manifest supersedes the metadata service it wrapped.
+- Centralized the `Pic` test factory, which two modules held copies
+  of.
+
 ## 2026-08-24
 
 ### ref/module-layout

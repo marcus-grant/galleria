@@ -10,6 +10,20 @@ re-home large parts of it.
 
 ## Goals
 
+### Module organization
+
+Revisit the package layout once the CLI is no longer the only adaptor.
+Questions it has to answer, rather than answers already chosen:
+
+- Whether `command/` survives once the CLI is one adaptor among
+  several.
+  NormPic uses `manager/` for the same role, and ecosystem consistency
+  probably decides it.
+- Whether grouping directories earn their place at this size, or
+  whether flat modules under `galleria/` read better.
+- `models/` and `util/` are plural against the singular convention.
+  `util/` is empty and likely just goes.
+
 ### Lightbox quality of life
 
 Smoother transitions, swipe gestures on touch devices, image preloading for
@@ -69,6 +83,23 @@ cascade and ship gallery templates.
 This unifies gallery rendering with the main site renderer.
 Prerequisite is a clean separation of the manifest reader and page model from
 the HTML output, which the v0.1 render seam already gestures at.
+
+### Grid and thumbnail sizing
+
+Grid column count and thumbnail sizing need a spec naming how the two
+relate.
+
+### Collection downloads
+
+Whole-collection download is a prebuilt artifact produced by the
+pipeline.
+Client-side selection downloads use a streaming zip via service
+worker rather than in-memory assembly.
+
+### Rebuilds on rendition changes
+
+Adding a rendition later requires a rebuild, since output is a
+snapshot of what resolved at build time.
 
 ### Tag-driven views
 
