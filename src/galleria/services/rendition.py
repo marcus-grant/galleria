@@ -17,13 +17,13 @@ def merge_variants(
     """Merge two variant manifests into one record per relative path."""
     dict_o, dict_d = {}, {}
     if original is not None:
-        dict_o = {pic.relative_path: pic for pic in original.pics}
+        dict_o = {pic.relative_path.with_suffix(""): pic for pic in original.pics}
     if display is not None:
-        dict_d = {pic.relative_path: pic for pic in display.pics}
-    paths = dict_o.keys() | dict_d.keys()
+        dict_d = {pic.relative_path.with_suffix(""): pic for pic in display.pics}
+    keys = dict_o.keys() | dict_d.keys()
     renditions = []
-    for path in paths:
-        pic_o, pic_d = dict_o.get(path), dict_d.get(path)
-        rendition = PicRenditions(relative_path=path, original=pic_o, display=pic_d)
+    for k in keys:
+        pic_o, pic_d = dict_o.get(k), dict_d.get(k)
+        rendition = PicRenditions(key=k, original=pic_o, display=pic_d)
         renditions.append(rendition)
-    return sorted(renditions, key=(lambda p: (p.taken_at, p.relative_path)))
+    return sorted(renditions, key=(lambda p: (p.taken_at, p.key)))
