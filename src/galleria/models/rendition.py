@@ -40,14 +40,14 @@ class Derivation(Enum):
 class PicRenditions:
     """One photo's renditions, sharing a relative path."""
 
-    relative_path: Path
+    key: Path
     original: Pic | None = None
     display: Pic | None = None
 
     def __post_init__(self) -> None:
         """Reject a record with no renditions at all."""
         if self.original is None and self.display is None:
-            raise ValueError(f"PicRenditions for {self.relative_path} has no variants")
+            raise ValueError(f"PicRenditions for {self.key} has no variants")
 
     @property
     def taken_at(self) -> datetime:
