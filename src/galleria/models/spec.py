@@ -20,6 +20,22 @@ class Format(Enum):
     PJPEG = "pjpeg"
     WEBP = "webp"
 
+    EXTENSIONS = nonmember(
+        {
+            "jpeg": "jpg",
+            "pjpeg": "jpg",
+            "webp": "webp",
+        }
+    )
+
+    PIL_NAMES = nonmember(
+        {
+            "jpeg": "JPEG",
+            "pjpeg": "JPEG",
+            "webp": "WEBP",
+        }
+    )
+
     ALIASES = nonmember(
         {
             "jpg": "JPEG",
@@ -54,6 +70,22 @@ class Format(Enum):
             raise RenditionSpecError(cls._error_message(value))
         return cls._coerce(value)
 
+    @property
+    def extension(self) -> str:
+        """The file extension this format writes, without a leading dot."""
+        if (ext := self.EXTENSIONS.get(self.value)) is None:
+            msg = f"no extension mapped for {self}, please report this bug"
+            raise Exception(msg)
+        return ext
+
+    @property
+    def pil_name(self) -> str:
+        """The format name PIL's save expects."""
+        if (name := self.PIL_NAMES.get(self.value)) is None:
+            msg = f"no PIL name mapped for {self}, please report this bug"
+            raise Exception(msg)
+        return name
+
 
 @dataclass
 class RenditionSpec:
@@ -69,3 +101,11 @@ class RenditionSpec:
             raise RenditionSpecError(f"quality {self.quality} outside 1-95")
         if self.max_dimension < 1:
             raise RenditionSpecError(f"max_dimension {self.max_dimension} less than 1")
+
+    @property
+    def pil_args(self) -> dict:
+        """Save arguments for this spec, including quality."""
+        return {
+            "quality": self.quality,
+            **({"progressive": True} if self.format is Format.PJPEG else {}),
+        }

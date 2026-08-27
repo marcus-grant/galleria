@@ -39,6 +39,37 @@ class TestFormat:
         with pytest.raises(RenditionSpecError, match=match):
             Format(given)
 
+    @pytest.mark.parametrize(
+        "fmt,expected",
+        [(Format.JPEG, "jpg"), (Format.PJPEG, "jpg"), (Format.WEBP, "webp")],
+    )
+    def test_extension_maps_to_written_suffix(self, fmt, expected):
+        """Both JPEG variants write .jpg; WEBP writes .webp."""
+        assert fmt.extension == expected
+
+    @pytest.mark.parametrize(
+        "fmt,expected",
+        [(Format.JPEG, "JPEG"), (Format.PJPEG, "JPEG"), (Format.WEBP, "WEBP")],
+    )
+    def test_pil_name_maps_to_encoder(self, fmt, expected):
+        """Both JPEG variants use PIL's JPEG encoder; WEBP uses WEBP."""
+        assert fmt.pil_name == expected
+
+    @pytest.mark.parametrize(
+        "prop,label,mapping",
+        [
+            ("extension", "extension", "EXTENSIONS"),
+            ("pil_name", "PIL name", "PIL_NAMES"),
+        ],
+    )
+    def test_unmapped_member_raises(self, prop, label, mapping, monkeypatch):
+        """A member absent from a mapping raises rather than returning None."""
+        fmt = Format.WEBP
+        monkeypatch.delitem(getattr(Format, mapping), fmt.value)
+        match = re.escape(f"no {label} mapped for {fmt}, please report this bug")
+        with pytest.raises(Exception, match=match):
+            getattr(fmt, prop)
+
 
 class TestRenditionSpec:
     """Construction and the invariants a spec enforces on itself."""
@@ -62,3 +93,15 @@ class TestRenditionSpec:
         match = re.escape(f"max_dimension {dimension} less than 1")
         with pytest.raises(RenditionSpecError, match=match):
             RenditionSpec(Format.WEBP, dimension, 42)
+
+    def test_pil_args_carry_quality(self):
+        """Save arguments include the spec's quality."""
+        assert RenditionSpec(Format.WEBP, 1024, 42).pil_args["quality"] == 42
+
+    @pytest.mark.parametrize(
+        "fmt,expect",
+        [(Format.JPEG, None), (Format.PJPEG, True), (Format.WEBP, None)],
+    )
+    def test_pil_args_mark_progressive_only_for_pjpeg(self, fmt, expect):
+        """Only PJPEG carries the progressive flag."""
+        assert RenditionSpec(fmt, 24, 42).pil_args.get("progressive") is expect
