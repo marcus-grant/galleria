@@ -185,11 +185,18 @@ class TestManifestFromJson:
 
     @pytest.mark.parametrize("root", [None, ".", _OMIT])
     def test_defaults_an_absent_collection_root(self, root):
-        """An absent or null collection_root reads as the current directory."""
+        """An absent or null collection_root resolves to the manifest's directory."""
         man_dict = self._make_manifest_dict(overrides={"collection_root": root})
         if root == _OMIT:
             del man_dict["collection_root"]
-        assert _manifest_from_json(man_dict, Path("/"), []).collection_root == Path(".")
+        result = _manifest_from_json(man_dict, Path("/data/m.json"), [])
+        assert result.collection_root == Path("/data")
+
+    def test_resolves_a_relative_collection_root(self):
+        """A relative collection_root resolves against the manifest's directory."""
+        man_dict = self._make_manifest_dict(overrides={"collection_root": "pics"})
+        result = _manifest_from_json(man_dict, Path("/data/m.json"), [])
+        assert result.collection_root == Path("/data/pics")
 
     @pytest.mark.parametrize("f", ["version", "collection_name", "generated_at"])
     def test_raises_naming_the_missing_field(self, f):
