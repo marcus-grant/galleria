@@ -9,6 +9,7 @@ License: AGPL-3.0-or-later
 from pathlib import Path
 import re
 
+from b3c32 import verify_conformance
 import pytest
 from PIL import Image
 
@@ -102,3 +103,11 @@ class TestDeriveRendition:
             derive_rendition(src, tmp_path, "derived", spec)
         assert exc.value.spec == spec
         assert isinstance(exc.value.cause, OSError)
+
+
+class TestB3C32:
+    """Pin library to its own conformance standard"""
+
+    def test_b3c32_still_honors_its_contract(self):
+        """The pinned b3c32 conforms; a bump breaking the surface fails here."""
+        verify_conformance()
