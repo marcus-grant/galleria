@@ -107,7 +107,7 @@ def _manifest_from_json(data: dict, path: Path, pics: list[Pic]) -> NormpicManif
             pics=_sorted_pics(pics),
             version=_checked_version(data["version"], path),
             collection_name=data["collection_name"],
-            collection_root=Path(data.get("collection_root") or "."),
+            collection_root=path.parent / Path(data.get("collection_root") or "."),
             generated_at=_checked_timestamp(data["generated_at"], path, "generated_at"),
         )
     except KeyError as err:  # Raise on missing required fields
