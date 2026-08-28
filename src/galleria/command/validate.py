@@ -63,7 +63,3 @@ def validate(original_manifest: Path | None, display_manifest: Path | None) -> N
     manifest = manifest_o or manifest_d
     name = manifest.collection_name if manifest else None
     click.echo(f"Valid config, tracking {len(renditions)} pics of {name}.")
-    renditions = merge_variants(manifest_o, manifest_d)
-    manifest = manifest_o or manifest_d
-    name = manifest.collection_name if manifest else None
-    click.echo(f"Valid config, tracking {len(renditions)} pics of {name}.")
