@@ -5,6 +5,10 @@ Pre-split history is archived under [changelog/](changelog/).
 
 ## 2026-08-28
 
+### main
+
+- Pin collection_root resolution against the manifest directory in tests.
+
 ### ft/rendition-model
 
 Make derived renditions configurable and produce them.

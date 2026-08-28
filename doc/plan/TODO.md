@@ -63,13 +63,6 @@ This is a stopgap rather than a design.
 The real fix is a cache keyed on source hash plus rendition spec, and
 it lands with the derive pipeline second pass.
 
-**Manifest fixtures never exercised a relative `collection_root`.**
-Every test manifest wrote an absolute root, so the reader joining it
-against the manifest's own directory was never checked.
-Production manifests write it relative, and a full derive run skipped
-all 645 photos before this was found.
-The suite still has no test for the relative case.
-
 **A test in `test_file_processing_dual.py` fails only in a full run.**
 `test_skip_processing_when_up_to_date` compares mtimes and passes when
 run alone.
