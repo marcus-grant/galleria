@@ -18,3 +18,11 @@ def manifest_options(f):
     f = click.option("--display-manifest", type=t)(f)
     f = click.option("--original-manifest", type=t)(f)
     return f
+
+
+def derive_options(f):
+    """Apply the options shared by commands writing renditions."""
+    t = click.Path(path_type=Path)
+    f = click.option("--output-dir", type=t)(f)
+    f = manifest_options(f)
+    return f
