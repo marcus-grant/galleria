@@ -39,26 +39,26 @@ class TestMergeVariants:
         assert len(renditions) == 1
         assert rendition.original is not None
         assert rendition.display is not None
-        assert rendition.relative_path == rendition.original.relative_path
-        assert rendition.relative_path == rendition.display.relative_path
+        assert rendition.key == Path("2026/a")
+        assert rendition.original.relative_path == rendition.display.relative_path
 
     def test_carries_a_photo_missing_its_display(self):
         """A relative path only in the original manifest has no display."""
         a_pic, b_pic = make_pic(), make_pic(relative_path=Path("2026/b.png"))
         a, b = _make_manifest(pics=[a_pic, b_pic]), _make_manifest(pics=[a_pic])
         assert len(renditions := merge_variants(a, b)) == 2
-        by_path = {r.relative_path: r for r in renditions}
-        assert by_path[Path("2026/b.png")].display is None
-        assert by_path[Path("2026/b.png")].original is not None
+        by_key = {r.key: r for r in renditions}
+        assert by_key[Path("2026/b")].display is None
+        assert by_key[Path("2026/b")].original is not None
 
     def test_carries_a_photo_missing_its_original(self):
         """A relative path only in the display manifest has no original."""
         a_pic, b_pic = make_pic(), make_pic(relative_path=Path("2026/b.png"))
         a, b = _make_manifest(pics=[a_pic]), _make_manifest(pics=[a_pic, b_pic])
         assert len(renditions := merge_variants(a, b)) == 2
-        by_path = {r.relative_path: r for r in renditions}
-        assert by_path[Path("2026/b.png")].display is not None
-        assert by_path[Path("2026/b.png")].original is None
+        by_key = {r.key: r for r in renditions}
+        assert by_key[Path("2026/b")].display is not None
+        assert by_key[Path("2026/b")].original is None
 
     def test_returns_records_in_capture_order(self):
         """Records are ordered by capture time across both manifests."""
@@ -69,10 +69,7 @@ class TestMergeVariants:
         late = make_pic(timestamp=datetime(2026, 8, 17, 10, 0, tzinfo=_UTC))
         a, b = _make_manifest(pics=[late]), _make_manifest(pics=[early])
         renditions = merge_variants(a, b)
-        assert [r.relative_path for r in renditions] == [
-            Path("2026/b.png"),
-            Path("2026/a.jpg"),
-        ]
+        assert [r.key for r in renditions] == [Path("2026/b"), Path("2026/a")]
 
     def test_absent_variant_manifest_yields_one_sided_records(self):
         """Either variant alone builds, so a None manifest merges as

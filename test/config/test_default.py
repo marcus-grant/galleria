@@ -9,6 +9,7 @@ License: AGPL-3.0-or-later
 from pathlib import Path
 
 from galleria.config import default
+from galleria.models.rendition import Derivation
 
 
 class TestDefaultKeys:
@@ -24,3 +25,7 @@ class TestDefaultKeys:
         """Output is build product, so a wrong guess costs a deleted
         directory rather than wrong data."""
         assert default.OUTPUT_DIR == Path("_build")
+
+    def test_specs_cover_every_derived_rendition(self):
+        """Display, preview, and thumb have specs; original does not."""
+        assert set(default.RENDITION_SPECS) == set(Derivation) - {Derivation.ORIGINAL}

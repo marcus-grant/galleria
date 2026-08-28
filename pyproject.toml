@@ -12,6 +12,7 @@ dependencies = [
     "markdown",
     "click",
     "timezonefinder>=6.0.0",
+    "b3c32>=0.0.2,<0.1.0",
 ]
 
 [dependency-groups]

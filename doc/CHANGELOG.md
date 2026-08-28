@@ -3,6 +3,51 @@
 Most recent first.
 Pre-split history is archived under [changelog/](changelog/).
 
+## 2026-08-28
+
+### ft/rendition-model
+
+Make derived renditions configurable and produce them.
+
+- Added `Derivation`, an ordered enum naming the four rendition
+  classes.
+  Ordering answers what an absence means: deeper than a present
+  rendition generates, shallower aliases, since fidelity only
+  reduces.
+- Added `RenditionSpec` and `Format`, carrying format, maximum
+  dimension, and quality.
+  Progressive JPEG is a format rather than an encoder flag, so
+  swapping it is a configuration change.
+  Format strings coerce case, dots, and separators.
+- Widened `PicRenditions` to four renditions and froze it, so a
+  filled record replaces a sparse one rather than being mutated.
+  Its pairing key is now extensionless, which lets a collection hold
+  mixed formats and a derived rendition be `.webp` while its source
+  is `.jpg`.
+- `taken_at` now reads the shallowest rendition carrying a timestamp
+  at any depth.
+  A derived rendition cannot invent EXIF, so a timestamp is evidence
+  of provenance rather than of depth.
+- Added `derive_rendition`, encoding one source per spec, and
+  `derive_absences`, filling one record from its shallowest present
+  rendition.
+  Every derivation reads that source, never a derivative.
+- Added `DeriveError`, carrying both paths, the spec, and the cause.
+- Added the `derive` command, warning per photo and continuing rather
+  than failing a run for one unreadable source.
+- Fixed `collection_root` resolution: a relative root now resolves
+  against the manifest's own directory.
+  Production manifests write it relative, and every photo was skipped
+  before this was found.
+- Registered `validate`, which existed but was unreachable, and
+  removed a duplicated tail that echoed its summary twice.
+- Added `b3c32` for derived rendition hashes, with a conformance
+  canary.
+
+Acceptance: 645 photos, both manifests, 1290 renditions at 70M in
+6m33s, nothing skipped.
+Display was correctly not derived, since it was manifested.
+
 ## 2026-08-25
 
 ### ft/cli-config

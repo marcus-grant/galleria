@@ -62,6 +62,12 @@ quality 85 for both JPEG and WebP.
 They answer the size, quality, and format question with real numbers
 rather than assumptions.
 
+A rendition spec could constrain output by byte budget rather than by
+quality.
+That means iterating encode attempts against a target size, so the
+spec's constraint would become two types rather than one field.
+Little benefit for a gallery whose renditions are already small.
+
 ### Module organization
 
 Revisit the package layout once the CLI is no longer the only adaptor.

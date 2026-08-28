@@ -8,8 +8,11 @@ License: AGPL-3.0-or-later
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Unpack, TypedDict
 
-from src.galleria.config.default import OUTPUT_DIR
+from src.galleria.config.default import OUTPUT_DIR, RENDITION_SPECS
+from src.galleria.models.rendition import Derivation
+from src.galleria.models.spec import RenditionSpec
 
 
 class MissingConfigError(Exception):
@@ -18,6 +21,14 @@ class MissingConfigError(Exception):
     Names what was not found, so a run reports the full gap rather
     than one key per invocation.
     """
+
+
+class Overrides(TypedDict, total=False):
+    """CLI-supplied overrides, each absent when the option is unset."""
+
+    original_manifest: Path | None
+    display_manifest: Path | None
+    output_dir: Path | None
 
 
 @dataclass(frozen=True)
@@ -33,6 +44,7 @@ class Config:
     original_manifest: Path | None
     display_manifest: Path | None
     output_dir: Path
+    specs: dict[Derivation, RenditionSpec]
 
     def has_manifest(self) -> bool:
         """Whether at least one variant manifest is configured.
@@ -42,17 +54,17 @@ class Config:
         return any((self.original_manifest, self.display_manifest))
 
     @classmethod
-    def from_overrides(cls, **overrides: Path | None) -> "Config":
+    def from_overrides(cls, **overrides: Unpack[Overrides]) -> "Config":
         """Build a Config from program defaults with overrides applied.
 
         An override whose value is None is treated as absent, so a CLI
         option left unset falls through to the default layer.
         """
-        override_cfgs = {k: v for k, v in overrides.items() if v is not None}
         cfg = cls(
-            original_manifest=override_cfgs.get("original_manifest"),
-            display_manifest=override_cfgs.get("display_manifest"),
-            output_dir=override_cfgs.get("output_dir", OUTPUT_DIR),
+            original_manifest=overrides.get("original_manifest"),
+            display_manifest=overrides.get("display_manifest"),
+            output_dir=overrides.get("output_dir") or OUTPUT_DIR,
+            specs=RENDITION_SPECS,
         )
         if not cfg.has_manifest():
             msg = "No manifest configured: supply original_manifest, "
