@@ -51,6 +51,37 @@ sends a reader looking for a problem that is no longer there.
 
 ### What has been found
 
+**Derived output is durable despite living in `_build`.**
+Derived renditions are written under the output directory, which for
+the wedding collection is marcustack's `_build` alongside its
+manifests.
+The name suggests scratch space; it is not.
+A full derive run over 645 photos takes six and a half minutes and
+there is no incremental skip, so cleaning that directory means
+re-encoding everything.
+This is a stopgap rather than a design.
+The real fix is a cache keyed on source hash plus rendition spec, and
+it lands with the derive pipeline second pass.
+
+**Manifest fixtures never exercised a relative `collection_root`.**
+Every test manifest wrote an absolute root, so the reader joining it
+against the manifest's own directory was never checked.
+Production manifests write it relative, and a full derive run skipped
+all 645 photos before this was found.
+The suite still has no test for the relative case.
+
+**A test in `test_file_processing_dual.py` fails only in a full run.**
+`test_skip_processing_when_up_to_date` compares mtimes and passes when
+run alone.
+It leaves with the module.
+
+**Three helpers named for writing manifests have different shapes.**
+`test_validate.py` and `test_manifest_reader.py` each define a
+`_write_manifest`, and `test_derive.py` defines a `_write_collection`
+that also writes the images its manifest names.
+All hand-build a contract this project does not own; they leave when
+NormPic ships a consumer package with test factories.
+
 **A test that asserts nothing can still pass.**
 A batch-ordering test in `test_filename_service.py` looped over a list
 of expected values with `pass` as the body.
@@ -75,11 +106,6 @@ Its imports of `exif`, `filename_service`, `photo_validation`, and
 `s3_storage` are function-local rather than at module top, so grepping
 the import block understates what depends on what.
 
-**The renderer reaches storage settings.**
-`template_renderer.py` and `photo_metadata.py` both import
-`is_dual_bucket_configured` from `s3_storage.py`, which is why storage
-code cannot leave while the render path still calls it.
-
 **Empty scaffolding directories exist and are referenced by nothing.**
 `sample-photos/` and `sample-pics/` are tracked and empty.
 `cache/`, `content/`, and `temp_test/` are untracked working
@@ -88,10 +114,6 @@ directories.
 **Three settings are set and never read.**
 `PICS_BASE_URL`, `SITE_BASE_URL`, and `THEME_DIR`.
 The renderer composes its own URL rather than reading the first two.
-
-**A relative-path code path exists but is unreachable.**
-`photo_metadata.py` contains it; nothing in the render pipeline calls
-it.
 
 **Two spellings of the local settings example coexist.**
 `settings.local.example.py` and `settings.local.py.example`.
@@ -125,22 +147,10 @@ anything enhances it.
   unbounded, which for 645 photos is one enormous page.
 - Fixed-dimension containers so images arriving do not reflow the
   grid.
-- Generate thumbnails from the display variant.
-  This is the first derived rendition, and it raises a model question
-  to settle before writing it: a generated rendition carries the same
-  fields as a manifested one, so decide whether `Pic` serves both
-  rather than adding a parallel record.
-  If it does, the container tracks which renditions were manifested
-  and which were generated, since the type no longer says.
-- Decide how the no-JavaScript page offers original, display and
-  thumbnail without a viewer to switch between them.
-  Deferred until the static page exists to look at.
 - `photos` and `pics` are two names for one thing.
   The loop iterates `pics`; two expressions call `photos|length`.
   Jinja renders an undefined name as empty, so the count reads wrong
   rather than failing.
-  This is the same defect as the standalone template-photos task,
-  which folds in here.
 - The `{% if photos %}` guard at `navbar.j2.html:11` is always false,
   so the navbar count does not render at all rather than rendering
   wrong.
@@ -162,86 +172,51 @@ anything enhances it.
   never fails on its own.
   The settled answer is to warn per photo and keep building, since a
   gallery missing one photo's display rendition should still publish.
+- Per-photo pages, the no-JavaScript equivalent of the modal.
+  Each shows the display rendition, an explicit link to the original,
+  a download link, and next and previous navigation.
+  The grid links to a page rather than an image, so a click can never
+  pull a 26MB original.
+  This also makes the eventual modal an enhancement over something
+  that already works.
+- Settle where per-photo pages sit in the URL structure.
+  Pagination already occupies `gallery/COLLECTION/pageN.html`.
+  Decide against the code rather than from a plan.
+- Settle how `gallery/COLLECTION/` resolves without a page number.
+  A static host serves `index.html` for a bare directory, not
+  `page1.html`, so the first page needs one name or the other.
+  Either copy those html files or redirect in html or something.
+  Ultimately I should see the exact same things on:
+  `gallery/COLLECTION/page1.html` as `gallery/COLLECTION/`
+- Settle whether next and previous follow the grid's sort order.
+  Decide against the code rather than from a plan.
 
 Display order is Galleria's decision, not NormPic's.
 Chronological is the default for a wedding.
 
-### chr/settings-removal
+### ft/gallery-styling
 
-Remove root-level `settings.py` and the mechanism around it.
+The first stylesheet this project has had.
 
-`Config` replaces what galleria needs from it, but six modules import
-it and five are live.
-Two of those five are rewritten by earlier items, so this is sequenced
-after them rather than migrating code about to change.
+There is no CSS file anywhere in the repository.
+Styling today is Tailwind utility classes against a CDN script tag,
+which ships a compiler to the browser and is explicitly not a
+production configuration.
 
-- Migrate the three remaining dependents: `fs.py`, `exif.py`, and
-  `s3_storage.py`.
-  `process_photos.py` imports it too, but the command is stubbed and
-  the import is dead.
-- Delete the three test modules covering the deleted mechanism:
-  `test_settings.py`, `test_settings_isolation_fix.py`, and
-  `test_gallery_settings_complete.py`.
-  That is 23 tests.
-- Skip remaining dependents' tests with a reason naming the item that
-  restores them.
-- Rewrite `doc/settings.md` as the configuration document.
-  It describes the settings hierarchy, environment variables, the
-  local settings file, XDG compliance, and Pelican settings, all of
-  which leave with the module.
-  What replaces it is galleria's own configuration surface: the
-  manifest options, `--output-dir`, the program-default layer, the
-  `Config` object, and what `validate` guarantees about its inputs.
-  `doc/README.md` indexes it and follows any rename.
-- Verify `python -m galleria build` runs from a directory that is not
-  the repository root.
-  A root-level module cannot ship, which is why this check waits here.
-  Running from the root can succeed because the current directory is
-  on the path.
+- Remove the Tailwind CDN tag and the utility classes.
+  Roughly nine test assertions name Tailwind classes and will need
+  updating.
+- PicoCSS as the base.
+- A simple custom stylesheet over it.
+  No real theming yet.
+- Colors, spacing, and fonts as CSS custom properties at the root,
+  so a later shared theme is an override of variables rather than a
+  rewrite of rules.
+- Conventional BEM block names rather than clever ones, so a second
+  consumer would plausibly arrive at the same words.
 
-Note the module creates directories on import: `cache/` and the
-configured source path both get `mkdir` at module scope.
-
-### chr/orphaned-module-removal
-
-Remove the modules whose work moved to NormPic and marcustack: EXIF
-extraction, filename generation, S3 storage, photo validation, and the
-processing pipeline.
-
-Thumbnail generation lives in `file_processing.py` and stays.
-Split it out rather than deleting the file.
-
-What this removal walks into, found by reading rather than grepping:
-
-- `process_photos.py` is the only caller of the dual-collection
-  processing path, but five test modules reach it: its own,
-  `test_e2e_pipeline.py`, `test_batch_metadata_efficiency.py`,
-  `test_file_processing_dual.py`, and `test_photo_metadata.py`.
-  The last two are named for services rather than for the command, so
-  the coupling is not visible from their filenames.
-- `file_processing.py` imports its dependencies inside functions
-  rather than at module top.
-  A grep of import blocks will show fewer dependents than exist.
-- `link_photo_with_filename` raises rather than returning an error
-  value, so its callers correctly ignore its return.
-  Worth knowing before treating those as defects.
-- The thumbnail generation to split out is generated from the display
-  variant, not the original.
-- Remove the dependencies those modules were the only users of:
-  `exifread`, `timezonefinder`, and `boto3`.
-  Grep before removing; `pillow` stays with thumbnail generation.
-  Run `uv sync` and commit `uv.lock` alongside the `pyproject.toml`
-  edit.
-- Removing this code also removes the pyright suppressions covering
-  it.
-  `template_renderer.py` and `file_processing.py` each carry a
-  file-level suppression with the reason stated above the directive.
-  Neither should survive the code it covers.
-
-This determines the suite's remaining cost.
-`test_e2e_pipeline.py` and the GPS timezone tests in
-`test_filename_service.py` are nearly all of the current runtime, and
-both cover producer work that leaves with these modules.
+Some renaming later is expected and fine.
+Spend no more effort here than that.
 
 ### ft/dev-loop
 
@@ -274,110 +249,6 @@ collection size.
   structural analysis counts Alpine and Tailwind artifacts that are
   being removed, and it manipulates `sys.path` at import rather than
   relying on the package.
-
-### ft/gallery-styling
-
-The first stylesheet this project has had.
-
-There is no CSS file anywhere in the repository.
-Styling today is Tailwind utility classes against a CDN script tag,
-which ships a compiler to the browser and is explicitly not a
-production configuration.
-
-- Remove the Tailwind CDN tag and the utility classes.
-  Roughly nine test assertions name Tailwind classes and will need
-  updating.
-- PicoCSS as the base.
-- A simple custom stylesheet over it.
-  No real theming yet.
-- Colors, spacing, and fonts as CSS custom properties at the root,
-  so a later shared theme is an override of variables rather than a
-  rewrite of rules.
-- Conventional BEM block names rather than clever ones, so a second
-  consumer would plausibly arrive at the same words.
-
-Some renaming later is expected and fine.
-Spend no more effort here than that.
-
-### ft/rendition-model
-
-Make derived image sets configurable rather than hardcoded.
-
-Thumbnails are currently 400px WEBP at quality 85, from module-level
-constants, generated from the display variant.
-Derived sets are build output, not content, and are never
-manifested.
-
-- A rendition spec as data: format, maximum dimension, and a
-  quality-or-byte-budget constraint.
-  The constraint must admit both, even if only quality is
-  implemented now, because a byte budget means iterating encode
-  attempts and an interface taking only quality cannot grow into it.
-- The generator takes a spec instead of reading module constants.
-  Behavior unchanged; the existing values become the default spec.
-- Configuration supplies the specs.
-  One rendition at MVP, more without code changes.
-- Named generator implementations behind one call, so a second
-  format lands without touching callers.
-- Settle whether a generated rendition is a `Pic`.
-  It carries the same fields, so a parallel record is duplication, but
-  reusing `Pic` loses the manifested-versus-generated distinction and
-  the container has to track it instead.
-- The fidelity chain in ROADMAP is what makes named slots insufficient
-  eventually.
-  Not MVP work; noted here so the spec shape does not foreclose it.
-- Production rendition values, recovered from the deleted settings
-  file and the only record of what the deployed gallery was built
-  with.
-  `WEB_SIZE = (2048, 2048)` is the `display` rendition under the
-  settled variant names.
-  `THUMB_SIZE = (400, 400)` is the hardcoded 400 that `doc/QA.md`
-  cites as its example of a literal standing in for unwritten
-  configuration.
-  `JPEG_QUALITY = 85` and `WEBP_QUALITY = 85`.
-- `doc/command/process-photos.md` documents a command this item may
-  rename or delete.
-  Its fate follows the module's.
-- Rename the pairing key to `stem`: extensionless, used only for
-  pairing, never for URL construction.
-  Real paths with extensions live on the per-rendition `Pic` members,
-  which is what lets a collection hold mixed formats and a generated
-  rendition be `.webp` while its source is `.jpg`.
-- Values recovered from the deleted settings module, as input to this
-  item: `WEB_SIZE = (2048, 2048)`, `THUMB_SIZE = (400, 400)`,
-  `JPEG_QUALITY = 85`, `WEBP_QUALITY = 85`.
-  `THUMB_SIZE` is the hardcoded 400 that `doc/QA.md` cites as its
-  example of a literal standing in for unwritten configuration.
-- A deleted helper selected its variant by string name.
-  That is the missing-type pattern CONTRIBUTE flags: cheap with two
-  variants, wrong with an ordered fidelity chain.
-- `--no-validate` on `build`.
-  Validation is unconditional today; the flag exists so nobody removes
-  the default call once derivation makes it slow.
-- Rewrite `doc/settings.md` as the configuration document.
-  It describes the settings hierarchy, environment variables, the
-  local settings file, XDG compliance, and Pelican settings, all of
-  which leave with the module.
-  What replaces it is galleria's own configuration surface: the
-  manifest options, `--output-dir`, the program-default layer, the
-  `Config` object, and what `validate` guarantees about its inputs.
-  Two documents describing one configuration surface would be two
-  definitions of one thing, so this is a rewrite rather than an
-  addition.
-  `doc/README.md` indexes it and follows any rename.
-
-Thumbnail format is unsettled.
-WEBP is a good size-to-quality compromise, but it has no progressive
-mode: it decodes top-to-bottom rather than coarse-to-fine, so a larger
-progressive JPEG may read better on a grid despite the extra bytes.
-Settle it cheaply before MVP: generate a grid in each format and look
-at both over a throttled connection.
-The point is a decision, not a benchmark.
-The winner becomes the default and the loser stays reachable.
-Before MVP, do only the abstraction that makes swapping formats a
-configuration change rather than a rewrite: format as a field on the
-spec, and the generator dispatching on it.
-Everything else in this section is post-MVP.
 
 ### ft/preview-modal
 
@@ -450,6 +321,129 @@ Decide this by looking at it, not by reasoning about it.
 Then ask marcus how to proceed.
 Since both options need to exist, documenting both options' results and
 providing at least high-level planning documentation for both are required.
+
+### ref/derive-pipeline
+
+A second pass at derivation, after the first landed enough to publish
+a gallery.
+
+It works: 1290 renditions from 645 photos in six and a half minutes.
+What it lacks is legibility while running, any notion of what it has
+already done, and an input path as wide as the model behind it.
+
+- The input path names two manifests where the model holds four
+  renditions.
+  `option.py`, `Config`, `resolve_inputs`, and `merge_variants` are
+  all two-shaped, so a manifested preview or thumb cannot be
+  expressed.
+  The production case is one or two manifests in the original and
+  display classes, which is why this was deferred.
+- `derive_absences` does too much: resolves the source, decides alias
+  from generate, encodes, builds a `Pic` per written file, assembles
+  the record.
+  At least the first and last of those are their own units.
+- `derive_rendition` takes a source, a destination directory, a stem,
+  and a spec, where three combine into one resolved destination.
+  `Overrides` lists keys without expressing which belong together.
+- Progress and failure reporting.
+  A successful run prints nothing until it finishes, which reads as a
+  hang; a run where everything fails prints 645 lines and a summary
+  that reads like partial success.
+- `--force`, and skipping a rendition whose destination exists.
+  Cheap and wrong when a source or spec changed, which `--force`
+  covers until hashes are persisted.
+- `--no-validate` on `build`, so nobody removes the default call now
+  that derivation is slow.
+- A count check closing a build.
+  Manifest pics, merged records, renditions per class, and rendered
+  thumbnails should agree.
+  Aliased renditions have no file, so that class legitimately differs
+  and the check needs to know which were aliased.
+- Consider another look at the defaults for derivations based on decision point
+- No test covers a relative `collection_root`.
+  Every manifest fixture writes an absolute root, so the reader
+  joining it against the manifest's own directory is unexercised.
+  The existing test asserting `Path(".")` for an absent root now
+  describes the wrong behavior.
+
+`PicRenditions` holds relative paths against a root and knows nothing
+of where files live.
+That stays until marcustack's routing and deploy tail exist, since a
+final shape now would be guessing at half the requirements.
+
+### chr/orphaned-module-removal
+
+Remove the modules whose work moved to NormPic and marcustack: EXIF
+extraction, filename generation, S3 storage, photo validation, the
+processing pipeline, and root-level `settings.py`.
+
+Thumbnail generation lives in `file_processing.py` and stays.
+Split it out rather than deleting the file.
+
+If enough lands to make future work less painful without finishing,
+stop, document what remains, and move it to a later item.
+
+What this walks into, found by reading rather than grepping:
+
+- `file_processing.py` imports its dependencies inside functions
+  rather than at module top, so a grep of import blocks understates
+  what depends on what.
+- `process_photos.py` is the only caller of the dual-collection path,
+  but four test modules reach it: its own, `test_e2e_pipeline.py`,
+  `test_batch_metadata_efficiency.py`, and
+  `test_file_processing_dual.py`.
+  Two are named for services rather than for the command, so the
+  coupling is invisible from their filenames.
+  `test_dual_hash_integration.py` also imports `file_processing`, and
+  sits at the top level of `test/`.
+- `create_thumbnail` has no consumer outside its own module, and
+  `derive_rendition` supersedes it.
+  Delete it here rather than migrating, with its three tests in
+  `test_file_processing_comprehensive.py`.
+- `generate_batch_metadata` and `merge_partial_metadata_files` write
+  partial metadata files and merge them by index, carrying a
+  pre-extraction `schema_version` and a `photos` key.
+  That is a second manifest format NormPic now owns.
+  Delete rather than salvage.
+- `generate_gallery_metadata` reads four values through
+  `getattr(settings, ...)` with inline defaults, and leaves here.
+- `template_renderer.py` imports `is_dual_bucket_configured` from
+  `s3_storage.py`, so storage cannot leave while the render path
+  still calls it.
+- `link_photo_with_filename` raises rather than returning an error
+  value, so its callers correctly ignore its return.
+- Remaining `settings.py` dependents are `fs.py`, `exif.py`, and
+  `s3_storage.py`.
+  `process_photos.py` imports it too, but the command is stubbed and
+  the import is dead.
+  The module also creates `cache/` and the configured source path at
+  import.
+- Delete the three test modules covering the settings mechanism:
+  `test_settings.py`, `test_settings_isolation_fix.py`, and
+  `test_gallery_settings_complete.py`.
+  That is 23 tests.
+- Remove `exifread`, `timezonefinder`, and `boto3`, which only these
+  modules used.
+  `pillow` stays with thumbnail generation.
+  Run `uv sync` and commit `uv.lock` with the `pyproject.toml` edit.
+- Removing this code removes the pyright suppressions covering it.
+  `template_renderer.py` and `file_processing.py` each carry a
+  file-level one; neither should survive its subject.
+- Verify `python -m galleria build` runs from outside the repository
+  root.
+  A root-level module cannot ship, and running from the root succeeds
+  only because the current directory is on the path.
+
+`doc/settings.md` describes the settings hierarchy, environment
+variables, XDG compliance, and Pelican settings, all of which leave
+with the module.
+Rewriting it as the configuration document waits for the
+documentation pass, since the surface is still moving.
+
+This determines the suite's remaining cost.
+`test_e2e_pipeline.py` and the GPS timezone tests in
+`test_filename_service.py` are nearly all of the current runtime, and
+both cover producer work that leaves with these modules.
 
 ### doc/mvp-docs-pass
 
@@ -526,13 +520,6 @@ No formatter has run across this repository.
 Diffs are dominated by incidental reformatting whenever a file is
 touched, which hides what actually changed.
 Run one sweep, then keep it in the gate.
-
-### fix/template-photos-variable
-
-`index.j2.html` and `navbar.j2.html` access `photos|length`, but the
-render context provides `pics`.
-Jinja renders an undefined variable as empty, so this fails silently.
-A leftover from the photo-to-pic rename.
 
 ### tst/fixture-dedup
 

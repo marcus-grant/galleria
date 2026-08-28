@@ -27,7 +27,7 @@ those, and links the standing documents that live at this level.
 ## Topics
 
 - [Architecture](architecture/).
-  System design, component structure, and the seams between them.
+  System design, component structure, and the interfaces between them.
 - [Command](command/).
   The command-line interface: each command's usage, options, and
   workflows.
