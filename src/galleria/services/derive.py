@@ -6,6 +6,7 @@ Created: 2026-08-27
 License: AGPL-3.0-or-later
 """
 
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
@@ -65,8 +66,20 @@ def derive_absences(
     dest_dir: Path,
     generate: Callable[[Path, Path, Path, RenditionSpec], Path] = derive_rendition,
 ) -> PicRenditions:
-    """Fill a record's absences, deriving deeper ones and aliasing shallower ones."""
-    origin_deriv, origin_pic = renditions.present[0]
+    """Fill a record's absences, deriving deeper ones and aliasing shallower ones.
+
+    Every Pic in the returned record has a relative_path relative to
+    dest_dir and starting with its kind directory. Manifested Pics are
+    re-keyed under their kind; derived Pics are written there; an
+    aliased shallower absence holds the deeper Pic itself and so
+    carries that Pic's kind.
+    """
+    present = {
+        d: replace(p, relative_path=Path(d.name.lower()) / p.relative_path)
+        for d, p in renditions.present
+    }
+    origin_deriv = renditions.present[0][0]
+    origin_pic = present[origin_deriv]
     derived_pics: dict[Derivation, Pic] = {}
     for deriv in renditions.absent:
         if deriv < origin_deriv:
@@ -81,7 +94,7 @@ def derive_absences(
             size_bytes=stat.st_size,
             mtime=datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc),
         )
-    fields = {d.name.lower(): p for d, p in renditions.present}
+    fields = {d.name.lower(): p for d, p in present.items()}
     fields.update({d.name.lower(): p for d, p in derived_pics.items()})
     return PicRenditions(renditions.key, **fields)
 

@@ -6,6 +6,7 @@ Created: 2026-08-27
 License: AGPL-3.0-or-later
 """
 
+from dataclasses import replace
 import json
 from pathlib import Path
 import re
@@ -151,8 +152,7 @@ class TestDeriveAbsences:
             for d in (Derivation.ORIGINAL, Derivation.PREVIEW, Derivation.THUMB)
         }
         filled = derive_absences(rends, specs, src, tmp_path, (gen := _Recorder()))
-        assert filled.original is display
-        assert filled.display is display
+        assert filled.original is filled.display
         assert filled.preview is not display
         assert filled.thumb is not display
         expect = [tmp_path / "preview", tmp_path / "thumb"]
@@ -166,7 +166,7 @@ class TestDeriveAbsences:
         thumb = make_pic()
         rends = PicRenditions(Path("2026/a"), thumb=thumb)
         filled = derive_absences(rends, {}, src, tmp_path, (gen := _Recorder()))
-        assert all(p is thumb for _, p in filled.present)
+        assert all(p is filled.thumb for _, p in filled.present)
         assert gen.calls == []
 
     def test_a_full_record_generates_nothing(self, tmp_path, _mk_src):
@@ -176,7 +176,26 @@ class TestDeriveAbsences:
         rends = PicRenditions(Path("2026/a"), **pics)
         filled = derive_absences(rends, {}, src, tmp_path, (gen := _Recorder()))
         assert gen.calls == []
-        assert filled == rends
+        for deriv, pic in filled.present:
+            given = getattr(rends, deriv.name.lower())
+            prefixed = Path(deriv.name.lower()) / given.relative_path
+            assert pic == replace(given, relative_path=prefixed)
+
+    def test_every_returned_path_starts_with_its_kind(self, tmp_path, _mk_src):
+        """Filled paths are pics-dir-relative and prefixed by kind, aliases too."""
+        display = make_pic(relative_path=Path(rel := "2026/a.jpg"))
+        rends = PicRenditions(Path("2026/a"), display=display)
+        specs = {
+            d: RenditionSpec(Format.WEBP, 120, 85)
+            for d in (Derivation.PREVIEW, Derivation.THUMB)
+        }
+        filled = derive_absences(rends, specs, _mk_src(tmp_path), tmp_path, _Recorder())
+        assert filled.display is not None and filled.original is not None
+        assert filled.display.relative_path == Path("display") / rel
+        assert filled.original.relative_path == filled.display.relative_path
+        for deriv, pic in filled.present:
+            if deriv > Derivation.DISPLAY:
+                assert pic.relative_path.parts[0] == deriv.name.lower()
 
 
 def _write_collection(
