@@ -7,19 +7,18 @@ License: AGPL-3.0-or-later
 """
 
 from galleria.models.normpic import Pic
-from galleria.models.rendition import Derivation
 
 
-def rendition_href(collection: str, deriv: Derivation, pic: Pic) -> str:
-    """Return pics/COLLECTION/KIND/RELATIVE_PATH for one rendition.
-    Interim: once ref/derive-pipeline reworks the rendition models,
-    this composition belongs on the model that knows its own kind
-    and path, and this module goes away.
+def rendition_href(collection: str, pic: Pic) -> str:
+    """Return pics/COLLECTION/RELATIVE_PATH for one rendition.
+
     Site-root-relative with forward slashes and no leading slash; the
-    template prefixes whatever root it renders from. KIND is the
-    derivation name lowercased, matching the derive output directory,
-    and RELATIVE_PATH is the Pic's kind-relative path as-is. Every
-    kind takes the same shape whether or not it is physically present
-    under the output directory; routing is the deployer's concern.
+    template prefixes whatever root it renders from. A filled record's
+    Pic paths already start with their kind, and an aliased field
+    holds the deeper Pic itself, so an absent original resolves to the
+    kind that was manifested with no logic here.
+
+    Interim: once ref/derive-pipeline reworks the rendition models,
+    this belongs on the model and this module goes away.
     """
-    return f"pics/{collection}/{deriv.name.lower()}/{pic.relative_path.as_posix()}"
+    return f"pics/{collection}/{pic.relative_path.as_posix()}"
