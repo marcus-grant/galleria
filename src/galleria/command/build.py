@@ -7,13 +7,16 @@ Generates static website from processed photos.
 import click
 from pathlib import Path
 
-from galleria.command.option import manifest_options
+from galleria.command.option import derive_options
 from galleria.command.validate import resolve_inputs
-from galleria.services.site_generator import (
-    check_source_directory,
-    check_source_subdirectories,
-    create_output_directory_structure,
+from galleria.services.derive import (
+    CollectionDeriveError,
+    adopt_rendition,
+    derive_rendition,
+    derive_collection,
 )
+from galleria.services.rendition import merge_variants
+from galleria.services.site_generator import create_output_directory_structure
 from galleria.services.template_renderer import TemplateRenderer
 
 
@@ -62,50 +65,45 @@ def build_gallery():
 
 
 @click.command()
-@manifest_options
-@click.option("--output-dir", type=click.Path(path_type=Path))
+@derive_options
+@click.option("--derive/--no-derive", default=False)
+@click.option("--validate/--no-validate", default=False)
 def build(
     original_manifest: Path | None,
     display_manifest: Path | None,
     output_dir: Path | None,
+    derive: bool,
+    validate: bool,
 ) -> None:
-    """Build static photo gallery site from processed photos."""
+    """Build the static gallery site from derived renditions.
+
+    Both flags default off while a full derive run has no
+    incremental skip; the derive default flips to opt-out when
+    ref/derive-pipeline lands. With --derive, missing renditions
+    are encoded; without it they are adopted from a prior derive
+    run, and a missing file stops the build. With --validate, the
+    merge report prints before building.
+    """
     cfg, manifest_o, manifest_d = resolve_inputs(
         original_manifest, display_manifest, output_dir
     )
+    if validate:
+        renditions = merge_variants(manifest_o, manifest_d)
+        manifest = manifest_o or manifest_d
+        name = manifest.collection_name if manifest else None
+        click.echo(f"Valid config, tracking {len(renditions)} pics of {name}.")
+    generate = derive_rendition if derive else adopt_rendition
+    try:
+        records = derive_collection(
+            manifest_o, manifest_d, cfg.specs, cfg.output_dir, generate
+        )
+    except CollectionDeriveError as e:
+        for failure in e.failures:
+            click.echo(failure, err=True)
+        if not derive:
+            click.echo("Missing renditions; re-run derive.", err=True)
+            raise SystemExit(1)
+        records = e.records
+    click.echo(f"Tracking {len(records)} pics.")
     click.echo("Generating static site...")
     build_gallery()
-    click.echo("Generating static site...")
-
-    # Check source directory
-    base_dir = Path.cwd()
-    click.echo("Checking source directory: prod/pics")
-
-    if not check_source_directory(base_dir):
-        click.echo("Source directory not found: prod/pics")
-    else:
-        # Check subdirectories
-        subdirs = check_source_subdirectories(base_dir)
-        missing = [name for name, exists in subdirs.items() if not exists]
-
-        if missing:
-            click.echo(f"Missing subdirectories: {', '.join(missing)}")
-        else:
-            click.echo("All source directories found")
-
-    # Call the pure build function
-    click.echo("Creating output directory structure: prod/site")
-    result = build_gallery()
-
-    # Report results
-    if result["success"]:
-        click.echo(f"Found {result['pics_processed']} pics")
-        if result["gallery_generated"]:
-            click.echo("Gallery page created: prod/site/gallery.html")
-            click.echo("Index page created: prod/site/index.html")
-        else:
-            click.echo("No photos found to generate gallery")
-        click.echo("Build complete!")
-    else:
-        click.echo("Build failed!")
-        SystemExit(1)
