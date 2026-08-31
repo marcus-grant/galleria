@@ -3,6 +3,14 @@
 Most recent first.
 Pre-split history is archived under [changelog/](changelog/).
 
+## 2026-08-31
+
+### ft/static-gallery
+
+- Extract derive_collection returning filled rendition records.
+- Add adopt_rendition filling records from disk without encoding.
+- Wire build onto the records; --derive and --validate default off.
+
 ## 2026-08-28
 
 ### main

@@ -131,6 +131,22 @@ A correct gallery with no JavaScript at all.
 This is the fallback, and it must be right on its own before
 anything enhances it.
 
+PR 1 landed the data path: `derive_collection`, `adopt_rendition`,
+and the build flags, both defaulting off.
+Settled for the presentation PR, against the code:
+
+- `output_dir` is the site root: HTML at `gallery/COLLECTION/`,
+  beside the existing `pics/COLLECTION/KIND/` renditions, all links
+  relative within that tree.
+- Per-photo pages at `gallery/COLLECTION/pic/STEM.html`.
+- `index.html` is a byte-identical copy of `page1.html`.
+- Next and previous follow merge order, chronological then key;
+  no other ordering exists.
+- A variant absent from a manifest warns and keeps building.
+  A derived file missing on disk stops the build, telling the user
+  to re-run derive.
+- Delete `site_generator.py`'s now-uncalled source checks with the
+  rest of the `prod/pics` residue.
 - Thumbnail links the web version.
 - Full resolution reachable by an explicit separate link, never from
   the thumbnail itself.
@@ -159,12 +175,6 @@ anything enhances it.
 - Emit relative paths in rendered output.
   Output must be self-contained; a CDN hostname baked into generated
   HTML is stale the moment anything moves.
-- Decide what the build does with a photo present in only one variant
-  set.
-  `merge_variants` reports these as records with a missing variant and
-  never fails on its own.
-  The settled answer is to warn per photo and keep building, since a
-  gallery missing one photo's display rendition should still publish.
 - Per-photo pages, the no-JavaScript equivalent of the modal.
   Each shows the display rendition, an explicit link to the original,
   a download link, and next and previous navigation.
@@ -172,17 +182,6 @@ anything enhances it.
   pull a 26MB original.
   This also makes the eventual modal an enhancement over something
   that already works.
-- Settle where per-photo pages sit in the URL structure.
-  Pagination already occupies `gallery/COLLECTION/pageN.html`.
-  Decide against the code rather than from a plan.
-- Settle how `gallery/COLLECTION/` resolves without a page number.
-  A static host serves `index.html` for a bare directory, not
-  `page1.html`, so the first page needs one name or the other.
-  Either copy those html files or redirect in html or something.
-  Ultimately I should see the exact same things on:
-  `gallery/COLLECTION/page1.html` as `gallery/COLLECTION/`
-- Settle whether next and previous follow the grid's sort order.
-  Decide against the code rather than from a plan.
 
 Display order is Galleria's decision, not NormPic's.
 Chronological is the default for a wedding.
@@ -345,8 +344,6 @@ already done, and an input path as wide as the model behind it.
 - `--force`, and skipping a rendition whose destination exists.
   Cheap and wrong when a source or spec changed, which `--force`
   covers until hashes are persisted.
-- `--no-validate` on `build`, so nobody removes the default call now
-  that derivation is slow.
 - A count check closing a build.
   Manifest pics, merged records, renditions per class, and rendered
   thumbnails should agree.
@@ -358,6 +355,12 @@ already done, and an input path as wide as the model behind it.
   joining it against the manifest's own directory is unexercised.
   The existing test asserting `Path(".")` for an absent root now
   describes the wrong behavior.
+- ft/static-gallery left the seam ready: `derive_collection` takes
+  a `generate` callable, and `adopt_rendition` fills records from
+  disk without encoding, failing on a missing file.
+  Adopt-or-encode per record is most of the incremental skip.
+- When incremental derivation lands, flip build's `--derive`
+  default to opt-out and revisit `--validate` with it.
 
 `PicRenditions` holds relative paths against a root and knows nothing
 of where files live.
@@ -522,6 +525,11 @@ Consolidate them.
 
 Worth doing after the module removals in `ft/cli-config`, since some
 of these fixtures serve tests that are being deleted anyway.
+
+`_write_collection` now has three deliberate copies, in
+`test/command/test_derive.py`, `test/services/test_derive.py`, and
+`test/command/test_build.py`.
+They change together or not at all until this task lands.
 
 ### chr/remove-empty-theme
 
