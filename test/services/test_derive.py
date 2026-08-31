@@ -6,6 +6,7 @@ Created: 2026-08-27
 License: AGPL-3.0-or-later
 """
 
+import json
 from pathlib import Path
 import re
 
@@ -14,9 +15,17 @@ import pytest
 from PIL import Image
 
 from conftest import make_pic
+from galleria.config.default import RENDITION_SPECS
 from galleria.models.spec import Format, RenditionSpec
 from galleria.models.rendition import Derivation, PicRenditions
-from galleria.services.derive import DeriveError, derive_absences, derive_rendition
+from galleria.services.derive import (
+    CollectionDeriveError,
+    DeriveError,
+    derive_absences,
+    derive_collection,
+    derive_rendition,
+)
+from galleria.services.manifest_reader import read_manifest
 
 
 @pytest.fixture
@@ -167,6 +176,102 @@ class TestDeriveAbsences:
         filled = derive_absences(rends, {}, src, tmp_path, (gen := _Recorder()))
         assert gen.calls == []
         assert filled == rends
+
+
+def _write_collection(
+    manifest_path: Path,
+    root: Path,
+    names: list[Path],
+    size: tuple[int, int] = (800, 600),
+) -> Path:
+    """Write a manifest and the real images it names under root.
+
+    Duplicated from test/command/test_derive.py deliberately: the
+    clean conftest version demands the derive-pipeline or orphan
+    removal scope. Centralize or replace when NormPic ships a
+    consumer package with test factories.
+    DELETEME once appropriate PR centralizes this helper which is duped
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    for n in names:
+        path = root / n
+        path.parent.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", size).save(path, "JPEG")
+    manifest = {
+        "version": "0.1.0",
+        "collection_name": "wedding",
+        "generated_at": "2026-08-17T09:00:00Z",
+        "collection_root": str(root),
+        "pic": [
+            {
+                "hash": "b3c32:NW9MKEFNZ6GTD8209QN3DQ69",
+                "relative_path": str(n),
+                "size_bytes": 1024,
+                "mtime": "2026-08-17T08:00:00Z",
+            }
+            for n in names
+        ],
+    }
+    manifest_path.write_text(json.dumps(manifest))
+    return manifest_path
+
+
+class TestDeriveCollection:
+    """derive_collection fills merged records and aggregates failures."""
+
+    def test_fills_every_record_in_merge_order(self, tmp_path):
+        """A clean collection returns one filled record per photo, in order."""
+        names = [Path("a.jpg"), Path("b.jpg")]
+        manifest = _write_collection(tmp_path / "m.json", tmp_path / "src", names)
+        records = derive_collection(
+            manifest_o=read_manifest(manifest),
+            manifest_d=None,
+            specs=RENDITION_SPECS,
+            output_dir=tmp_path / "_build",
+        )
+        assert [r.key for r in records] == [Path("a"), Path("b")]
+        assert all(r.absent == [] for r in records)
+
+    def test_derive_error_fails_that_record_and_continues(self, tmp_path):
+        """A DeriveError on one record does not stop the others filling."""
+        names = [Path("a.jpg"), Path("b.jpg")]
+        manifest = _write_collection(tmp_path / "m.json", tmp_path / "src", names)
+        (tmp_path / "src" / "a.jpg").write_text("not an image")
+        with pytest.raises(CollectionDeriveError) as e:
+            derive_collection(
+                manifest_o=read_manifest(manifest),
+                manifest_d=None,
+                specs=RENDITION_SPECS,
+                output_dir=tmp_path / "_build",
+            )
+        assert [r.key for r in e.value.records] == [Path("b")]
+        assert all(r.absent == [] for r in e.value.records)
+
+    def test_failures_raise_after_the_loop_with_partials(self, tmp_path):
+        """CollectionDeriveError carries failures and the records that filled."""
+        names = [Path("a.jpg"), Path("b.jpg")]
+        manifest = _write_collection(tmp_path / "m.json", tmp_path / "src", names)
+        (tmp_path / "src" / "a.jpg").write_text("not an image")
+        with pytest.raises(CollectionDeriveError) as e:
+            derive_collection(
+                manifest_o=read_manifest(manifest),
+                manifest_d=None,
+                specs=RENDITION_SPECS,
+                output_dir=tmp_path / "_build",
+            )
+        assert len(e.value.failures) == 1
+        assert "a.jpg" in e.value.failures[0]
+        assert len(e.value.records) == 1
+
+    def test_empty_manifests_fill_nothing_and_raise_nothing(self):
+        """Two absent manifests produce an empty record list."""
+        records = derive_collection(
+            manifest_o=None,
+            manifest_d=None,
+            specs=RENDITION_SPECS,
+            output_dir=Path("unused"),
+        )
+        assert records == []
 
 
 class TestB3C32:
