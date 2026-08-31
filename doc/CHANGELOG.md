@@ -7,9 +7,19 @@ Pre-split history is archived under [changelog/](changelog/).
 
 ### ft/static-gallery
 
-- Extract derive_collection returning filled rendition records.
-- Add adopt_rendition filling records from disk without encoding.
-- Wire build onto the records; --derive and --validate default off.
+- Static gallery rendered from filled records.
+  - Pages of `PAGE_SIZE` (96) at `gallery/COLLECTION/pageN.html`,
+    `index.html` a byte copy of `page1.html`, prev and next links.
+  - Per-photo pages at `gallery/COLLECTION/pic/STEM.html`: display
+    rendition, view-original and download links, prev and next.
+  - Grid cells link the per-photo page and show the thumb by relative
+    path; no URL is composed in a template.
+  - Filled `Pic` paths carry their kind; `rendition_href` composes
+    `pics/COLLECTION/PATH`; aliases resolve to real files.
+  - Renderer loads templates package-relative; `settings`,
+    `s3_storage`, `PICS_BASE_URL`, `index.j2.html`, and
+    `site_generator.py` removed.
+  - Accepted on the real 645-photo collection in a browser.
 
 ## 2026-08-28
 
