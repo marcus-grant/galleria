@@ -1,9 +1,12 @@
 <!-- START: src/template/components/pic-cell.j2.html -->
-<a href="{{ PICS_BASE_URL }}/web/{{ pic.filename }}" target="_blank" class="block aspect-square cursor-pointer">
-  <img 
-    src="{{ PICS_BASE_URL }}/thumb/{{ pic.filename }}" 
-    alt="Wedding pic {{ pic.filename }}"
-    class="w-full h-full object-cover rounded-lg hover:shadow-lg transition-shadow"
-  />
-</a>
+<div class="pic-cell">
+  <a href="pic/{{ pic.key.name }}.html" class="block aspect-square">
+    <img
+      src="{{ root }}/{{ href(collection, pic.thumb) }}"
+      alt="{{ collection }} {{ pic.key.name }}"
+      loading="lazy"
+      class="w-full h-full object-cover rounded-lg hover:shadow-lg transition-shadow"
+    />
+  </a>
+</div>
 <!-- END: src/template/components/pic-cell.j2.html -->

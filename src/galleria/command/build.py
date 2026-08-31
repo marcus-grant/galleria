@@ -43,6 +43,7 @@ def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) ->
             "pics": page,
             "page": n,
             "pages": len(pages),
+            "total": len(records),
             "root": "../..",
         }
         renderer.save_html(

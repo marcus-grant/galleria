@@ -10,6 +10,8 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
+from galleria.services.link import rendition_href
+
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "template"
 
 
@@ -19,6 +21,7 @@ class TemplateRenderer:
     def __init__(self) -> None:
         """Load templates from the package, independent of cwd."""
         self.env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)))
+        self.env.globals["href"] = rendition_href
 
     def render(self, template_path: str, context: dict) -> str:
         """Render one template with the given context."""

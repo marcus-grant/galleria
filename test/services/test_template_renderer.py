@@ -18,7 +18,7 @@ class TestTemplateRenderer:
         """Rendering works with cwd anywhere, because the loader is package-relative."""
         monkeypatch.chdir(tmp_path)
         assert (TEMPLATE_DIR / "gallery.j2.html").is_file()
-        html = TemplateRenderer().render("gallery.j2.html", {"pics": []})
+        html = TemplateRenderer().render("base.j2.html", {})
         assert "<html" in html
 
     def test_save_html_creates_parent_directories(self, tmp_path: Path):
