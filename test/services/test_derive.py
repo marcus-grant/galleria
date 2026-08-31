@@ -21,6 +21,7 @@ from galleria.models.rendition import Derivation, PicRenditions
 from galleria.services.derive import (
     CollectionDeriveError,
     DeriveError,
+    adopt_rendition,
     derive_absences,
     derive_collection,
     derive_rendition,
@@ -272,6 +273,35 @@ class TestDeriveCollection:
             output_dir=Path("unused"),
         )
         assert records == []
+
+
+class TestAdoptRendition:
+    """adopt_rendition predicts paths and never encodes."""
+
+    def test_returns_the_path_derive_would_write(self, tmp_path, _mk_src):
+        """Adoption after a real derive returns the identical path."""
+        src, dst = _mk_src(tmp_path), tmp_path / "out"
+        spec = RENDITION_SPECS[Derivation.THUMB]
+        written = derive_rendition(src, dst, Path("derived"), spec)
+        adopted = adopt_rendition(src, dst, Path("derived"), spec)
+        assert adopted == written
+
+    def test_missing_file_raises_derive_error(self, tmp_path):
+        """A rendition absent on disk raises, naming the expected path."""
+        spec = RENDITION_SPECS[Derivation.THUMB]
+        src, dst = tmp_path / "src.jpg", tmp_path / "dst"
+        with pytest.raises(DeriveError, match="derived.webp"):
+            adopt_rendition(src, dst, Path("derived"), spec)
+
+    def test_adopting_reads_real_file_metadata(self, tmp_path, _mk_src):
+        """derive_collection with adopt fills Pics from the on-disk files."""
+        names = [Path("a.jpg")]
+        manifest = _write_collection(tmp_path / "m.json", tmp_path / "src", names)
+        manifest_o = read_manifest(manifest)
+        args = (manifest_o, None, RENDITION_SPECS, tmp_path / "_build")
+        derived = derive_collection(*args)
+        adopted = derive_collection(*args, generate=adopt_rendition)
+        assert adopted == derived
 
 
 class TestB3C32:

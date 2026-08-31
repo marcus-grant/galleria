@@ -86,6 +86,25 @@ def derive_absences(
     return PicRenditions(renditions.key, **fields)
 
 
+def adopt_rendition(
+    src_path: Path, dest_dir: Path, stem: Path, spec: RenditionSpec
+) -> Path:
+    """Return the path derive_rendition would write, without encoding.
+
+    Path prediction only: the extension comes from the spec and the
+    directory from the caller, the same inputs derive_rendition uses,
+    so the two can never disagree. The file must already exist from a
+    prior derive run; a missing file raises DeriveError so the edge
+    can stop and tell the user to re-run derive. src_path is unused,
+    accepted to match the generate signature.
+    """
+    path = dest_dir / stem.with_suffix(f".{spec.format.extension}")
+    if not path.is_file():
+        msg = "not derived; re-run derive"
+        raise DeriveError(src_path, path, spec, cause=FileNotFoundError(msg))
+    return path
+
+
 class CollectionDeriveError(Exception):
     """Raised after a collection fill when any record failed.
 
