@@ -10,9 +10,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Unpack, TypedDict
 
-from src.galleria.config.default import OUTPUT_DIR, PAGE_SIZE, RENDITION_SPECS
-from src.galleria.models.rendition import Derivation
-from src.galleria.models.spec import RenditionSpec
+from galleria.config.default import OUTPUT_DIR, PAGE_SIZE, RENDITION_SPECS
+from galleria.models.rendition import Derivation
+from galleria.models.spec import RenditionSpec
 
 
 class MissingConfigError(Exception):
