@@ -5,16 +5,19 @@ Author: Marcus Grant
 License: AGPL-3.0-or-later
 """
 
+from dataclasses import replace
 import json
 from pathlib import Path
 from unittest.mock import patch
 
+from bs4 import BeautifulSoup
 from click.testing import CliRunner
 from PIL import Image
-import pytest
 
 from galleria.cli import cli
+from galleria.config import Config
 from galleria.config.default import RENDITION_SPECS
+from galleria.command.build import build_gallery
 from galleria.services.derive import derive_collection
 from galleria.services.manifest_reader import read_manifest
 
@@ -54,6 +57,70 @@ def _write_collection(
     }
     manifest_path.write_text(json.dumps(manifest))
     return manifest_path
+
+
+def _records(tmp_path: Path, count: int):
+    """Write count pics, derive them, and return manifest, output, records."""
+    names = [Path(f"{i:03d}.jpg") for i in range(count)]
+    man = _write_collection(tmp_path / "m.json", tmp_path / "src", names)
+    out = tmp_path / "out"
+    records = derive_collection(read_manifest(man), None, RENDITION_SPECS, out)
+    return man, out, records
+
+
+def _cfg(man: Path, out: Path, page_size: int) -> Config:
+    """A Config for one manifest with the page size under test."""
+    cfg = Config.from_overrides(original_manifest=man, output_dir=out)
+    return replace(cfg, page_size=page_size)
+
+
+def _pages(out: Path) -> list[str]:
+    """Sorted page file names under the collection's gallery dir."""
+    return sorted(p.name for p in (out / "gallery" / "wedding").glob("page*.html"))
+
+
+def _cells(path: Path) -> int:
+    """Number of grid cells rendered on one page."""
+    return len(BeautifulSoup(path.read_text(), "html.parser").select("img"))
+
+
+class TestBuildGallery:
+    """Paginated rendering of filled records under output_dir."""
+
+    def test_zero_records_writes_page1_and_index(self, tmp_path: Path):
+        """An empty collection still yields page1.html and index.html."""
+        man, out, records = _records(tmp_path, 0)
+        build_gallery(_cfg(man, out, 2), "wedding", records)
+        assert _pages(out) == ["page1.html"]
+        assert (out / "gallery" / "wedding" / "index.html").is_file()
+
+    def test_index_is_a_byte_copy_of_page1(self, tmp_path: Path):
+        """index.html and page1.html are byte-identical."""
+        man, out, records = _records(tmp_path, 1)
+        build_gallery(_cfg(man, out, 2), "wedding", records)
+        site = out / "gallery" / "wedding"
+        assert (site / "index.html").read_bytes() == (site / "page1.html").read_bytes()
+
+    def test_below_page_size_is_one_page(self, tmp_path: Path):
+        """Fewer records than a page yields only page1.html."""
+        man, out, records = _records(tmp_path, 1)
+        build_gallery(_cfg(man, out, 2), "wedding", records)
+        assert _pages(out) == ["page1.html"]
+
+    def test_at_page_size_is_one_page(self, tmp_path: Path):
+        """Exactly a page of records yields one page and no empty page2."""
+        man, out, records = _records(tmp_path, 2)
+        build_gallery(_cfg(man, out, 2), "wedding", records)
+        assert _pages(out) == ["page1.html"]
+
+    def test_over_page_size_splits_by_position(self, tmp_path: Path):
+        """One record past a page yields two pages split at the page size."""
+        man, out, records = _records(tmp_path, 3)
+        build_gallery(_cfg(man, out, 2), "wedding", records)
+        assert _pages(out) == ["page1.html", "page2.html"]
+        site = out / "gallery" / "wedding"
+        assert _cells(site / "page1.html") == 2
+        assert _cells(site / "page2.html") == 1
 
 
 class TestBuildCommand:
@@ -137,35 +204,3 @@ class TestBuildCommand:
         )
         assert result.exit_code == 0
         assert "tracking 1 pics" in result.output
-
-    @pytest.mark.skip(reason="Output layout settles in the static gallery item")
-    def test_creates_output_directory_structure(self):
-        """Test that build command creates output directory structure."""
-        from galleria.cli import cli
-
-        runner = CliRunner()
-        with runner.isolated_filesystem():
-            # Create source structure
-            source_dir = Path.cwd() / "prod" / "pics"
-            source_dir.mkdir(parents=True)
-            (source_dir / "full").mkdir()
-            (source_dir / "web").mkdir()
-            (source_dir / "thumb").mkdir()
-
-            # Run build command
-            result = runner.invoke(cli, ["build"])
-
-            # Check output directory was created
-            output_dir = Path.cwd() / "prod" / "site"
-            assert output_dir.exists()
-            assert output_dir.is_dir()
-
-            # Check subdirectories were created
-            assert (output_dir / "css").exists()
-            assert (output_dir / "js").exists()
-
-            # Check output mentions creation
-            assert (
-                "creating" in result.output.lower()
-                or "created" in result.output.lower()
-            )

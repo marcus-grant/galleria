@@ -4,11 +4,15 @@ Build command for Galleria.
 Generates static website from processed photos.
 """
 
-import click
 from pathlib import Path
+import shutil
 
+import click
+
+from galleria.config import Config
 from galleria.command.option import derive_options
 from galleria.command.validate import resolve_inputs
+from galleria.models.rendition import PicRenditions
 from galleria.services.derive import (
     CollectionDeriveError,
     adopt_rendition,
@@ -16,52 +20,35 @@ from galleria.services.derive import (
     derive_collection,
 )
 from galleria.services.rendition import merge_variants
-from galleria.services.site_generator import create_output_directory_structure
 from galleria.services.template_renderer import TemplateRenderer
 
 
-def build_gallery():
-    """Pure function that orchestrates gallery building services.
+def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) -> None:
+    """Render the collection's pages under output_dir/gallery/COLLECTION.
 
-    Returns:
-        Dict with build results: {
-            'success': bool,
-            'photos_processed': int,
-            'gallery_generated': bool
-        }
+    Records are sliced into pages of cfg.page_size in the order given,
+    which is merge order. An empty collection still writes page1.html.
+    index.html is a byte copy of page1.html. Every page renders from
+    two levels below the site root, so templates prefix hrefs with
+    root. A missing or broken template raises; there is no silent
+    partial build.
     """
-    # Create output directory structure
-    create_output_directory_structure(Path.cwd())
-
-    # Generate pic metadata
-    pic_data = {"pics": []}
-    # Use gallery metadata file if it exists, otherwise scan files directly
-    # metadata_file = Path("prod/pics/gallery-metadata.json")
-    pics_count = len(pic_data["pics"])
-    gallery_generated = False
-
-    if pic_data["pics"]:
-        # Render templates
-        renderer = TemplateRenderer()
-
-        # Generate gallery page
-        gallery_template = Path("src/galleria/template/gallery.j2.html")
-        if gallery_template.exists():
-            gallery_html = renderer.render("gallery.j2.html", pic_data)
-            renderer.save_html(gallery_html, "prod/site/gallery.html")
-            gallery_generated = True
-
-        # Generate index page
-        index_template = Path("src/galleria/template/index.j2.html")
-        if index_template.exists():
-            index_html = renderer.render("index.j2.html", pic_data)
-            renderer.save_html(index_html, "prod/site/index.html")
-
-    return {
-        "success": True,
-        "pics_processed": pics_count,
-        "gallery_generated": gallery_generated,
-    }
+    renderer = TemplateRenderer()
+    site_dir = cfg.output_dir / "gallery" / collection
+    size = cfg.page_size
+    pages = [records[i : i + size] for i in range(0, len(records), size)] or [[]]
+    for n, page in enumerate(pages, start=1):
+        ctx = {
+            "collection": collection,
+            "pics": page,
+            "page": n,
+            "pages": len(pages),
+            "root": "../..",
+        }
+        renderer.save_html(
+            renderer.render("gallery.j2.html", ctx), site_dir / f"page{n}.html"
+        )
+    shutil.copyfile(site_dir / "page1.html", site_dir / "index.html")
 
 
 @click.command()
@@ -87,10 +74,11 @@ def build(
     cfg, manifest_o, manifest_d = resolve_inputs(
         original_manifest, display_manifest, output_dir
     )
+    manifest = manifest_o or manifest_d
+    assert manifest is not None, "resolve_inputs guarantees a manifest"
+    name = manifest.collection_name
     if validate:
         renditions = merge_variants(manifest_o, manifest_d)
-        manifest = manifest_o or manifest_d
-        name = manifest.collection_name if manifest else None
         click.echo(f"Valid config, tracking {len(renditions)} pics of {name}.")
     generate = derive_rendition if derive else adopt_rendition
     try:
@@ -106,4 +94,4 @@ def build(
         records = e.records
     click.echo(f"Tracking {len(records)} pics.")
     click.echo("Generating static site...")
-    build_gallery()
+    build_gallery(cfg, name, records)
