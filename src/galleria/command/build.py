@@ -50,6 +50,17 @@ def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) ->
             renderer.render("gallery.j2.html", ctx), site_dir / f"page{n}.html"
         )
     shutil.copyfile(site_dir / "page1.html", site_dir / "index.html")
+    for i, rec in enumerate(records):
+        ctx = {
+            "collection": collection,
+            "pic": rec,
+            "prev": records[i - 1] if i > 0 else None,
+            "next": records[i + 1] if i + 1 < len(records) else None,
+            "total": len(records),
+            "root": "../../..",
+        }
+        html = renderer.render("pic.j2.html", ctx)
+        renderer.save_html(html, site_dir / "pic" / f"{rec.key.name}.html")
 
 
 @click.command()

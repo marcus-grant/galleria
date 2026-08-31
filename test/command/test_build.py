@@ -122,6 +122,14 @@ class TestBuildGallery:
         assert _cells(site / "page1.html") == 2
         assert _cells(site / "page2.html") == 1
 
+    def test_writes_a_page_per_record(self, tmp_path: Path):
+        """Every record gets gallery/COLLECTION/pic/STEM.html."""
+        man, out, records = _records(tmp_path, 3)
+        build_gallery(_cfg(man, out, 2), "wedding", records)
+        pic_dir = out / "gallery" / "wedding" / "pic"
+        expected = [f"{r.key.name}.html" for r in records]
+        assert sorted(p.name for p in pic_dir.glob("*.html")) == expected
+
 
 class TestBuildCommand:
     """The command's CLI surface and wiring."""

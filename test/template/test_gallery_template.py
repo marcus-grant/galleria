@@ -48,6 +48,20 @@ def _one(soup: BeautifulSoup, selector: str) -> Tag:
     return tag
 
 
+def _pic_page(rec, prev=None, next=None) -> BeautifulSoup:
+    """Render pic.j2.html with the context build_gallery supplies."""
+    ctx = {
+        "collection": "wedding",
+        "pic": rec,
+        "prev": prev,
+        "next": next,
+        "total": 1,
+        "root": "../../..",
+    }
+    html = TemplateRenderer().render("pic.j2.html", ctx)
+    return BeautifulSoup(html, "html.parser")
+
+
 class TestGalleryPage:
     """What other parts of the system depend on in the grid page."""
 
@@ -105,3 +119,57 @@ class TestGalleryPage:
         """Every cell fixes its aspect so arriving images do not reflow the grid."""
         soup = _page([_record("a")])
         assert "aspect-square" in _one(soup, ".pic-cell a")["class"]
+
+
+class TestPicPage:
+    """The per-photo page: display rendition, original, download, neighbors."""
+
+    def test_shows_the_display_rendition(self):
+        """The main img src is root plus the display href."""
+        rec = _record("a")
+        assert rec.display is not None
+        src = str(_one(_pic_page(rec), ".pic-display img")["src"])
+        assert src == f"../../../{rendition_href('wedding', rec.display)}"
+
+    def test_links_the_original_separately(self):
+        """The original is reached by its own anchor, not the display img."""
+        rec = _record("a")
+        assert rec.original is not None
+        href = str(_one(_pic_page(rec), "a.pic-original")["href"])
+        assert href == f"../../../{rendition_href('wedding', rec.original)}"
+
+    def test_download_link_is_marked_download(self):
+        """The download anchor targets the original and carries download."""
+        rec = _record("a")
+        assert rec.original is not None
+        tag = _one(_pic_page(rec), "a.pic-download")
+        assert str(tag["href"]) == f"../../../{rendition_href('wedding', rec.original)}"
+        assert tag.has_attr("download")
+
+    def test_aliased_original_degrades_to_display(self):
+        """With no manifested original both links resolve to the display path."""
+        display = make_pic(relative_path=Path("display/a.webp"))
+        rec = PicRenditions(Path("a"), original=display, display=display)
+        soup = _pic_page(rec)
+        original = str(_one(soup, "a.pic-original")["href"])
+        assert original == str(_one(soup, "a.pic-download")["href"])
+        assert "/display/" in original and "/original/" not in original
+
+    def test_neighbors_by_position(self):
+        """Prev and next link the neighboring stems; ends omit the missing one."""
+        soup = _pic_page(_record("b"), prev=_record("a"), next=_record("c"))
+        assert str(_one(soup, "a[rel=prev]")["href"]) == "a.html"
+        assert str(_one(soup, "a[rel=next]")["href"]) == "c.html"
+        assert (
+            _pic_page(_record("a"), next=_record("b")).select_one("a[rel=prev]") is None
+        )
+        assert (
+            _pic_page(_record("b"), prev=_record("a")).select_one("a[rel=next]") is None
+        )
+
+    def test_no_root_absolute_links(self):
+        """No anchor or image points at a root-absolute or remote path."""
+        soup = _pic_page(_record("b"), prev=_record("a"), next=_record("c"))
+        urls = [str(a["href"]) for a in soup.select("a")]
+        urls += [str(i["src"]) for i in soup.select("img")]
+        assert urls and not any(u.startswith(("/", "http")) for u in urls)
