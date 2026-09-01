@@ -63,13 +63,6 @@ This is a stopgap rather than a design.
 The real fix is a cache keyed on source hash plus rendition spec, and
 it lands with the derive pipeline second pass.
 
-**Manifest fixtures never exercised a relative `collection_root`.**
-Every test manifest wrote an absolute root, so the reader joining it
-against the manifest's own directory was never checked.
-Production manifests write it relative, and a full derive run skipped
-all 645 photos before this was found.
-The suite still has no test for the relative case.
-
 **A test in `test_file_processing_dual.py` fails only in a full run.**
 `test_skip_processing_when_up_to_date` compares mtimes and passes when
 run alone.
@@ -94,8 +87,8 @@ all, so error paths in the code they cover are unexercised.
 **Module dependents shrink as deletions land.**
 Each deletion removes an importer, and a module with none left can
 leave without argument.
-`s3_storage.py` had two live dependents and now has one:
-`photo_metadata.py` is deleted and `template_renderer.py` remains.
+`s3_storage.py` now has no dependents; `template_renderer.py` dropped
+it with `PICS_BASE_URL`.
 Worth asking after each deletion which module just lost a dependent,
 and which has reached zero.
 
@@ -111,9 +104,10 @@ the import block understates what depends on what.
 `cache/`, `content/`, and `temp_test/` are untracked working
 directories.
 
-**Three settings are set and never read.**
-`PICS_BASE_URL`, `SITE_BASE_URL`, and `THEME_DIR`.
-The renderer composes its own URL rather than reading the first two.
+**Two settings are set and never read.**
+`SITE_BASE_URL` and `THEME_DIR`.
+`PICS_BASE_URL` is gone from the renderer and templates; the setting
+itself leaves with `settings.py`.
 
 **Two spellings of the local settings example coexist.**
 `settings.local.example.py` and `settings.local.py.example`.
@@ -138,6 +132,22 @@ A correct gallery with no JavaScript at all.
 This is the fallback, and it must be right on its own before
 anything enhances it.
 
+PR 1 landed the data path: `derive_collection`, `adopt_rendition`,
+and the build flags, both defaulting off.
+Settled for the presentation PR, against the code:
+
+- `output_dir` is the site root: HTML at `gallery/COLLECTION/`,
+  beside the existing `pics/COLLECTION/KIND/` renditions, all links
+  relative within that tree.
+- Per-photo pages at `gallery/COLLECTION/pic/STEM.html`.
+- `index.html` is a byte-identical copy of `page1.html`.
+- Next and previous follow merge order, chronological then key;
+  no other ordering exists.
+- A variant absent from a manifest warns and keeps building.
+  A derived file missing on disk stops the build, telling the user
+  to re-run derive.
+- Delete `site_generator.py`'s now-uncalled source checks with the
+  rest of the `prod/pics` residue.
 - Thumbnail links the web version.
 - Full resolution reachable by an explicit separate link, never from
   the thumbnail itself.
@@ -166,12 +176,6 @@ anything enhances it.
 - Emit relative paths in rendered output.
   Output must be self-contained; a CDN hostname baked into generated
   HTML is stale the moment anything moves.
-- Decide what the build does with a photo present in only one variant
-  set.
-  `merge_variants` reports these as records with a missing variant and
-  never fails on its own.
-  The settled answer is to warn per photo and keep building, since a
-  gallery missing one photo's display rendition should still publish.
 - Per-photo pages, the no-JavaScript equivalent of the modal.
   Each shows the display rendition, an explicit link to the original,
   a download link, and next and previous navigation.
@@ -179,17 +183,6 @@ anything enhances it.
   pull a 26MB original.
   This also makes the eventual modal an enhancement over something
   that already works.
-- Settle where per-photo pages sit in the URL structure.
-  Pagination already occupies `gallery/COLLECTION/pageN.html`.
-  Decide against the code rather than from a plan.
-- Settle how `gallery/COLLECTION/` resolves without a page number.
-  A static host serves `index.html` for a bare directory, not
-  `page1.html`, so the first page needs one name or the other.
-  Either copy those html files or redirect in html or something.
-  Ultimately I should see the exact same things on:
-  `gallery/COLLECTION/page1.html` as `gallery/COLLECTION/`
-- Settle whether next and previous follow the grid's sort order.
-  Decide against the code rather than from a plan.
 
 Display order is Galleria's decision, not NormPic's.
 Chronological is the default for a wedding.
@@ -322,6 +315,38 @@ Then ask marcus how to proceed.
 Since both options need to exist, documenting both options' results and
 providing at least high-level planning documentation for both are required.
 
+### ft/static-gallery-refinements
+
+Observed on the real collection during the static gallery acceptance
+run.
+None blocks publishing; each is decided by looking at it.
+
+- Grid loading.
+  On LTE the grid shows empty cells with alt text for a noticeable
+  time.
+  Either thumbs move to progressive JPEG so cells fill smoothly, or
+  they stay WEBP behind a neutral placeholder block.
+  Decide against a throttled browser run.
+- Per-photo page loading.
+  The display rendition is roughly 2MB and reads as a wait on mobile.
+  Two no-JavaScript mechanisms to try: `srcset` naming preview and
+  display so a phone fetches only the preview, and the preview as
+  the image's CSS background so it paints first and display paints
+  over it.
+  ft/preview-modal may make this moot; try it there first.
+- Per-photo page numbering.
+  Pages are named by stem.
+  The maintainer prefers grid position, `pic/1.html` onward.
+  Trade-off: position renumbers every URL when a photo is added or
+  removed, where the stem is stable; decide by whether the published
+  set is frozen.
+- Supplied navbar.
+  The parent site owns landing page and navigation; galleria emits
+  gallery trees only.
+  How a caller supplies a navbar is an ecosystem question for the
+  director.
+  Pre-MVP the built-in one, "COLLECTION Gallery" and a count, stands.
+
 ### ref/derive-pipeline
 
 A second pass at derivation, after the first landed enough to publish
@@ -352,19 +377,25 @@ already done, and an input path as wide as the model behind it.
 - `--force`, and skipping a rendition whose destination exists.
   Cheap and wrong when a source or spec changed, which `--force`
   covers until hashes are persisted.
-- `--no-validate` on `build`, so nobody removes the default call now
-  that derivation is slow.
 - A count check closing a build.
   Manifest pics, merged records, renditions per class, and rendered
   thumbnails should agree.
   Aliased renditions have no file, so that class legitimately differs
   and the check needs to know which were aliased.
 - Consider another look at the defaults for derivations based on decision point
-- No test covers a relative `collection_root`.
-  Every manifest fixture writes an absolute root, so the reader
-  joining it against the manifest's own directory is unexercised.
-  The existing test asserting `Path(".")` for an absent root now
-  describes the wrong behavior.
+- `services/link.py` and its test are interim.
+  `rendition_href` composes `pics/COLLECTION/RELATIVE_PATH` from a
+  `Pic` whose path already carries its kind; that belongs on a model
+  that knows its own kind and path, and both files go when it does.
+  Every filled `Pic` path is now relative to the collection's pics
+  directory and starts with its kind; an aliased shallower field
+  holds the deeper `Pic` itself, so it resolves to a real file.
+- ft/static-gallery left the seam ready: `derive_collection` takes
+  a `generate` callable, and `adopt_rendition` fills records from
+  disk without encoding, failing on a missing file.
+  Adopt-or-encode per record is most of the incremental skip.
+- When incremental derivation lands, flip build's `--derive`
+  default to opt-out and revisit `--validate` with it.
 
 `PicRenditions` holds relative paths against a root and knows nothing
 of where files live.
@@ -407,9 +438,13 @@ What this walks into, found by reading rather than grepping:
   Delete rather than salvage.
 - `generate_gallery_metadata` reads four values through
   `getattr(settings, ...)` with inline defaults, and leaves here.
-- `template_renderer.py` imports `is_dual_bucket_configured` from
-  `s3_storage.py`, so storage cannot leave while the render path
-  still calls it.
+- `s3_storage.py` has no dependents in `src`.
+  Move it to `salvage/` with the tests that name it, and list it in
+  the salvage README; marcustack may want it.
+  Confirm with a grep that nothing outside those tests imports it
+  before moving.
+- `prod/` residue remains in `process_photos.py`, `serve.py`,
+  `dev_server.py`, and `test_static_assets.py`.
 - `link_photo_with_filename` raises rather than returning an error
   value, so its callers correctly ignore its return.
 - Remaining `settings.py` dependents are `fs.py`, `exif.py`, and
@@ -426,9 +461,13 @@ What this walks into, found by reading rather than grepping:
   modules used.
   `pillow` stays with thumbnail generation.
   Run `uv sync` and commit `uv.lock` with the `pyproject.toml` edit.
-- Removing this code removes the pyright suppressions covering it.
-  `template_renderer.py` and `file_processing.py` each carry a
-  file-level one; neither should survive its subject.
+- `s3_storage.py` has no dependents in `src` except a function-local
+  import in `file_processing.py`'s dual-collection path.
+  When that path leaves, move `s3_storage.py` to `salvage/` with the
+  tests that name it and list it in the salvage README; marcustack
+  may want it.
+- `prod/` residue remains in `process_photos.py`, `serve.py`,
+  `dev_server.py`, and `test_static_assets.py`.
 - Verify `python -m galleria build` runs from outside the repository
   root.
   A root-level module cannot ship, and running from the root succeeds
@@ -459,6 +498,21 @@ Left until here because each describes a moving target.
 - `doc/guides/`: rewrite or delete per guide.
 - Restore a Quick Start to the root README once the CLI is settled.
 
+- Write the output layout document from these settled facts.
+  `output_dir` is the site root.
+  Pages at `gallery/COLLECTION/pageN.html`, `PAGE_SIZE` records each,
+  in merge order; `index.html` is a byte copy of `page1.html`.
+  Per-photo pages at `gallery/COLLECTION/pic/STEM.html` with display
+  rendition, view-original and download links, prev and next by
+  position.
+  Renditions at `pics/COLLECTION/KIND/`; every emitted link is
+  relative to the page.
+  An absent original aliases to display and its links degrade to the
+  shallowest present rendition; an absent display is derived from
+  the original, or stops an adopt-only build as stale.
+  A local tree lacks `original/` and `display/`; the acceptance run
+  symlinks the manifest directories in.
+
 ## Standalone tasks
 
 No ordering constraint; pick these up alongside the sequence.
@@ -479,6 +533,10 @@ BeautifulSoup's annotations reject callable `class_` predicates and
 return an optional attribute value from `get()`.
 Replace them with typed assertion helpers that narrow once.
 Every template test added from here hits the same thing.
+
+`_one(soup, selector)` in `test/template/test_gallery_template.py`
+is the seed: it narrows `select_one` once.
+Attribute values still need `str()` at each use.
 
 ### chr/orphaned-test-fixtures
 
@@ -529,6 +587,14 @@ Consolidate them.
 
 Worth doing after the module removals in `ft/cli-config`, since some
 of these fixtures serve tests that are being deleted anyway.
+
+`_write_collection` has three deliberate copies, in
+`test/command/test_derive.py`, `test/services/test_derive.py`, and
+`test/command/test_build.py`.
+They change together or not at all until this task lands.
+`test_build.py` adds `_records`, `_cfg`, `_pages`, and `_cells`;
+`test_gallery_template.py` adds `_record`, `_page`, and `_pic_page`.
+All belong in conftest modules.
 
 ### chr/remove-empty-theme
 

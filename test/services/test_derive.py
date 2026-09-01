@@ -6,6 +6,8 @@ Created: 2026-08-27
 License: AGPL-3.0-or-later
 """
 
+from dataclasses import replace
+import json
 from pathlib import Path
 import re
 
@@ -14,9 +16,18 @@ import pytest
 from PIL import Image
 
 from conftest import make_pic
+from galleria.config.default import RENDITION_SPECS
 from galleria.models.spec import Format, RenditionSpec
 from galleria.models.rendition import Derivation, PicRenditions
-from galleria.services.derive import DeriveError, derive_absences, derive_rendition
+from galleria.services.derive import (
+    CollectionDeriveError,
+    DeriveError,
+    adopt_rendition,
+    derive_absences,
+    derive_collection,
+    derive_rendition,
+)
+from galleria.services.manifest_reader import read_manifest
 
 
 @pytest.fixture
@@ -141,8 +152,7 @@ class TestDeriveAbsences:
             for d in (Derivation.ORIGINAL, Derivation.PREVIEW, Derivation.THUMB)
         }
         filled = derive_absences(rends, specs, src, tmp_path, (gen := _Recorder()))
-        assert filled.original is display
-        assert filled.display is display
+        assert filled.original is filled.display
         assert filled.preview is not display
         assert filled.thumb is not display
         expect = [tmp_path / "preview", tmp_path / "thumb"]
@@ -156,7 +166,7 @@ class TestDeriveAbsences:
         thumb = make_pic()
         rends = PicRenditions(Path("2026/a"), thumb=thumb)
         filled = derive_absences(rends, {}, src, tmp_path, (gen := _Recorder()))
-        assert all(p is thumb for _, p in filled.present)
+        assert all(p is filled.thumb for _, p in filled.present)
         assert gen.calls == []
 
     def test_a_full_record_generates_nothing(self, tmp_path, _mk_src):
@@ -166,7 +176,151 @@ class TestDeriveAbsences:
         rends = PicRenditions(Path("2026/a"), **pics)
         filled = derive_absences(rends, {}, src, tmp_path, (gen := _Recorder()))
         assert gen.calls == []
-        assert filled == rends
+        for deriv, pic in filled.present:
+            given = getattr(rends, deriv.name.lower())
+            prefixed = Path(deriv.name.lower()) / given.relative_path
+            assert pic == replace(given, relative_path=prefixed)
+
+    def test_every_returned_path_starts_with_its_kind(self, tmp_path, _mk_src):
+        """Filled paths are pics-dir-relative and prefixed by kind, aliases too."""
+        display = make_pic(relative_path=Path(rel := "2026/a.jpg"))
+        rends = PicRenditions(Path("2026/a"), display=display)
+        specs = {
+            d: RenditionSpec(Format.WEBP, 120, 85)
+            for d in (Derivation.PREVIEW, Derivation.THUMB)
+        }
+        filled = derive_absences(rends, specs, _mk_src(tmp_path), tmp_path, _Recorder())
+        assert filled.display is not None and filled.original is not None
+        assert filled.display.relative_path == Path("display") / rel
+        assert filled.original.relative_path == filled.display.relative_path
+        for deriv, pic in filled.present:
+            if deriv > Derivation.DISPLAY:
+                assert pic.relative_path.parts[0] == deriv.name.lower()
+
+
+def _write_collection(
+    manifest_path: Path,
+    root: Path,
+    names: list[Path],
+    size: tuple[int, int] = (800, 600),
+) -> Path:
+    """Write a manifest and the real images it names under root.
+
+    Duplicated from test/command/test_derive.py deliberately: the
+    clean conftest version demands the derive-pipeline or orphan
+    removal scope. Centralize or replace when NormPic ships a
+    consumer package with test factories.
+    DELETEME once appropriate PR centralizes this helper which is duped
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    for n in names:
+        path = root / n
+        path.parent.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", size).save(path, "JPEG")
+    manifest = {
+        "version": "0.1.0",
+        "collection_name": "wedding",
+        "generated_at": "2026-08-17T09:00:00Z",
+        "collection_root": str(root),
+        "pic": [
+            {
+                "hash": "b3c32:NW9MKEFNZ6GTD8209QN3DQ69",
+                "relative_path": str(n),
+                "size_bytes": 1024,
+                "mtime": "2026-08-17T08:00:00Z",
+            }
+            for n in names
+        ],
+    }
+    manifest_path.write_text(json.dumps(manifest))
+    return manifest_path
+
+
+class TestDeriveCollection:
+    """derive_collection fills merged records and aggregates failures."""
+
+    def test_fills_every_record_in_merge_order(self, tmp_path):
+        """A clean collection returns one filled record per photo, in order."""
+        names = [Path("a.jpg"), Path("b.jpg")]
+        manifest = _write_collection(tmp_path / "m.json", tmp_path / "src", names)
+        records = derive_collection(
+            manifest_o=read_manifest(manifest),
+            manifest_d=None,
+            specs=RENDITION_SPECS,
+            output_dir=tmp_path / "_build",
+        )
+        assert [r.key for r in records] == [Path("a"), Path("b")]
+        assert all(r.absent == [] for r in records)
+
+    def test_derive_error_fails_that_record_and_continues(self, tmp_path):
+        """A DeriveError on one record does not stop the others filling."""
+        names = [Path("a.jpg"), Path("b.jpg")]
+        manifest = _write_collection(tmp_path / "m.json", tmp_path / "src", names)
+        (tmp_path / "src" / "a.jpg").write_text("not an image")
+        with pytest.raises(CollectionDeriveError) as e:
+            derive_collection(
+                manifest_o=read_manifest(manifest),
+                manifest_d=None,
+                specs=RENDITION_SPECS,
+                output_dir=tmp_path / "_build",
+            )
+        assert [r.key for r in e.value.records] == [Path("b")]
+        assert all(r.absent == [] for r in e.value.records)
+
+    def test_failures_raise_after_the_loop_with_partials(self, tmp_path):
+        """CollectionDeriveError carries failures and the records that filled."""
+        names = [Path("a.jpg"), Path("b.jpg")]
+        manifest = _write_collection(tmp_path / "m.json", tmp_path / "src", names)
+        (tmp_path / "src" / "a.jpg").write_text("not an image")
+        with pytest.raises(CollectionDeriveError) as e:
+            derive_collection(
+                manifest_o=read_manifest(manifest),
+                manifest_d=None,
+                specs=RENDITION_SPECS,
+                output_dir=tmp_path / "_build",
+            )
+        assert len(e.value.failures) == 1
+        assert "a.jpg" in e.value.failures[0]
+        assert len(e.value.records) == 1
+
+    def test_empty_manifests_fill_nothing_and_raise_nothing(self):
+        """Two absent manifests produce an empty record list."""
+        records = derive_collection(
+            manifest_o=None,
+            manifest_d=None,
+            specs=RENDITION_SPECS,
+            output_dir=Path("unused"),
+        )
+        assert records == []
+
+
+class TestAdoptRendition:
+    """adopt_rendition predicts paths and never encodes."""
+
+    def test_returns_the_path_derive_would_write(self, tmp_path, _mk_src):
+        """Adoption after a real derive returns the identical path."""
+        src, dst = _mk_src(tmp_path), tmp_path / "out"
+        spec = RENDITION_SPECS[Derivation.THUMB]
+        written = derive_rendition(src, dst, Path("derived"), spec)
+        adopted = adopt_rendition(src, dst, Path("derived"), spec)
+        assert adopted == written
+
+    def test_missing_file_raises_derive_error(self, tmp_path):
+        """A rendition absent on disk raises, naming the expected path."""
+        spec = RENDITION_SPECS[Derivation.THUMB]
+        src, dst = tmp_path / "src.jpg", tmp_path / "dst"
+        with pytest.raises(DeriveError, match="derived.webp"):
+            adopt_rendition(src, dst, Path("derived"), spec)
+
+    def test_adopting_reads_real_file_metadata(self, tmp_path, _mk_src):
+        """derive_collection with adopt fills Pics from the on-disk files."""
+        names = [Path("a.jpg")]
+        manifest = _write_collection(tmp_path / "m.json", tmp_path / "src", names)
+        manifest_o = read_manifest(manifest)
+        args = (manifest_o, None, RENDITION_SPECS, tmp_path / "_build")
+        derived = derive_collection(*args)
+        adopted = derive_collection(*args, generate=adopt_rendition)
+        assert adopted == derived
 
 
 class TestB3C32:

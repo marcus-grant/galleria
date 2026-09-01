@@ -8,7 +8,7 @@ def test_base_template_includes_tailwind_cdn():
     renderer = TemplateRenderer()
     photo_data = {"photos": []}
 
-    html = renderer.render("gallery.j2.html", photo_data)
+    html = renderer.render("base.j2.html", photo_data)
     soup = BeautifulSoup(html, "html.parser")
 
     # Check for Tailwind CSS CDN link
@@ -53,7 +53,7 @@ def test_base_template_has_proper_html_structure():
     renderer = TemplateRenderer()
     photo_data = {"photos": []}
 
-    html = renderer.render("gallery.j2.html", photo_data)
+    html = renderer.render("base.j2.html", photo_data)
     soup = BeautifulSoup(html, "html.parser")
 
     # Check for proper HTML5 structure
@@ -61,4 +61,3 @@ def test_base_template_has_proper_html_structure():
     assert soup.find("head")
     assert soup.find("body")
     assert soup.find("meta", {"charset": "UTF-8"})
-

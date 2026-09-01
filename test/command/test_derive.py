@@ -87,7 +87,7 @@ class TestDeriveCommand:
             ["--original-manifest", str(man), "--output-dir", str(out)],
         )
         assert result.exit_code == 0
-        assert "Skipping 2026/a" in result.output
+        assert "Skipping" in result.output and "2026/a" in result.output
         assert (out / "pics" / "wedding" / "thumb" / "2026/b.webp").exists()
 
     def test_no_manifest_reports_and_exits_non_zero(self):

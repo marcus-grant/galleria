@@ -10,9 +10,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Unpack, TypedDict
 
-from src.galleria.config.default import OUTPUT_DIR, RENDITION_SPECS
-from src.galleria.models.rendition import Derivation
-from src.galleria.models.spec import RenditionSpec
+from galleria.config.default import OUTPUT_DIR, PAGE_SIZE, RENDITION_SPECS
+from galleria.models.rendition import Derivation
+from galleria.models.spec import RenditionSpec
 
 
 class MissingConfigError(Exception):
@@ -45,6 +45,7 @@ class Config:
     display_manifest: Path | None
     output_dir: Path
     specs: dict[Derivation, RenditionSpec]
+    page_size: int
 
     def has_manifest(self) -> bool:
         """Whether at least one variant manifest is configured.
@@ -65,6 +66,7 @@ class Config:
             display_manifest=overrides.get("display_manifest"),
             output_dir=overrides.get("output_dir") or OUTPUT_DIR,
             specs=RENDITION_SPECS,
+            page_size=PAGE_SIZE,
         )
         if not cfg.has_manifest():
             msg = "No manifest configured: supply original_manifest, "
