@@ -113,6 +113,15 @@ itself leaves with `settings.py`.
 `settings.local.example.py` and `settings.local.py.example`.
 One is stale; which has not been determined.
 
+**A local build has no `original/` or `display/` renditions.**
+Only preview and thumb are written under `output_dir`; the other two
+are marcustack's to place at deploy.
+For a browser run, symlink the manifest directories in at
+`pics/COLLECTION/original` and `pics/COLLECTION/display`, or every
+per-photo page 404s on its image and both links.
+The same fact is recorded for the output layout document under
+`doc/mvp-docs-pass`.
+
 **Not chased.**
 The `realworld` pytest marker was defined and never applied to the
 real-photo tests, which guard on a settings path instead.
@@ -124,68 +133,6 @@ helper rather than the project.
 
 The tasks below are ordered by what unblocks what.
 Each is a separate change with its own plan and sign-off.
-
-### ft/static-gallery
-
-A correct gallery with no JavaScript at all.
-
-This is the fallback, and it must be right on its own before
-anything enhances it.
-
-PR 1 landed the data path: `derive_collection`, `adopt_rendition`,
-and the build flags, both defaulting off.
-Settled for the presentation PR, against the code:
-
-- `output_dir` is the site root: HTML at `gallery/COLLECTION/`,
-  beside the existing `pics/COLLECTION/KIND/` renditions, all links
-  relative within that tree.
-- Per-photo pages at `gallery/COLLECTION/pic/STEM.html`.
-- `index.html` is a byte-identical copy of `page1.html`.
-- Next and previous follow merge order, chronological then key;
-  no other ordering exists.
-- A variant absent from a manifest warns and keeps building.
-  A derived file missing on disk stops the build, telling the user
-  to re-run derive.
-- Delete `site_generator.py`'s now-uncalled source checks with the
-  rest of the `prod/pics` residue.
-- Thumbnail links the web version.
-- Full resolution reachable by an explicit separate link, never from
-  the thumbnail itself.
-  Originals are often over 20MB.
-- Configurable pagination.
-  None exists today; the template loops over the whole collection
-  unbounded, which for 645 photos is one enormous page.
-- Fixed-dimension containers so images arriving do not reflow the
-  grid.
-- `photos` and `pics` are two names for one thing.
-  The loop iterates `pics`; two expressions call `photos|length`.
-  Jinja renders an undefined name as empty, so the count reads wrong
-  rather than failing.
-- The `{% if photos %}` guard at `navbar.j2.html:11` is always false,
-  so the navbar count does not render at all rather than rendering
-  wrong.
-- Both template renders are guarded by `.exists()`.
-  Make them fail loud: a silent partial build is plausible output with
-  a wrong answer, expensive to diagnose.
-- Remove `PICS_BASE_URL` with `_generate_pics_base_url()` and the two
-  template references.
-  Galleria emits paths; templates never compose URLs.
-- `build_gallery`'s data acquisition is stubbed to an empty pics list.
-  The render path is intact but fed nothing, and wiring merged
-  renditions into it is this item's work.
-- Emit relative paths in rendered output.
-  Output must be self-contained; a CDN hostname baked into generated
-  HTML is stale the moment anything moves.
-- Per-photo pages, the no-JavaScript equivalent of the modal.
-  Each shows the display rendition, an explicit link to the original,
-  a download link, and next and previous navigation.
-  The grid links to a page rather than an image, so a click can never
-  pull a 26MB original.
-  This also makes the eventual modal an enhancement over something
-  that already works.
-
-Display order is Galleria's decision, not NormPic's.
-Chronological is the default for a wedding.
 
 ### ft/gallery-styling
 
@@ -325,7 +272,8 @@ None blocks publishing; each is decided by looking at it.
   On LTE the grid shows empty cells with alt text for a noticeable
   time.
   Either thumbs move to progressive JPEG so cells fill smoothly, or
-  they stay WEBP behind a neutral placeholder block.
+  they stay WEBP behind a neutral placeholder block but
+  made smaller with tweaked defaults for faster loading.
   Decide against a throttled browser run.
 - Per-photo page loading.
   The display rendition is roughly 2MB and reads as a wait on mobile.
@@ -342,10 +290,27 @@ None blocks publishing; each is decided by looking at it.
   set is frozen.
 - Supplied navbar.
   The parent site owns landing page and navigation; galleria emits
-  gallery trees only.
-  How a caller supplies a navbar is an ecosystem question for the
-  director.
-  Pre-MVP the built-in one, "COLLECTION Gallery" and a count, stands.
+  gallery trees only, so the built-in navbar, "COLLECTION Gallery"
+  and a count, stands pre-MVP.
+  The constraint that decides the mechanism: pages sit at two depths,
+  `gallery/COLLECTION/` and `gallery/COLLECTION/pic/`, and every link
+  is relative, so a verbatim fragment included by path cannot carry
+  links correct at both depths.
+  A template override directory solves depth but puts two projects
+  in authority over one template set.
+  Current lean is the parent post-processing the output, which reuses
+  the injection mechanism marcustack builds for the deprecation
+  banner and knows each file's path.
+  Who owns the navbar markup is open and is the director's call.
+- STEM collision.
+  Per-photo pages are named by `key.name`, so nested manifest paths
+  flatten.
+  Two photos sharing a basename in different directories write one
+  page, silently, the second overwriting the first.
+  The wedding collection has none.
+  Trigger: any collection whose manifest has subdirectories.
+  Fix is naming by the full key or by position; decide with the
+  numbering bullet above.
 
 ### ref/derive-pipeline
 
@@ -439,10 +404,6 @@ What this walks into, found by reading rather than grepping:
 - `generate_gallery_metadata` reads four values through
   `getattr(settings, ...)` with inline defaults, and leaves here.
 - `s3_storage.py` has no dependents in `src`.
-  Move it to `salvage/` with the tests that name it, and list it in
-  the salvage README; marcustack may want it.
-  Confirm with a grep that nothing outside those tests imports it
-  before moving.
 - `prod/` residue remains in `process_photos.py`, `serve.py`,
   `dev_server.py`, and `test_static_assets.py`.
 - `link_photo_with_filename` raises rather than returning an error
