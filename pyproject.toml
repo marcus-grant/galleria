@@ -1,6 +1,6 @@
 [project]
 name = "galleria"
-version = "0.1.0"
+version = "0.0.2"
 description = "Static web photo gallery generator"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
@@ -11,6 +11,8 @@ dependencies = [
     "boto3",
     "markdown",
     "click",
+    "jinja2",
+    "pydantic",
     "timezonefinder>=6.0.0",
     "b3c32>=0.0.2,<0.1.0",
 ]
