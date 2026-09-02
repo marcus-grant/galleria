@@ -134,6 +134,112 @@ helper rather than the project.
 The tasks below are ordered by what unblocks what.
 Each is a separate change with its own plan and sign-off.
 
+### chr/orphaned-module-removal
+
+Remove the modules whose work moved to NormPic and marcustack: EXIF
+extraction, filename generation, S3 storage, photo validation, the
+processing pipeline, and root-level `settings.py`.
+
+Thumbnail generation lives in `file_processing.py` and stays.
+Raised in urgency by the v0.0.1 install failure: a clean
+`uv tool install` crashed at import because `cli.py` registered
+`process-photos`, whose chain pulls `settings`, `boto3`, `exifread`,
+and `piexif`, none installable or declared.
+v0.0.2 unregistered `process-photos` and `serve` rather than fixing
+the chain; this task is what actually removes it, and runs next.
+Found while fixing:
+
+- Root-level `settings.py` does not ship in the package at all, so
+  any shipped import of it is a guaranteed crash in an install.
+  Salvage or delete it with its dependents; nothing that ships may
+  import it when this task closes.
+- Shipped modules import `piexif`, a dev-group dependency: `exif.py`,
+  `file_processing.py`, `fs.py`, `s3_storage.py`.
+- `python-dotenv` and `markdown` are declared and unimported.
+  With `boto3`, `exifread`, and `timezonefinder`, they leave the
+  dependency list when their importers leave the tree.
+- The dev suite cannot catch an undeclared runtime dep; the dev
+  environment masks it.
+  A gate step that installs the package clean and runs
+  `python -m galleria build --help` closes that hole permanently;
+  add it with this task.
+- `python-dotenv`, `markdown`, and `pydantic` are declared and
+  unimported; `pydantic` never made sense here, the models are
+  dataclasses.
+  With `boto3`, `exifread`, and `timezonefinder`, they leave the
+  dependency list when their importers leave the tree, and `pydantic`
+  can leave immediately.
+
+If enough lands to make future work less painful without finishing,
+stop, document what remains, and move it to a later item.
+Also the test fixture fixing/centralizing/refactoring task belongs either in this PR or as a companion queued either before or after this one.
+
+What this walks into, found by reading rather than grepping:
+
+- `file_processing.py` imports its dependencies inside functions
+  rather than at module top, so a grep of import blocks understates
+  what depends on what.
+- `process_photos.py` is the only caller of the dual-collection path,
+  but four test modules reach it: its own, `test_e2e_pipeline.py`,
+  `test_batch_metadata_efficiency.py`, and
+  `test_file_processing_dual.py`.
+  Two are named for services rather than for the command, so the
+  coupling is invisible from their filenames.
+  `test_dual_hash_integration.py` also imports `file_processing`, and
+  sits at the top level of `test/`.
+- `create_thumbnail` has no consumer outside its own module, and
+  `derive_rendition` supersedes it.
+  Delete it here rather than migrating, with its three tests in
+  `test_file_processing_comprehensive.py`.
+- `generate_batch_metadata` and `merge_partial_metadata_files` write
+  partial metadata files and merge them by index, carrying a
+  pre-extraction `schema_version` and a `photos` key.
+  That is a second manifest format NormPic now owns.
+  Delete rather than salvage.
+- `generate_gallery_metadata` reads four values through
+  `getattr(settings, ...)` with inline defaults, and leaves here.
+- `s3_storage.py` has no dependents in `src`.
+- `prod/` residue remains in `process_photos.py`, `serve.py`,
+  `dev_server.py`, and `test_static_assets.py`.
+- `link_photo_with_filename` raises rather than returning an error
+  value, so its callers correctly ignore its return.
+- Remaining `settings.py` dependents are `fs.py`, `exif.py`, and
+  `s3_storage.py`.
+  `process_photos.py` imports it too, but the command is stubbed and
+  the import is dead.
+  The module also creates `cache/` and the configured source path at
+  import.
+- Delete the three test modules covering the settings mechanism:
+  `test_settings.py`, `test_settings_isolation_fix.py`, and
+  `test_gallery_settings_complete.py`.
+  That is 23 tests.
+- Remove `exifread`, `timezonefinder`, and `boto3`, which only these
+  modules used.
+  `pillow` stays with thumbnail generation.
+  Run `uv sync` and commit `uv.lock` with the `pyproject.toml` edit.
+- `s3_storage.py` has no dependents in `src` except a function-local
+  import in `file_processing.py`'s dual-collection path.
+  When that path leaves, move `s3_storage.py` to `salvage/` with the
+  tests that name it and list it in the salvage README; marcustack
+  may want it.
+- `prod/` residue remains in `process_photos.py`, `serve.py`,
+  `dev_server.py`, and `test_static_assets.py`.
+- Verify `python -m galleria build` runs from outside the repository
+  root.
+  A root-level module cannot ship, and running from the root succeeds
+  only because the current directory is on the path.
+
+`doc/settings.md` describes the settings hierarchy, environment
+variables, XDG compliance, and Pelican settings, all of which leave
+with the module.
+Rewriting it as the configuration document waits for the
+documentation pass, since the surface is still moving.
+
+This determines the suite's remaining cost.
+`test_e2e_pipeline.py` and the GPS timezone tests in
+`test_filename_service.py` are nearly all of the current runtime, and
+both cover producer work that leaves with these modules.
+
 ### ft/gallery-styling
 
 The first stylesheet this project has had.
@@ -366,84 +472,6 @@ already done, and an input path as wide as the model behind it.
 of where files live.
 That stays until marcustack's routing and deploy tail exist, since a
 final shape now would be guessing at half the requirements.
-
-### chr/orphaned-module-removal
-
-Remove the modules whose work moved to NormPic and marcustack: EXIF
-extraction, filename generation, S3 storage, photo validation, the
-processing pipeline, and root-level `settings.py`.
-
-Thumbnail generation lives in `file_processing.py` and stays.
-Split it out rather than deleting the file.
-
-If enough lands to make future work less painful without finishing,
-stop, document what remains, and move it to a later item.
-
-What this walks into, found by reading rather than grepping:
-
-- `file_processing.py` imports its dependencies inside functions
-  rather than at module top, so a grep of import blocks understates
-  what depends on what.
-- `process_photos.py` is the only caller of the dual-collection path,
-  but four test modules reach it: its own, `test_e2e_pipeline.py`,
-  `test_batch_metadata_efficiency.py`, and
-  `test_file_processing_dual.py`.
-  Two are named for services rather than for the command, so the
-  coupling is invisible from their filenames.
-  `test_dual_hash_integration.py` also imports `file_processing`, and
-  sits at the top level of `test/`.
-- `create_thumbnail` has no consumer outside its own module, and
-  `derive_rendition` supersedes it.
-  Delete it here rather than migrating, with its three tests in
-  `test_file_processing_comprehensive.py`.
-- `generate_batch_metadata` and `merge_partial_metadata_files` write
-  partial metadata files and merge them by index, carrying a
-  pre-extraction `schema_version` and a `photos` key.
-  That is a second manifest format NormPic now owns.
-  Delete rather than salvage.
-- `generate_gallery_metadata` reads four values through
-  `getattr(settings, ...)` with inline defaults, and leaves here.
-- `s3_storage.py` has no dependents in `src`.
-- `prod/` residue remains in `process_photos.py`, `serve.py`,
-  `dev_server.py`, and `test_static_assets.py`.
-- `link_photo_with_filename` raises rather than returning an error
-  value, so its callers correctly ignore its return.
-- Remaining `settings.py` dependents are `fs.py`, `exif.py`, and
-  `s3_storage.py`.
-  `process_photos.py` imports it too, but the command is stubbed and
-  the import is dead.
-  The module also creates `cache/` and the configured source path at
-  import.
-- Delete the three test modules covering the settings mechanism:
-  `test_settings.py`, `test_settings_isolation_fix.py`, and
-  `test_gallery_settings_complete.py`.
-  That is 23 tests.
-- Remove `exifread`, `timezonefinder`, and `boto3`, which only these
-  modules used.
-  `pillow` stays with thumbnail generation.
-  Run `uv sync` and commit `uv.lock` with the `pyproject.toml` edit.
-- `s3_storage.py` has no dependents in `src` except a function-local
-  import in `file_processing.py`'s dual-collection path.
-  When that path leaves, move `s3_storage.py` to `salvage/` with the
-  tests that name it and list it in the salvage README; marcustack
-  may want it.
-- `prod/` residue remains in `process_photos.py`, `serve.py`,
-  `dev_server.py`, and `test_static_assets.py`.
-- Verify `python -m galleria build` runs from outside the repository
-  root.
-  A root-level module cannot ship, and running from the root succeeds
-  only because the current directory is on the path.
-
-`doc/settings.md` describes the settings hierarchy, environment
-variables, XDG compliance, and Pelican settings, all of which leave
-with the module.
-Rewriting it as the configuration document waits for the
-documentation pass, since the surface is still moving.
-
-This determines the suite's remaining cost.
-`test_e2e_pipeline.py` and the GPS timezone tests in
-`test_filename_service.py` are nearly all of the current runtime, and
-both cover producer work that leaves with these modules.
 
 ### doc/mvp-docs-pass
 
