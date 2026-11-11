@@ -10,13 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Unpack, TypedDict
 
-from galleria.config.default import (
-    ARTIFACT_NAME_LENGTH,
-    LOAD_AHEAD_VIEWPORTS,
-    OUTPUT_DIR,
-    PAGE_SIZE,
-    RENDITION_SPECS,
-)
+from galleria.config import default
 from galleria.models.rendition import Derivation
 from galleria.models.spec import RenditionSpec
 
@@ -72,11 +66,11 @@ class Config:
         cfg = cls(
             original_manifest=overrides.get("original_manifest"),
             display_manifest=overrides.get("display_manifest"),
-            output_dir=overrides.get("output_dir") or OUTPUT_DIR,
-            specs=RENDITION_SPECS,
-            page_size=PAGE_SIZE,
-            load_ahead_viewports=LOAD_AHEAD_VIEWPORTS,
-            artifact_name_length=ARTIFACT_NAME_LENGTH,
+            output_dir=overrides.get("output_dir") or default.OUTPUT_DIR,
+            specs=default.RENDITION_SPECS,
+            page_size=default.PAGE_SIZE,
+            load_ahead_viewports=default.LOAD_AHEAD_VIEWPORTS,
+            artifact_name_length=default.ARTIFACT_NAME_LENGTH,
         )
         if not cfg.has_manifest():
             msg = "No manifest configured: supply original_manifest, "
