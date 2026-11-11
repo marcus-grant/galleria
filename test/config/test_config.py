@@ -13,7 +13,7 @@ import pytest
 
 
 from galleria.config import Config, MissingConfigError
-from galleria.config import OUTPUT_DIR
+from galleria.config import ARTIFACT_NAME_LENGTH, LOAD_AHEAD_VIEWPORTS, OUTPUT_DIR
 
 
 def make_config(tmp_path: Path, **overrides) -> Config:
@@ -47,6 +47,13 @@ class TestConfigFromOverrides:
         result = Config.from_overrides(original_manifest=orig, display_manifest=disp)
         assert result.original_manifest == orig
         assert result.display_manifest == disp
+
+    def test_carries_scroll_and_artifact_defaults(self, tmp_path):
+        """Load-ahead distance and artifact name length come from the
+        default layer, since no override sets them."""
+        cfg = make_config(tmp_path)
+        assert cfg.load_ahead_viewports == LOAD_AHEAD_VIEWPORTS
+        assert cfg.artifact_name_length == ARTIFACT_NAME_LENGTH
 
 
 class TestConfigImmutability:
