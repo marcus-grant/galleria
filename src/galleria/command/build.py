@@ -19,11 +19,12 @@ from galleria.services.derive import (
     derive_rendition,
     derive_collection,
 )
+from galleria.services.grid_index import write_grid_index
 from galleria.services.rendition import merge_variants
 from galleria.services.template_renderer import TemplateRenderer
 
 
-def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) -> None:
+def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) -> str:
     """Render the collection's pages under output_dir/gallery/COLLECTION.
 
     Records are sliced into pages of cfg.page_size in the order given,
@@ -31,12 +32,16 @@ def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) ->
     index.html is a byte copy of page1.html. Every page renders from
     two levels below the site root, so templates prefix hrefs with
     root. A missing or broken template raises; there is no silent
-    partial build.
+    partial build. The grid index artifact is written beside the pages
+    first; its file name is returned and given to each grid page as
+    grid_index.
     """
     renderer = TemplateRenderer()
     site_dir = cfg.output_dir / "gallery" / collection
+    site_dir.mkdir(parents=True, exist_ok=True)
+    grid_index = write_grid_index(site_dir, records, cfg.artifact_name_length)
     size = cfg.page_size
-    pages = [records[i : i + size] for i in range(0, len(records), size)] or [[]]
+    pages =[records[i : i + size] for i in range(0, len(records), size)] or [[]]
     for n, page in enumerate(pages, start=1):
         ctx = {
             "collection": collection,
@@ -45,6 +50,7 @@ def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) ->
             "pages": len(pages),
             "total": len(records),
             "root": "../..",
+            "grid_index": grid_index,
         }
         renderer.save_html(
             renderer.render("gallery.j2.html", ctx), site_dir / f"page{n}.html"
@@ -61,6 +67,7 @@ def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) ->
         }
         html = renderer.render("pic.j2.html", ctx)
         renderer.save_html(html, site_dir / "pic" / f"{rec.key.name}.html")
+    return grid_index
 
 
 @click.command()

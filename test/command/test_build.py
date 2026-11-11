@@ -20,6 +20,7 @@ from galleria.config.default import RENDITION_SPECS
 from galleria.command.build import build_gallery
 from galleria.services.derive import derive_collection
 from galleria.services.manifest_reader import read_manifest
+from galleria.services.template_renderer import TemplateRenderer
 
 
 def _write_collection(
@@ -129,6 +130,58 @@ class TestBuildGallery:
         pic_dir = out / "gallery" / "wedding" / "pic"
         expected = [f"{r.key.name}.html" for r in records]
         assert sorted(p.name for p in pic_dir.glob("*.html")) == expected
+
+
+class TestBuildGalleryGridIndex:
+    """The grid index artifact written beside the pages."""
+
+    collection = "wedding"  # the name _write_collection gives its manifest
+
+    def _site(self, out: Path) -> Path:
+        """The collection's gallery directory under out."""
+        return out / "gallery" / self.collection
+
+    def _artifacts(self, out: Path) -> list[Path]:
+        """Grid index artifacts beside the pages."""
+        return sorted(self._site(out).glob("grid-index-*.json"))
+
+    def _rendered_stems(self, out: Path) -> list[str]:
+        """Pic page stems linked from each page's cells, in page order."""
+        stems = []
+        for page in sorted(self._site(out).glob("page*.html")):
+            soup = BeautifulSoup(page.read_text(), "html.parser")
+            stems += [Path(str(a["href"])).stem for a in soup.select(".pic-cell a")]
+        return stems
+
+    def test_order_matches_rendered_pages(self, tmp_path: Path):
+        """The artifact lists photos in the order the pages show them."""
+        man, out, records = _records(tmp_path, 12)
+        build_gallery(_cfg(man, out, 5), self.collection, records)
+        (artifact,) = self._artifacts(out)
+        assert json.loads(artifact.read_text()) == self._rendered_stems(out)
+
+    def test_name_length_comes_from_config(self, tmp_path: Path):
+        """A configured length, not a fixed one, sizes the name's code."""
+        man, out, records = _records(tmp_path, 3)
+        cfg = replace(_cfg(man, out, 2), artifact_name_length=5)
+        name = build_gallery(cfg, self.collection, records)
+        assert len(Path(name).stem.removeprefix("grid-index-")) == 5
+
+    def test_returns_the_artifact_name(self, tmp_path: Path):
+        """The caller learns the written file's name from the return."""
+        man, out, records = _records(tmp_path, 3)
+        name = build_gallery(_cfg(man, out, 2), self.collection, records)
+        assert [p.name for p in self._artifacts(out)] == [name]
+
+    def test_grid_pages_get_the_name_in_context(self, tmp_path: Path):
+        """Every grid page renders with the artifact name available."""
+        man, out, records = _records(tmp_path, 3)
+        real = TemplateRenderer.render
+        with patch.object(TemplateRenderer, "render", autospec=True) as spy:
+            spy.side_effect = real
+            name = build_gallery(_cfg(man, out, 2), self.collection, records)
+        grid = [c.args[2] for c in spy.call_args_list if c.args[1] == "gallery.j2.html"]
+        assert [ctx["grid_index"] for ctx in grid] == [name, name]
 
 
 class TestBuildCommand:
