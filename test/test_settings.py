@@ -47,6 +47,10 @@ class TestSettingsHierarchy:
 
         assert hasattr(test_settings, "CACHE_DIR")
 
+    @pytest.mark.skip(
+        reason="Needs a machine-specific photo path; module removed by "
+        "chr/orphaned-module-removal"
+    )
     def test_settings_import_creates_directories(self):
         # Test that importing settings creates required directories
         import settings as test_settings
