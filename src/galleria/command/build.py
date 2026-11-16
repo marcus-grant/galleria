@@ -4,6 +4,7 @@ Build command for Galleria.
 Generates static website from processed photos.
 """
 
+from datetime import datetime, timezone
 from pathlib import Path
 import shutil
 
@@ -12,7 +13,9 @@ import click
 from galleria.config import Config
 from galleria.command.option import derive_options
 from galleria.command.validate import resolve_inputs
-from galleria.models.rendition import PicRenditions
+from galleria.models.normpic import Pic
+from galleria.models.spec import RenditionSpec
+from galleria.models.rendition import Derivation, PicRenditions
 from galleria.services.derive import (
     CollectionDeriveError,
     adopt_rendition,
@@ -22,6 +25,24 @@ from galleria.services.derive import (
 from galleria.services.grid_index import write_grid_index
 from galleria.services.rendition import merge_variants
 from galleria.services.template_renderer import TemplateRenderer
+
+SENTINEL = "__STEM__"
+
+
+def sentinel_record(specs: dict[Derivation, RenditionSpec]) -> PicRenditions:
+    """A placeholder record whose stem-derived paths carry SENTINEL.
+
+    Rendered once into page 1's cell template for the scroll script
+    to clone and fill. Its thumb path is named the way derive names
+    thumbs, kind directory plus key plus the configured thumb spec's
+    extension, so the template cell resolves exactly like a real one.
+    Other renditions are absent; the cell reads only key and thumb.
+    """
+    ext = specs[Derivation.THUMB].format.extension
+    rel = Path("thumb") / f"{SENTINEL}.{ext}"
+    mtime = datetime.fromtimestamp(0, tz=timezone.utc)
+    thumb = Pic(hash="", relative_path=rel, size_bytes=0, mtime=mtime)
+    return PicRenditions(Path(SENTINEL), thumb=thumb)
 
 
 def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) -> str:
@@ -41,9 +62,10 @@ def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) ->
     site_dir.mkdir(parents=True, exist_ok=True)
     grid_index = write_grid_index(site_dir, records, cfg.artifact_name_length)
     size = cfg.page_size
-    pages =[records[i : i + size] for i in range(0, len(records), size)] or [[]]
+    sentinel = sentinel_record(cfg.specs)
+    pages = [records[i : i + size] for i in range(0, len(records), size)] or [[]]
     for n, page in enumerate(pages, start=1):
-        ctx = {
+        ctx = {  # Thumbnail grid context
             "collection": collection,
             "pics": page,
             "page": n,
@@ -51,6 +73,9 @@ def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) ->
             "total": len(records),
             "root": "../..",
             "grid_index": grid_index,
+            "sentinel_pic": sentinel,
+            "load_ahead_viewports": cfg.load_ahead_viewports,
+            "page_size": cfg.page_size,
         }
         renderer.save_html(
             renderer.render("gallery.j2.html", ctx), site_dir / f"page{n}.html"

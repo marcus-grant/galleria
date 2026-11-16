@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup as BSoup
 from click.testing import CliRunner
 from PIL import Image
 
@@ -18,6 +18,8 @@ from galleria.cli import cli
 from galleria.config import Config
 from galleria.config.default import RENDITION_SPECS
 from galleria.command.build import build_gallery
+from galleria.models.rendition import Derivation
+from galleria.models.spec import Format
 from galleria.services.derive import derive_collection
 from galleria.services.manifest_reader import read_manifest
 from galleria.services.template_renderer import TemplateRenderer
@@ -82,7 +84,7 @@ def _pages(out: Path) -> list[str]:
 
 def _cells(path: Path) -> int:
     """Number of grid cells rendered on one page."""
-    return len(BeautifulSoup(path.read_text(), "html.parser").select("img"))
+    return len(BSoup(path.read_text(), "html.parser").select("img:not(template *)"))
 
 
 class TestBuildGallery:
@@ -132,6 +134,43 @@ class TestBuildGallery:
         assert sorted(p.name for p in pic_dir.glob("*.html")) == expected
 
 
+class TestBuildGalleryScrollContext:
+    """build_gallery supplies page 1 everything the scroll hooks read."""
+
+    def test_page_one_renders_its_cell_template(self, tmp_path: Path):
+        """A real build renders page 1 with the sentinel cell template."""
+        man, out, recs = _records(tmp_path, 1)
+        build_gallery(_cfg(man, out, 2), "wedding", recs)
+        page1 = out / "gallery" / "wedding" / "page1.html"
+        soup = BSoup(page1.read_text(), "html.parser")
+        assert soup.select_one("template .pic-cell") is not None
+
+    def test_template_thumb_follows_the_thumb_spec(self, tmp_path: Path):
+        """The template cell's thumb extension comes from the thumb spec."""
+        man, out, recs = _records(tmp_path, 1)
+        cfg = _cfg(man, out, 2)
+        thumb = replace(cfg.specs[Derivation.THUMB], format=Format.PJPEG)
+        cfg = replace(cfg, specs={**cfg.specs, Derivation.THUMB: thumb})
+        build_gallery(cfg, "wedding", recs)
+        page1 = out / "gallery" / "wedding" / "page1.html"
+        soup = BSoup(page1.read_text(), "html.parser")
+        img = soup.select_one("template .pic-cell img")
+        assert img is not None
+        assert str(img["src"]).endswith("/thumb/__STEM__.jpg")
+
+    def test_page_one_carries_configured_scroll_settings(self, tmp_path: Path):
+        """Load-ahead and page size on page 1 are the Config values."""
+        man, out, recs = _records(tmp_path, 1)
+        cfg = replace(_cfg(man, out, 2), load_ahead_viewports=3)
+        build_gallery(cfg, "wedding", recs)
+        page1 = out / "gallery" / "wedding" / "page1.html"
+        soup = BSoup(page1.read_text(), "html.parser")
+        hooks = soup.select_one("[data-grid-index]")
+        assert hooks is not None
+        assert hooks["data-load-ahead"] == "3"
+        assert hooks["data-page-size"] == "2"
+
+
 class TestBuildGalleryGridIndex:
     """The grid index artifact written beside the pages."""
 
@@ -149,8 +188,11 @@ class TestBuildGalleryGridIndex:
         """Pic page stems linked from each page's cells, in page order."""
         stems = []
         for page in sorted(self._site(out).glob("page*.html")):
-            soup = BeautifulSoup(page.read_text(), "html.parser")
-            stems += [Path(str(a["href"])).stem for a in soup.select(".pic-cell a")]
+            soup = BSoup(page.read_text(), "html.parser")
+            stems += [
+                Path(str(a["href"])).stem
+                for a in soup.select(".pic-cell:not(template *) a")
+            ]
         return stems
 
     def test_order_matches_rendered_pages(self, tmp_path: Path):
