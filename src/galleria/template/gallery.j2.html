@@ -6,11 +6,7 @@
   {% set grid_classes = "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" %}
   {% include 'components/pic-grid.j2.html' with context %}
   {% if page == 1 %}
-  <template>
-    {% with pic = sentinel_pic %}
-    {% include 'components/pic-cell.j2.html' %}
-    {% endwith %}
-  </template>
+  {% include 'components/grid-scroll.j2.html' with context %}
   {% endif %}
   <nav class="page-nav flex justify-between py-8">
     {% if page > 1 %}

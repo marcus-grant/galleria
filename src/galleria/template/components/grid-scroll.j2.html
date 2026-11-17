@@ -1,0 +1,168 @@
+<!-- START: src/template/components/grid-scroll.j2.html -->
+{#
+Infinite scroll for the thumb grid: cell template plus inline script.
+Author: Marcus Grant
+Created: 2026-11-16
+License: AGPL-3.0-or-later
+#}
+<template>
+  {% with pic = sentinel_pic %}
+  {% include 'components/pic-cell.j2.html' %}
+  {% endwith %}
+</template>
+
+<script type="module">
+{% raw %}
+  const SENTINEL = "__STEM__";
+
+  /**
+    * Wire infinite scroll if this page carries the hooks.
+    *
+    * Pagination (nav.page-nav) stays visible until the grid index
+    * has loaded, so any failure leaves the no-JS path intact.
+    * Page 1's cells are already rendered, so appending starts at
+    * offset page size.
+    */
+  async function main() {
+    const grid = document.querySelector("[data-grid-index]");
+    if (!grid) return;
+    const settings = readSettings(grid);
+    const keys = await loadGridIndex(settings.indexName);
+    if (keys === null) return;
+    hidePagination();
+    scrollAppend(grid, document.querySelector("template"), keys, settings);
+  }
+
+  /**
+    * Read the scroll settings the build put on the grid.
+    *
+    * @param {HTMLElement} grid  the element carrying data-grid-index
+    * @returns {{ indexName: string, pageSize: number, loadAhead: number }}
+    */
+  function readSettings(grid) {
+    return {
+      indexName: grid.dataset.gridIndex,
+      pageSize: Number(grid.dataset.pageSize),
+      loadAhead: Number(grid.dataset.loadAhead),
+    };
+  }
+
+  /**
+    * Fetch the grid index, resolved relative to this page.
+    *
+    * @param {string} name  grid index filename from data-grid-index
+    * @returns {Promise<string[] | null>}  ordered keys, or null on
+    *   any network, status, or parse failure
+    */
+  async function loadGridIndex(name) {
+    try {
+      const result = await fetch(name);
+      if (!result.ok) return null;
+      const data = await result.json();
+      return Array.isArray(data) ? data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+    * Hide the no-JS pagination once scrolling has taken over.
+    *
+    * Kept in the DOM; only hidden. Uses inline display because
+    * Tailwind's flex utility outranks the hidden attribute.
+    */
+  function hidePagination() {
+    const nav = document.querySelector("nav.page-nav");
+    if (nav) nav.style.display = "none";
+  }
+
+
+  /**
+    * Clone the template's cell for one key.
+    *
+    * Replaces every SENTINEL in href, src, and alt attributes via
+    * setAttribute, never via HTML strings. Keys are used whole, so
+    * nested keys would put directories into the per-photo href;
+    * the wedding collection's keys are flat.
+    *
+    * @param {HTMLTemplateElement} template
+    * @param {string} key
+    * @returns {DocumentFragment}
+    */
+  function cellFor(template, key) {
+    const frag = template.content.cloneNode(true);
+    const els = frag.querySelectorAll("[href], [src], [alt]");
+    for (const el of els) {
+      for (const attr of ["href", "src", "alt"]) {
+        if (!el.getAttribute(attr)) continue;
+        el.setAttribute(attr, el.getAttribute(attr).replaceAll(SENTINEL, key));
+      }
+    } return frag;
+  }
+
+  /**
+    * Append up to count cells from keys, starting at offset.
+    *
+    * @param {Element} grid
+    * @param {HTMLTemplateElement} template
+    * @param {string[]} keys
+    * @param {number} offset
+    * @param {number} count
+    * @returns {number}  the new offset
+    */
+  function appendBatch(grid, template, keys, offset, count) {
+    const end = Math.min(offset + count, keys.length);
+    for (let i = offset; i < end; i += 1) {
+      grid.append(cellFor(template, keys[i]));
+    } return end;
+  }
+
+  /**
+    * Call onNear when target comes within loadAhead viewports of
+    * the visible area.
+    *
+    * The bottom root margin is loadAhead * 100%, so the distance
+    * scales with the viewport. The caller retargets the returned
+    * observer at the new last cell after each batch, and
+    * disconnects it once every key is appended.
+    *
+    * @param {Element} target
+    * @param {number} loadAhead
+    * @param {() => void} onNear
+    * @returns {IntersectionObserver}
+    */
+  function watchGridEnd(target, loadAhead, onNear) {
+    const options = { rootMargin: `0px 0px ${loadAhead * 100}% 0px`};
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) { onNear(); }
+    }, options);
+    observer.observe(target);
+    return observer;
+  }
+
+  /**
+    * Append keys after the rendered page as the grid end nears.
+    *
+    * Starts at pageSize, since page 1's cells are already rendered,
+    * and stops watching once every key is appended.
+    *
+    * @param {HTMLElement} grid
+    * @param {HTMLTemplateElement} template
+    * @param {string[]} keys
+    * @param {{ pageSize: number, loadAhead: number }} settings
+    */
+  function scrollAppend(grid, template, keys, settings) {
+    let offset = settings.pageSize;
+    if (offset >= keys.length) return;
+    const observer = watchGridEnd(grid.lastElementChild, settings.loadAhead, () => {
+      offset = appendBatch(grid, template, keys, offset, settings.pageSize);
+      observer.disconnect();
+      if (offset < keys.length) observer.observe(grid.lastElementChild);
+    });
+  }
+
+
+  main();
+{% endraw %}
+</script>
+<!-- END: src/template/components/grid-scroll.j2.html -->
