@@ -192,15 +192,6 @@ Before every commit, all applicable checks must pass, in this order:
 1. `uv run ruff check`
 2. `uv run pyright`
 3. `uv run pytest` (the full suite, not a single file)
-4. The clean-install check: install the package non-editable into an
-   isolated environment from a directory outside the repository, then
-   run `python -m galleria build --help`.
-   A non-zero exit fails it.
-   The dev environment masks undeclared runtime dependencies, so only
-   a clean install can catch them.
-   The recipe forces a rebuild with `--refresh-package galleria`,
-   because uv otherwise reuses a cached wheel when only `.py` files
-   changed.
 
 This list is the definition of the gate.
 When a task-runner recipe wraps it, the recipe follows this list, so a
@@ -209,6 +200,23 @@ change here requires the same change there.
 Use `uv run`, never a bare interpreter.
 Run a focused file with `uv run pytest test/test_name.py -v` during
 development, but always run the full suite before committing.
+
+### The clean-install check
+
+The clean-install check is a separate requirement from the per-commit
+gate.
+It must pass before a change is submitted and before a release is
+tagged.
+Run it with `just clean-install`.
+
+The check installs the package non-editable into an isolated
+environment from a directory outside the repository, then runs
+`python -m galleria build --help`.
+A non-zero exit fails it.
+The dev environment masks undeclared runtime dependencies, so only a
+clean install can catch them.
+The recipe forces a rebuild with `--refresh-package galleria`, because
+uv otherwise reuses a cached wheel when only `.py` files changed.
 
 ### Commit sizing
 

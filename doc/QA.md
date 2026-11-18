@@ -188,6 +188,7 @@ A change is signed off when all of the following hold:
 - Its scope is contained and proportionate.
 - Every falsifiable claim checks against ground truth.
 - The applicable trap and completeness rungs found nothing.
+- The clean-install check passes on the final tree.
 - The manual acceptance run has happened where it applies, and what it
   observed has been stated.
 
