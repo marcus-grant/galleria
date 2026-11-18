@@ -17,15 +17,13 @@ src/template/
 
 1. **Photo Metadata Generation**: `PhotoMetadataService.generate_json_metadata()`
 2. **Template Rendering**: Jinja2 with photo data context
-3. **Static Asset Copying**: CSS/JS files
-4. **Output**: Complete static site in `prod/site/`
+3. **Output**: Complete static site in the output directory
 
 ## Configuration
 
 ```python
 # Build command configuration
 TEMPLATE_DIR = 'src/template/'
-OUTPUT_DIR = 'prod/site/'
 
 # Template mapping
 TEMPLATES = {
@@ -49,28 +47,16 @@ src/template/
     ├── navbar.j2.html         # Navigation
     ├── photo-grid.j2.html     # Photo grid container
     └── photo-cell.j2.html     # Individual photo cells
-
-prod/pics/                     # Processed photos
-├── full/                      # Full resolution symlinks
-├── web/                       # Web-optimized symlinks
-└── thumb/                     # Generated WebP thumbnails
 ```
 
 ### Output Structure
 ```
-prod/site/                     # Generated static site
+<output-dir>/                  # Generated static site
 ├── index.html                 # Landing page
 ├── gallery.html               # Photo gallery
 ├── css/                       # Tailwind CSS
 └── js/                        # Future: AlpineJS enhancements
 ```
-
-## Development Server
-
-- **Command**: `python manage.py serve --reload`
-- **Hot-reload**: Watches template/CSS/JS changes
-- **Photo serving**: `/photos/*` routes to `prod/pics/*`
-- **Routing**: `/gallery` serves gallery.html, `/` serves index.html
 
 ## Static-First Approach
 

@@ -91,7 +91,7 @@ removed token, and the assertions it promised:
 Use `grep -I --include='*.py'` for Python, widening the include when
 the change is in templates, stylesheets, or scripts.
 Exclude generated and vendored trees so build output does not muddy the
-results: `__pycache__/`, `_build/`, `prod/`, and `.venv/`.
+results: `__pycache__/`, `_build/`, and `.venv/`.
 
 These greps confirm the tests assert the right thing for the cases they
 name.
