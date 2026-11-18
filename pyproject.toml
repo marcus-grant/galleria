@@ -53,4 +53,4 @@ exclude = ["salvage", "**/__pycache__"]
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
-pythonpath = ["src", "."]
+pythonpath = ["src"]
