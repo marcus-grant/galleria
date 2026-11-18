@@ -1,6 +1,6 @@
 default: check
 
-check: lint typecheck test
+check: lint typecheck test clean-install
 
 lint:
     uv run ruff check
@@ -13,6 +13,9 @@ test *ARGS:
 
 test-file FILE:
     uv run pytest {{FILE}} -v
+
+clean-install:
+    uv run --isolated --no-project --refresh-package galleria --directory "$(mktemp -d)" --with "{{justfile_directory()}}" python -m galleria build --help
 
 serve:
     uv run python -m galleria serve --reload
