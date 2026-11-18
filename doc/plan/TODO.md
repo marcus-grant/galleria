@@ -63,11 +63,6 @@ This is a stopgap rather than a design.
 The real fix is a cache keyed on source hash plus rendition spec, and
 it lands with the derive pipeline second pass.
 
-**A test in `test_file_processing_dual.py` fails only in a full run.**
-`test_skip_processing_when_up_to_date` compares mtimes and passes when
-run alone.
-It leaves with the module.
-
 **Three helpers named for writing manifests have different shapes.**
 `test_validate.py` and `test_manifest_reader.py` each define a
 `_write_manifest`, and `test_derive.py` defines a `_write_collection`
@@ -76,42 +71,10 @@ All hand-build a contract this project does not own; they leave when
 NormPic ships a consumer package with test factories.
 
 **A test that asserts nothing can still pass.**
-A batch-ordering test in `test_filename_service.py` looped over a list
-of expected values with `pass` as the body.
-The loop was removed and its intent recorded as a comment.
-The same shape is worth watching for elsewhere: an unused local in a
-test is often a call whose result was never asserted on.
-Eleven test modules were also found to contain no `pytest.raises` at
-all, so error paths in the code they cover are unexercised.
-
-**Module dependents shrink as deletions land.**
-Each deletion removes an importer, and a module with none left can
-leave without argument.
-`s3_storage.py` now has no dependents; `template_renderer.py` dropped
-it with `PICS_BASE_URL`.
-Worth asking after each deletion which module just lost a dependent,
-and which has reached zero.
-
-**`file_processing.py` cannot simply be deleted.**
-It holds thumbnail generation, which Galleria keeps, alongside dual
-collection processing, which moved upstream.
-Its imports of `exif`, `filename_service`, `photo_validation`, and
-`s3_storage` are function-local rather than at module top, so grepping
-the import block understates what depends on what.
-
-**Empty scaffolding directories exist and are referenced by nothing.**
-`sample-photos/` and `sample-pics/` are tracked and empty.
-`cache/`, `content/`, and `temp_test/` are untracked working
-directories.
-
-**Two settings are set and never read.**
-`SITE_BASE_URL` and `THEME_DIR`.
-`PICS_BASE_URL` is gone from the renderer and templates; the setting
-itself leaves with `settings.py`.
-
-**Two spellings of the local settings example coexist.**
-`settings.local.example.py` and `settings.local.py.example`.
-One is stale; which has not been determined.
+Watch for an unused local in a test.
+It is often a call whose result was never asserted on.
+Ten test modules were also found to contain no `pytest.raises` at all.
+So error paths in the code they cover are unexercised.
 
 **A local build has no `original/` or `display/` renditions.**
 Only preview and thumb are written under `output_dir`; the other two
@@ -134,118 +97,29 @@ helper rather than the project.
 The tasks below are ordered by what unblocks what.
 Each is a separate change with its own plan and sign-off.
 
-### chr/orphaned-module-removal
+### Console script (Fix: on main)
 
-Remove the modules whose work moved to NormPic and marcustack: EXIF
-extraction, filename generation, S3 storage, photo validation, the
-processing pipeline, and root-level `settings.py`.
+The package declares no console script.
+A tool install therefore provides no `galleria` command.
 
-Thumbnail generation lives in `file_processing.py` and stays.
-Raised in urgency by the v0.0.1 install failure: a clean
-`uv tool install` crashed at import because `cli.py` registered
-`process-photos`, whose chain pulls `settings`, `boto3`, `exifread`,
-and `piexif`, none installable or declared.
-v0.0.2 unregistered `process-photos` and `serve` rather than fixing
-the chain; this task is what actually removes it, and runs next.
-Found while fixing:
-
-- Root-level `settings.py` does not ship in the package at all, so
-  any shipped import of it is a guaranteed crash in an install.
-  Salvage or delete it with its dependents; nothing that ships may
-  import it when this task closes.
-- Shipped modules import `piexif`, a dev-group dependency: `exif.py`,
-  `file_processing.py`, `fs.py`, `s3_storage.py`.
-- `python-dotenv` and `markdown` are declared and unimported.
-  With `boto3`, `exifread`, and `timezonefinder`, they leave the
-  dependency list when their importers leave the tree.
-- The dev suite cannot catch an undeclared runtime dep; the dev
-  environment masks it.
-  A gate step that installs the package clean and runs
-  `python -m galleria build --help` closes that hole permanently;
-  add it with this task.
-- `python-dotenv`, `markdown`, and `pydantic` are declared and
-  unimported; `pydantic` never made sense here, the models are
-  dataclasses.
-  With `boto3`, `exifread`, and `timezonefinder`, they leave the
-  dependency list when their importers leave the tree, and `pydantic`
-  can leave immediately.
-
-If enough lands to make future work less painful without finishing,
-stop, document what remains, and move it to a later item.
-Also the test fixture fixing/centralizing/refactoring task belongs either in this PR or as a companion queued either before or after this one.
-
-What this walks into, found by reading rather than grepping:
-
-- `file_processing.py` imports its dependencies inside functions
-  rather than at module top, so a grep of import blocks understates
-  what depends on what.
-- `process_photos.py` is the only caller of the dual-collection path,
-  but four test modules reach it: its own, `test_e2e_pipeline.py`,
-  `test_batch_metadata_efficiency.py`, and
-  `test_file_processing_dual.py`.
-  Two are named for services rather than for the command, so the
-  coupling is invisible from their filenames.
-  `test_dual_hash_integration.py` also imports `file_processing`, and
-  sits at the top level of `test/`.
-- `create_thumbnail` has no consumer outside its own module, and
-  `derive_rendition` supersedes it.
-  Delete it here rather than migrating, with its three tests in
-  `test_file_processing_comprehensive.py`.
-- `generate_batch_metadata` and `merge_partial_metadata_files` write
-  partial metadata files and merge them by index, carrying a
-  pre-extraction `schema_version` and a `photos` key.
-  That is a second manifest format NormPic now owns.
-  Delete rather than salvage.
-- `generate_gallery_metadata` reads four values through
-  `getattr(settings, ...)` with inline defaults, and leaves here.
-- `s3_storage.py` has no dependents in `src`.
-- `prod/` residue remains in `process_photos.py`, `serve.py`,
-  `dev_server.py`, and `test_static_assets.py`.
-- `link_photo_with_filename` raises rather than returning an error
-  value, so its callers correctly ignore its return.
-- Remaining `settings.py` dependents are `fs.py`, `exif.py`, and
-  `s3_storage.py`.
-  `process_photos.py` imports it too, but the command is stubbed and
-  the import is dead.
-  The module also creates `cache/` and the configured source path at
-  import.
-- Delete the three test modules covering the settings mechanism:
-  `test_settings.py`, `test_settings_isolation_fix.py`, and
-  `test_gallery_settings_complete.py`.
-  That is 23 tests.
-- Remove `exifread`, `timezonefinder`, and `boto3`, which only these
-  modules used.
-  `pillow` stays with thumbnail generation.
-  Run `uv sync` and commit `uv.lock` with the `pyproject.toml` edit.
-- `s3_storage.py` has no dependents in `src` except a function-local
-  import in `file_processing.py`'s dual-collection path.
-  When that path leaves, move `s3_storage.py` to `salvage/` with the
-  tests that name it and list it in the salvage README; marcustack
-  may want it.
-- `prod/` residue remains in `process_photos.py`, `serve.py`,
-  `dev_server.py`, and `test_static_assets.py`.
-- Verify `python -m galleria build` runs from outside the repository
-  root.
-  A root-level module cannot ship, and running from the root succeeds
-  only because the current directory is on the path.
-- `test_settings.py::TestSettingsHierarchy::
-  test_settings_import_creates_directories` carries an unconditional
-  skip because it asserts a machine-specific path.
-  It leaves with the module.
-- After removal, check nothing left in `test/` depends on a home path
-  or wall-clock state.
-  Anything found goes to `tst/fakefs-fixture`.
-
-`doc/settings.md` describes the settings hierarchy, environment
-variables, XDG compliance, and Pelican settings, all of which leave
-with the module.
-Rewriting it as the configuration document waits for the
-documentation pass, since the surface is still moving.
-
-This determines the suite's remaining cost.
-`test_e2e_pipeline.py` and the GPS timezone tests in
-`test_filename_service.py` are nearly all of the current runtime, and
-both cover producer work that leaves with these modules.
+- Lands as a `Fix:` commit on main, not on a branch.
+  - It follows the merge of `chr/orphaned-module-removal`.
+- Add `[project.scripts]` with `galleria = "galleria.cli:cli"`.
+- Bump the version and run `uv lock` in the same commit.
+- Verify with a clean `uv tool install` from the tag.
+  - Run the installed `galleria` command, not the module.
+  - Check `galleria build --help` lists every flag marcustack passes.
+  - Those are `--original-manifest`, `--display-manifest`, `--output-dir`.
+  - Also `--derive`/`--no-derive` and `--no-validate`.
+  - Then release.
+- marcustack pins the release, then switches its invocation.
+  - It switches only after the tag exists.
+  - Switching first breaks its pipeline.
+- Once switched, marcustack's pipeline exercises only `build`.
+  - The clean-install check still covers the rest.
+  - It renders no templates, so it does not catch missing package data.
+- Declare `pyright` in the dev group.
+  - `uv run pyright` currently resolves it from outside the project.
 
 ### ft/pic-page-loading
 
@@ -356,8 +230,12 @@ already done, and an input path as wide as the model behind it.
   a `generate` callable, and `adopt_rendition` fills records from
   disk without encoding, failing on a missing file.
   Adopt-or-encode per record is most of the incremental skip.
-- When incremental derivation lands, flip build's `--derive`
-  default to opt-out and revisit `--validate` with it.
+- When incremental derivation lands:
+  - Flip build's `--derive` default to opt-out.
+  - Revisit `--validate` with it.
+  - marcustack passes `--derive` and `--validate` explicitly.
+  - Flipping either default is still a behavior change.
+    - It affects any caller that omits the flag.
 - Move `derive.py` hashing from `hash_b32` on read bytes to
   `code_from_path`.
   The b3c32 floor is already 0.0.3.
@@ -376,20 +254,11 @@ final shape now would be guessing at half the requirements.
 
 Make iteration on templates and styles fast.
 
-Most of this exists: `serve --reload` watches `src/template` and
-`static`, and rebuilds through a subprocess.
 Build does no image processing, so it is fast regardless of
 collection size.
 
-- Wire the static asset copy into `build`.
-  `static_assets.py` has `copy_css_files()` and `copy_js_files()`
-  but nothing calls them.
-- Create the `static` directory the watcher already watches and the
-  build already creates empty output directories for.
-- Make a missing `watchdog` loud.
-  Reload currently catches the ImportError and prints a warning,
-  then silently does not reload, so an edit appears to do nothing
-  and the wrong thing gets debugged.
+- `serve` and the dev server were removed.
+  - The loop needs its own serving and reload mechanism.
 - Assemble a small fixture collection for the loop.
   Iterating against 645 photos is not the working rhythm; the real
   collection is for acceptance runs.
@@ -397,7 +266,6 @@ collection size.
   It has no sensible program default: prod is a domain galleria must
   not know, and dev is an address that does not exist until this loop
   does.
-- The `serve` command is a stub reporting its unwired state on stderr.
 - `debug/template_debug.py` needs a refit.
   Its sample data keys do not match the current template surface, its
   structural analysis counts Alpine and Tailwind artifacts that are
@@ -543,8 +411,15 @@ Left until here because each describes a moving target.
 - `doc/command/`: rewrite against the CLI as it ends up.
 - `doc/deployment/`: salvage anything useful to marcustack, then
   delete.
-- `doc/guides/`: rewrite or delete per guide.
 - Restore a Quick Start to the root README once the CLI is settled.
+- Write the configuration document.
+- `static-site-generation.md` still names a nonexistent service.
+  - The service is `PhotoMetadataService`.
+- The testing README tree omits four directories.
+  - They are `models/`, `config/`, `template/`, and `debug/`.
+- Dead links in two READMEs.
+  - `doc/testing/README.md` links `patterns.md`.
+  - `doc/util/README.md` links `UUIDv7.md`.
 
 - Write the output layout document from these settled facts.
   `output_dir` is the site root.
@@ -607,37 +482,9 @@ stale since the module layout change.
 Correct them and give each template a `{# #}` header block (summary,
 Author, Created, License), as `components/grid-scroll.j2.html` has.
 
-### chr/orphaned-test-fixtures
-
-`test/conftest.py` holds two fixtures building JPEG files with optional
-EXIF, `create_test_images` and `create_fake_photo_with_exif`.
-Both are producer-side work that moved to NormPic.
-
-They stay while any test module still requests them, so this runs after
-`ft/cli-config` removes the modules that do.
-
-- Grep `test/` for each fixture name and confirm no requester remains.
-  An orphaned fixture raises no failure, so the grep is the only
-  signal.
-- Move the orphaned fixtures to `salvage/` with the modules that used
-  them.
-- Drop the `piexif` import guard and the file-level pyright suppression
-  at the top of `test/conftest.py` if nothing needing them remains.
-- Remove `piexif` from the dev dependency group once no test imports
-  it, running `uv sync` and committing `uv.lock` in the same commit.
-
-### tst/fakefs-fixture
-
-Three test modules suppress the same finding: pyfakefs types
-`Patcher.fs` as optional, so every call through it reports.
-Replace the suppressions with a fixture that asserts it once.
-
 ### ref/path-typed-interfaces
 
-`fs.py` declares path parameters as optional strings and then rebinds
-them to `Path`.
-Rewrite it, and audit for other interfaces taking an optional string
-where they mean a path.
+Audit for interfaces taking an optional string where they mean a path.
 An absent value collapsing into a wrong-typed one is the shape to look
 for.
 
@@ -650,13 +497,6 @@ Run one sweep, then keep it in the gate.
 
 ### tst/fixture-dedup
 
-Roughly seven near-identical "create a JPEG with EXIF" factories are
-scattered across seven test files; only two live in a `conftest.py`.
-Consolidate them.
-
-Worth doing after the module removals in `ft/cli-config`, since some
-of these fixtures serve tests that are being deleted anyway.
-
 `_write_collection` has three deliberate copies, in
 `test/command/test_derive.py`, `test/services/test_derive.py`, and
 `test/command/test_build.py`.
@@ -665,19 +505,10 @@ They change together or not at all until this task lands.
 `test_gallery_template.py` adds `_record`, `_page`, and `_pic_page`.
 All belong in conftest modules.
 
-### chr/remove-empty-theme
-
-`themes/wedding/` holds two empty directories and nothing else.
-`THEME_DIR` in `settings.py` points at it and is never read.
-Remove both.
-
 ## Deferred
 
 Recorded so they are not rediscovered.
 
-- `settings.py` loads local settings with `exec()`.
-  It works, but an executed config file can do anything.
-  Worth revisiting once the settings surface is smaller.
 - The live CDN has no web set, so the deployed gallery serves
   full-resolution files.
   Galleria's templates reference the web prefix correctly and the
