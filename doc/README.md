@@ -31,12 +31,8 @@ those, and links the standing documents that live at this level.
 - [Command](command/).
   The command-line interface: each command's usage, options, and
   workflows.
-- [Services](services/).
-  The service layer and its components.
 - [Testing](testing/).
   Test infrastructure, fixtures, and patterns.
-- [Guides](guides/).
-  Setup and configuration walkthroughs.
 - [Utilities](util/).
   Utility functions, implementation notes, and technical research.
 - [Changelog archive](changelog/).

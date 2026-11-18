@@ -91,7 +91,7 @@ removed token, and the assertions it promised:
 Use `grep -I --include='*.py'` for Python, widening the include when
 the change is in templates, stylesheets, or scripts.
 Exclude generated and vendored trees so build output does not muddy the
-results: `__pycache__/`, `_build/`, `prod/`, and `.venv/`.
+results: `__pycache__/`, `_build/`, and `.venv/`.
 
 These greps confirm the tests assert the right thing for the cases they
 name.
@@ -188,6 +188,7 @@ A change is signed off when all of the following hold:
 - Its scope is contained and proportionate.
 - Every falsifiable claim checks against ground truth.
 - The applicable trap and completeness rungs found nothing.
+- The clean-install check passes on the final tree.
 - The manual acceptance run has happened where it applies, and what it
   observed has been stated.
 

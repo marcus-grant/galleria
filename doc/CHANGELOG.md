@@ -3,6 +3,27 @@
 Most recent first.
 Pre-split history is archived under [changelog/](changelog/).
 
+## 2026-11-18
+
+### chr/orphaned-module-removal
+
+- Producer chain and root-level settings removed, with their tests.
+  - EXIF extraction, filename generation, S3 storage, and photo validation.
+  - The processing pipeline and root-level `settings.py`.
+- `serve`, the dev server, and static assets removed with their tests.
+- Unused runtime dependencies dropped.
+  - `exifread`, `python-dotenv`, `boto3`, and `markdown`.
+  - `pydantic` and `timezonefinder`.
+- Unused dev dependencies dropped.
+  - `piexif`, `moto`, and `watchdog`.
+  - `pyfakefs`, `pytest-mock`, and `pytest-cov`.
+- Clean-install check added as a pre-submission and pre-release requirement.
+  - Run it with `just clean-install`.
+  - It installs non-editable in isolation, then runs `build --help`.
+  - It forces a rebuild, since uv caches wheels for local paths.
+- Documentation for removed code deleted.
+- Pytest `pythonpath` narrowed to `src`.
+
 ## 2026-11-17
 
 ### ft/lazy-scroll

@@ -7,16 +7,12 @@ workflows.
 
 ## Available Commands
 
-- **[process-photos](process-photos.md)** - Legacy photo processing.
-  Superseded by NormPic; retained as a stub.
 - **build** - Generate the static gallery from NormPic manifests.
-- **serve** - Development server with reload for template work.
 
 ## Development Workflow
 
 ```bash
 python -m galleria build
-python -m galleria serve --reload
 ```
 
 ## Getting Help

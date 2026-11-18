@@ -201,6 +201,23 @@ Use `uv run`, never a bare interpreter.
 Run a focused file with `uv run pytest test/test_name.py -v` during
 development, but always run the full suite before committing.
 
+### The clean-install check
+
+The clean-install check is a separate requirement from the per-commit
+gate.
+It must pass before a change is submitted and before a release is
+tagged.
+Run it with `just clean-install`.
+
+The check installs the package non-editable into an isolated
+environment from a directory outside the repository, then runs
+`python -m galleria build --help`.
+A non-zero exit fails it.
+The dev environment masks undeclared runtime dependencies, so only a
+clean install can catch them.
+The recipe forces a rebuild with `--refresh-package galleria`, because
+uv otherwise reuses a cached wheel when only `.py` files changed.
+
 ### Commit sizing
 
 Group commits by logical coherence.

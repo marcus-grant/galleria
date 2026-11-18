@@ -14,8 +14,8 @@ test *ARGS:
 test-file FILE:
     uv run pytest {{FILE}} -v
 
-serve:
-    uv run python -m galleria serve --reload
+clean-install:
+    uv run --isolated --no-project --refresh-package galleria --directory "$(mktemp -d)" --with "{{justfile_directory()}}" python -m galleria build --help > /dev/null
 
 build:
     uv run python -m galleria build
