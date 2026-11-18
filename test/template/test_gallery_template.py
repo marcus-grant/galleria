@@ -11,9 +11,15 @@ from pathlib import Path
 from bs4 import BeautifulSoup, Tag
 from conftest import make_pic
 
+from galleria.config import default
 from galleria.models.rendition import PicRenditions
 from galleria.services.link import rendition_href
 from galleria.services.template_renderer import TemplateRenderer
+
+# A rendered grid cell. Page 1 also carries one inert cell inside a
+# <template> for the scroll script to clone; html.parser does not
+# treat template content as inert, so it would otherwise match.
+GRID_CELL = ".pic-cell:not(template *)"
 
 
 def _record(stem: str) -> PicRenditions:
@@ -27,16 +33,26 @@ def _record(stem: str) -> PicRenditions:
     )
 
 
-def _page(pics, page=1, pages=1, total=None) -> BeautifulSoup:
-    """Render gallery.j2.html with the context build_gallery supplies."""
+def _page(pics, **overrides) -> BeautifulSoup:
+    """Render gallery.j2.html with the context build_gallery supplies.
+
+    A base context mirrors build_gallery for a single-page
+    collection, with total from pics and scroll settings from program
+    defaults; each keyword override replaces one context key.
+    """
     ctx = {
         "collection": "wedding",
         "pics": pics,
-        "page": page,
-        "pages": pages,
-        "total": len(pics) if total is None else total,
+        "page": 1,
+        "pages": 1,
+        "total": len(pics),
         "root": "../..",
+        "grid_index": "grid-index-TEST0000.json",
+        "load_ahead_viewports": default.LOAD_AHEAD_VIEWPORTS,
+        "page_size": default.PAGE_SIZE,
+        "sentinel_pic": _record("__STEM__"),
     }
+    ctx.update(overrides)
     html = TemplateRenderer().render("gallery.j2.html", ctx)
     return BeautifulSoup(html, "html.parser")
 
@@ -78,21 +94,21 @@ class TestGalleryPage:
     def test_cell_links_the_per_photo_page(self):
         """Each cell's anchor targets pic/STEM.html, never an image."""
         soup = _page([_record("a"), _record("b")])
-        hrefs = [a["href"] for a in soup.select(".pic-cell a")]
+        hrefs = [a["href"] for a in soup.select(f"{GRID_CELL} a")]
         assert hrefs == ["pic/a.html", "pic/b.html"]
 
     def test_thumb_src_is_the_thumb_rendition(self):
         """Each img src is root plus the thumb href, never display or original."""
         rec = _record("a")
         assert rec.thumb is not None
-        src = str(_one(_page([rec]), ".pic-cell img")["src"])
+        src = str(_one(_page([rec]), f"{GRID_CELL} img")["src"])
         assert src == f"../../{rendition_href('wedding', rec.thumb)}"
         assert "/thumb/" in src
 
     def test_cells_follow_record_order(self):
         """Cells render in list order, which is merge order."""
         soup = _page([_record("b"), _record("a")])
-        hrefs = [a["href"] for a in soup.select(".pic-cell a")]
+        hrefs = [a["href"] for a in soup.select(f"{GRID_CELL} a")]
         assert hrefs == ["pic/b.html", "pic/a.html"]
 
     def test_navbar_counts_the_collection(self):
@@ -119,6 +135,73 @@ class TestGalleryPage:
         """Every cell fixes its aspect so arriving images do not reflow the grid."""
         soup = _page([_record("a")])
         assert "aspect-square" in _one(soup, ".pic-cell a")["class"]
+
+
+class TestScrollHooks:
+    """Page 1 carries what the scroll script reads; later pages do not."""
+
+    def test_page_one_carries_scroll_settings(self):
+        """Page 1 exposes the grid index name, load-ahead, and page size.
+
+        Values are the ones supplied in the render context, so the
+        script never hard-codes them.
+        """
+        soup = _page(
+            [_record("a")],
+            grid_index="grid-index-ABCD1234.json",
+            load_ahead_viewports=3,
+            page_size=7,
+        )
+        assert (hooks := _one(soup, "[data-grid-index]"))["data-load-ahead"] == "3"
+        assert hooks["data-grid-index"] == "grid-index-ABCD1234.json"
+        assert hooks["data-page-size"] == "7"
+
+    def test_later_pages_carry_no_scroll_settings(self):
+        """Page 2 of a multi-page collection exposes none of them."""
+        soup = _page(
+            [_record("a")],
+            page=2,
+            pages=3,
+            grid_index="grid-index-ABCD1234.json",
+            load_ahead_viewports=3,
+            page_size=7,
+        )
+        for attr in ("data-grid-index", "data-load-ahead", "data-page-size"):
+            assert soup.select_one(f"[{attr}]") is None, attr
+
+    def test_settings_sit_with_the_grid(self):
+        """The script finds the settings from the grid container.
+        One lookup reaches both the grid to append to and how to fill it."""
+        soup = _page([_record("a"), _record("b")])
+        hooks = _one(soup, "[data-grid-index]")
+        cells = soup.select(GRID_CELL)
+        assert cells
+        for cell in cells:
+            assert cell.parent is hooks
+
+
+class TestCellTemplate:
+    """Page 1 carries one inert cell for the script to clone."""
+
+    def test_page_one_holds_a_cell_template(self):
+        """Page 1 renders exactly one template holding one grid cell."""
+        templates = _page([_record("a")]).select("template")
+        assert len(templates) == 1
+        assert len(templates[0].select(".pic-cell")) == 1
+
+    def test_later_pages_hold_no_cell_template(self):
+        """Page 2 renders no template, even with the placeholder given."""
+        soup = _page([_record("a")], page=2, pages=3)
+        assert soup.select_one("template") is None
+
+    def test_template_cell_matches_a_real_cell(self):
+        """The template cell has a real cell's tags, attributes, classes.
+        Built by the same include, so it can differ from a real cell
+        only where the stem appears."""
+        soup = _page([_record("real-stem")])
+        real = _one(soup, GRID_CELL)
+        clone = _one(soup, "template .pic-cell")
+        assert str(real).replace("real-stem", "__STEM__") == str(clone)
 
 
 class TestPicPage:

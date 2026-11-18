@@ -7,6 +7,21 @@
   <meta name="robots" content="noindex, nofollow">
   <title>{% block title %}Wedding Gallery{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --pic-placeholder-bg: #e5e7eb;
+      --pic-cell-radius: 0.5rem;
+    }
+
+    .pic-cell__link {
+      background: var(--pic-placeholder-bg);
+      border-radius: var(--pic-cell-radius);
+    }
+
+    .pic-cell__img {
+      color: transparent;
+    }
+  </style>
   {% block head %}{% endblock %}
 </head>
 <body class="bg-gray-50">

@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup as BSoup
 from click.testing import CliRunner
 from PIL import Image
 
@@ -18,8 +18,11 @@ from galleria.cli import cli
 from galleria.config import Config
 from galleria.config.default import RENDITION_SPECS
 from galleria.command.build import build_gallery
+from galleria.models.rendition import Derivation
+from galleria.models.spec import Format
 from galleria.services.derive import derive_collection
 from galleria.services.manifest_reader import read_manifest
+from galleria.services.template_renderer import TemplateRenderer
 
 
 def _write_collection(
@@ -81,7 +84,7 @@ def _pages(out: Path) -> list[str]:
 
 def _cells(path: Path) -> int:
     """Number of grid cells rendered on one page."""
-    return len(BeautifulSoup(path.read_text(), "html.parser").select("img"))
+    return len(BSoup(path.read_text(), "html.parser").select("img:not(template *)"))
 
 
 class TestBuildGallery:
@@ -129,6 +132,98 @@ class TestBuildGallery:
         pic_dir = out / "gallery" / "wedding" / "pic"
         expected = [f"{r.key.name}.html" for r in records]
         assert sorted(p.name for p in pic_dir.glob("*.html")) == expected
+
+
+class TestBuildGalleryScrollContext:
+    """build_gallery supplies page 1 everything the scroll hooks read."""
+
+    def test_page_one_renders_its_cell_template(self, tmp_path: Path):
+        """A real build renders page 1 with the sentinel cell template."""
+        man, out, recs = _records(tmp_path, 1)
+        build_gallery(_cfg(man, out, 2), "wedding", recs)
+        page1 = out / "gallery" / "wedding" / "page1.html"
+        soup = BSoup(page1.read_text(), "html.parser")
+        assert soup.select_one("template .pic-cell") is not None
+
+    def test_template_thumb_follows_the_thumb_spec(self, tmp_path: Path):
+        """The template cell's thumb extension comes from the thumb spec."""
+        man, out, recs = _records(tmp_path, 1)
+        cfg = _cfg(man, out, 2)
+        thumb = replace(cfg.specs[Derivation.THUMB], format=Format.PJPEG)
+        cfg = replace(cfg, specs={**cfg.specs, Derivation.THUMB: thumb})
+        build_gallery(cfg, "wedding", recs)
+        page1 = out / "gallery" / "wedding" / "page1.html"
+        soup = BSoup(page1.read_text(), "html.parser")
+        img = soup.select_one("template .pic-cell img")
+        assert img is not None
+        assert str(img["src"]).endswith("/thumb/__STEM__.jpg")
+
+    def test_page_one_carries_configured_scroll_settings(self, tmp_path: Path):
+        """Load-ahead and page size on page 1 are the Config values."""
+        man, out, recs = _records(tmp_path, 1)
+        cfg = replace(_cfg(man, out, 2), load_ahead_viewports=3)
+        build_gallery(cfg, "wedding", recs)
+        page1 = out / "gallery" / "wedding" / "page1.html"
+        soup = BSoup(page1.read_text(), "html.parser")
+        hooks = soup.select_one("[data-grid-index]")
+        assert hooks is not None
+        assert hooks["data-load-ahead"] == "3"
+        assert hooks["data-page-size"] == "2"
+
+
+class TestBuildGalleryGridIndex:
+    """The grid index artifact written beside the pages."""
+
+    collection = "wedding"  # the name _write_collection gives its manifest
+
+    def _site(self, out: Path) -> Path:
+        """The collection's gallery directory under out."""
+        return out / "gallery" / self.collection
+
+    def _artifacts(self, out: Path) -> list[Path]:
+        """Grid index artifacts beside the pages."""
+        return sorted(self._site(out).glob("grid-index-*.json"))
+
+    def _rendered_stems(self, out: Path) -> list[str]:
+        """Pic page stems linked from each page's cells, in page order."""
+        stems = []
+        for page in sorted(self._site(out).glob("page*.html")):
+            soup = BSoup(page.read_text(), "html.parser")
+            stems += [
+                Path(str(a["href"])).stem
+                for a in soup.select(".pic-cell:not(template *) a")
+            ]
+        return stems
+
+    def test_order_matches_rendered_pages(self, tmp_path: Path):
+        """The artifact lists photos in the order the pages show them."""
+        man, out, records = _records(tmp_path, 12)
+        build_gallery(_cfg(man, out, 5), self.collection, records)
+        (artifact,) = self._artifacts(out)
+        assert json.loads(artifact.read_text()) == self._rendered_stems(out)
+
+    def test_name_length_comes_from_config(self, tmp_path: Path):
+        """A configured length, not a fixed one, sizes the name's code."""
+        man, out, records = _records(tmp_path, 3)
+        cfg = replace(_cfg(man, out, 2), artifact_name_length=5)
+        name = build_gallery(cfg, self.collection, records)
+        assert len(Path(name).stem.removeprefix("grid-index-")) == 5
+
+    def test_returns_the_artifact_name(self, tmp_path: Path):
+        """The caller learns the written file's name from the return."""
+        man, out, records = _records(tmp_path, 3)
+        name = build_gallery(_cfg(man, out, 2), self.collection, records)
+        assert [p.name for p in self._artifacts(out)] == [name]
+
+    def test_grid_pages_get_the_name_in_context(self, tmp_path: Path):
+        """Every grid page renders with the artifact name available."""
+        man, out, records = _records(tmp_path, 3)
+        real = TemplateRenderer.render
+        with patch.object(TemplateRenderer, "render", autospec=True) as spy:
+            spy.side_effect = real
+            name = build_gallery(_cfg(man, out, 2), self.collection, records)
+        grid = [c.args[2] for c in spy.call_args_list if c.args[1] == "gallery.j2.html"]
+        assert [ctx["grid_index"] for ctx in grid] == [name, name]
 
 
 class TestBuildCommand:

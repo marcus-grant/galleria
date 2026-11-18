@@ -12,8 +12,7 @@ from pathlib import Path
 import pytest
 
 
-from galleria.config import Config, MissingConfigError
-from galleria.config import OUTPUT_DIR
+from galleria.config import Config, MissingConfigError, default
 
 
 def make_config(tmp_path: Path, **overrides) -> Config:
@@ -38,7 +37,7 @@ class TestConfigFromOverrides:
     def test_unspecified_value_falls_through_to_default(self, tmp_path):
         """An output directory absent from the overrides comes from
         the default layer."""
-        assert make_config(tmp_path).output_dir == OUTPUT_DIR
+        assert make_config(tmp_path).output_dir == default.OUTPUT_DIR
 
     def test_required_paths_are_carried_verbatim(self, tmp_path):
         """Both manifest paths come only from the overrides, since the
@@ -47,6 +46,13 @@ class TestConfigFromOverrides:
         result = Config.from_overrides(original_manifest=orig, display_manifest=disp)
         assert result.original_manifest == orig
         assert result.display_manifest == disp
+
+    def test_carries_scroll_and_artifact_defaults(self, tmp_path):
+        """Load-ahead distance and artifact name length come from the
+        default layer, since no override sets them."""
+        cfg = make_config(tmp_path)
+        assert cfg.load_ahead_viewports == default.LOAD_AHEAD_VIEWPORTS
+        assert cfg.artifact_name_length == default.ARTIFACT_NAME_LENGTH
 
 
 class TestConfigImmutability:

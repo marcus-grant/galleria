@@ -4,6 +4,7 @@ Build command for Galleria.
 Generates static website from processed photos.
 """
 
+from datetime import datetime, timezone
 from pathlib import Path
 import shutil
 
@@ -12,18 +13,39 @@ import click
 from galleria.config import Config
 from galleria.command.option import derive_options
 from galleria.command.validate import resolve_inputs
-from galleria.models.rendition import PicRenditions
+from galleria.models.normpic import Pic
+from galleria.models.spec import RenditionSpec
+from galleria.models.rendition import Derivation, PicRenditions
 from galleria.services.derive import (
     CollectionDeriveError,
     adopt_rendition,
     derive_rendition,
     derive_collection,
 )
+from galleria.services.grid_index import write_grid_index
 from galleria.services.rendition import merge_variants
 from galleria.services.template_renderer import TemplateRenderer
 
+SENTINEL = "__STEM__"
 
-def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) -> None:
+
+def sentinel_record(specs: dict[Derivation, RenditionSpec]) -> PicRenditions:
+    """A placeholder record whose stem-derived paths carry SENTINEL.
+
+    Rendered once into page 1's cell template for the scroll script
+    to clone and fill. Its thumb path is named the way derive names
+    thumbs, kind directory plus key plus the configured thumb spec's
+    extension, so the template cell resolves exactly like a real one.
+    Other renditions are absent; the cell reads only key and thumb.
+    """
+    ext = specs[Derivation.THUMB].format.extension
+    rel = Path("thumb") / f"{SENTINEL}.{ext}"
+    mtime = datetime.fromtimestamp(0, tz=timezone.utc)
+    thumb = Pic(hash="", relative_path=rel, size_bytes=0, mtime=mtime)
+    return PicRenditions(Path(SENTINEL), thumb=thumb)
+
+
+def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) -> str:
     """Render the collection's pages under output_dir/gallery/COLLECTION.
 
     Records are sliced into pages of cfg.page_size in the order given,
@@ -31,20 +53,29 @@ def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) ->
     index.html is a byte copy of page1.html. Every page renders from
     two levels below the site root, so templates prefix hrefs with
     root. A missing or broken template raises; there is no silent
-    partial build.
+    partial build. The grid index artifact is written beside the pages
+    first; its file name is returned and given to each grid page as
+    grid_index.
     """
     renderer = TemplateRenderer()
     site_dir = cfg.output_dir / "gallery" / collection
+    site_dir.mkdir(parents=True, exist_ok=True)
+    grid_index = write_grid_index(site_dir, records, cfg.artifact_name_length)
     size = cfg.page_size
+    sentinel = sentinel_record(cfg.specs)
     pages = [records[i : i + size] for i in range(0, len(records), size)] or [[]]
     for n, page in enumerate(pages, start=1):
-        ctx = {
+        ctx = {  # Thumbnail grid context
             "collection": collection,
             "pics": page,
             "page": n,
             "pages": len(pages),
             "total": len(records),
             "root": "../..",
+            "grid_index": grid_index,
+            "sentinel_pic": sentinel,
+            "load_ahead_viewports": cfg.load_ahead_viewports,
+            "page_size": cfg.page_size,
         }
         renderer.save_html(
             renderer.render("gallery.j2.html", ctx), site_dir / f"page{n}.html"
@@ -61,6 +92,7 @@ def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) ->
         }
         html = renderer.render("pic.j2.html", ctx)
         renderer.save_html(html, site_dir / "pic" / f"{rec.key.name}.html")
+    return grid_index
 
 
 @click.command()

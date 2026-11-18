@@ -1,5 +1,10 @@
 <!-- START: src/template/components/pic-grid.j2.html -->
-<div class="{{ grid_classes }}">
+<div class="{{ grid_classes }}"
+     {%- if page == 1 %}
+     data-grid-index="{{ grid_index }}"
+     data-load-ahead="{{ load_ahead_viewports }}"
+     data-page-size="{{ page_size }}"
+{%- endif %}>
   {% for pic in pics %}
     {% include 'components/pic-cell.j2.html' with context %}
   {% endfor %}

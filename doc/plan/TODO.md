@@ -228,6 +228,13 @@ What this walks into, found by reading rather than grepping:
   root.
   A root-level module cannot ship, and running from the root succeeds
   only because the current directory is on the path.
+- `test_settings.py::TestSettingsHierarchy::
+  test_settings_import_creates_directories` carries an unconditional
+  skip because it asserts a machine-specific path.
+  It leaves with the module.
+- After removal, check nothing left in `test/` depends on a home path
+  or wall-clock state.
+  Anything found goes to `tst/fakefs-fixture`.
 
 `doc/settings.md` describes the settings hierarchy, environment
 variables, XDG compliance, and Pelican settings, all of which leave
@@ -239,6 +246,28 @@ This determines the suite's remaining cost.
 `test_e2e_pipeline.py` and the GPS timezone tests in
 `test_filename_service.py` are nearly all of the current runtime, and
 both cover producer work that leaves with these modules.
+
+### ft/pic-page-loading
+
+Per-photo page loading, moved out of `ft/static-gallery-refinements`.
+The display rendition is roughly 2MB and reads as a wait on mobile.
+
+- The page renders `pic.display` today.
+  The preview rendition is derived but no template uses it.
+- Preview is progressive JPEG by default spec, so preview-first needs
+  no JavaScript.
+- Plan: `<img src>` is the preview, with `srcset` naming preview and
+  display.
+- `srcset` widths are nominal, taken from each spec's
+  `max_dimension` through `Config`, because manifests carry no
+  dimensions.
+  Real dimensions arrive with `ref/derive-pipeline`.
+- On a 3x-DPR phone the slot can exceed the preview's 1024px, so the
+  browser may pick display anyway.
+  `sizes` and preview size decide this; verify in a throttled
+  browser.
+- Build hrefs through the existing `href` helper, so the
+  `ref/derive-pipeline` move of `rendition_href` stays mechanical.
 
 ### ft/gallery-styling
 
@@ -261,162 +290,24 @@ production configuration.
 - Conventional BEM block names rather than clever ones, so a second
   consumer would plausibly arrive at the same words.
 
+- `base.j2.html` carries an inline `<style>` block: a token layer on
+  `:root` and BEM rules for `pic-cell__link` and `pic-cell__img`.
+  Move it into the first stylesheet and keep it as the token layer's
+  seed.
+- `hidePagination` in `components/grid-scroll.j2.html` sets inline
+  `display: none` because Tailwind's `flex` outranks the `hidden`
+  attribute.
+  Switch it to `hidden` once Tailwind is gone.
+- Asset content addressing lands with the first stylesheet.
+  Name static assets by a b3c32 code prefix, pass a name map in
+  template context, and keep any stale-asset cleanup scoped by
+  pattern.
+  marcustack's `_upload_dir` uploads only top-level files, so an
+  asset subdirectory needs a marcustack change.
+  That boundary is the maintainer's call.
+
 Some renaming later is expected and fine.
 Spend no more effort here than that.
-
-### ft/dev-loop
-
-Make iteration on templates and styles fast.
-
-Most of this exists: `serve --reload` watches `src/template` and
-`static`, and rebuilds through a subprocess.
-Build does no image processing, so it is fast regardless of
-collection size.
-
-- Wire the static asset copy into `build`.
-  `static_assets.py` has `copy_css_files()` and `copy_js_files()`
-  but nothing calls them.
-- Create the `static` directory the watcher already watches and the
-  build already creates empty output directories for.
-- Make a missing `watchdog` loud.
-  Reload currently catches the ImportError and prints a warning,
-  then silently does not reload, so an edit appears to do nothing
-  and the wrong thing gets debugged.
-- Assemble a small fixture collection for the loop.
-  Iterating against 645 photos is not the working rhythm; the real
-  collection is for acceptance runs.
-- `base_url` and the dev-versus-prod distinction land here.
-  It has no sensible program default: prod is a domain galleria must
-  not know, and dev is an address that does not exist until this loop
-  does.
-- The `serve` command is a stub reporting its unwired state on stderr.
-- `debug/template_debug.py` needs a refit.
-  Its sample data keys do not match the current template surface, its
-  structural analysis counts Alpine and Tailwind artifacts that are
-  being removed, and it manipulates `sys.path` at import rather than
-  relying on the package.
-
-### ft/preview-modal
-
-Clicking a thumbnail opens a preview.
-
-- Modal or full-page.
-- Show the scaled-up thumbnail immediately, swap in the web version
-  once loaded.
-- A toggle switches to full resolution.
-- A download button acts on whichever rendition is currently
-  displayed.
-- Keyboard navigation and a working no-JS anchor underneath.
-
-The web set averages 3.5MB per image across 645 photos.
-That is "web" as a photographer means it, sized to survive a social
-network's ingest, not as a browser means it.
-The swap will feel like waiting, which is what the decision after
-this task addresses.
-
-### ft/lazy-scroll
-
-Lazy-loaded infinite scroll, overriding the static pagination.
-
-- Not literally infinite.
-- Configurable.
-- Load ahead of the viewport by a tunable distance.
-- Fixed-dimension containers so arriving images do not reflow.
-
-Blank tiles filling in behind a fast scroll is the failure mode to
-avoid.
-
-### Decision point: what the preview needs
-
-Not a task.
-After the preview works, look at it on mobile against the real
-collection and answer two independent questions.
-
-Does the placeholder look acceptable while the larger image loads?
-If not, a progressive JPEG rendition is what fixes it.
-
-Does the larger image arrive fast enough to feel like a swap rather
-than a wait?
-If not, a smaller display rendition between thumbnail and web is what
-fixes it.
-
-Either, both, or neither may be needed for MVP.
-Progressive encoding changes what is seen during a transfer; a smaller
-rendition changes what is transferred.
-They address different complaints and neither substitutes for the
-other.
-
-What this decides is only what ships for MVP, not what exists.
-Both progressive JPEG and WEBP are formats a rendition spec names, and
-both belong in the set of options eventually.
-The rendition model is what makes that true: whichever is not chosen
-here lands later as configuration and a named generator, not as new
-plumbing.
-If adding the other one afterward would mean touching the generator's
-callers or branching on where output is displayed, the abstraction is
-wrong and that is the thing to fix.
-
-WEBP has incremental decoding, which paints top-to-bottom as bytes
-arrive.
-It does not have progressive decoding, the blurry-whole-image effect
-that makes a good placeholder.
-That is a JPEG feature, and it is why the two formats are not
-interchangeable here.
-
-Decide this by looking at it, not by reasoning about it.
-Then ask marcus how to proceed.
-Since both options need to exist, documenting both options' results and
-providing at least high-level planning documentation for both are required.
-
-### ft/static-gallery-refinements
-
-Observed on the real collection during the static gallery acceptance
-run.
-None blocks publishing; each is decided by looking at it.
-
-- Grid loading.
-  On LTE the grid shows empty cells with alt text for a noticeable
-  time.
-  Either thumbs move to progressive JPEG so cells fill smoothly, or
-  they stay WEBP behind a neutral placeholder block but
-  made smaller with tweaked defaults for faster loading.
-  Decide against a throttled browser run.
-- Per-photo page loading.
-  The display rendition is roughly 2MB and reads as a wait on mobile.
-  Two no-JavaScript mechanisms to try: `srcset` naming preview and
-  display so a phone fetches only the preview, and the preview as
-  the image's CSS background so it paints first and display paints
-  over it.
-  ft/preview-modal may make this moot; try it there first.
-- Per-photo page numbering.
-  Pages are named by stem.
-  The maintainer prefers grid position, `pic/1.html` onward.
-  Trade-off: position renumbers every URL when a photo is added or
-  removed, where the stem is stable; decide by whether the published
-  set is frozen.
-- Supplied navbar.
-  The parent site owns landing page and navigation; galleria emits
-  gallery trees only, so the built-in navbar, "COLLECTION Gallery"
-  and a count, stands pre-MVP.
-  The constraint that decides the mechanism: pages sit at two depths,
-  `gallery/COLLECTION/` and `gallery/COLLECTION/pic/`, and every link
-  is relative, so a verbatim fragment included by path cannot carry
-  links correct at both depths.
-  A template override directory solves depth but puts two projects
-  in authority over one template set.
-  Current lean is the parent post-processing the output, which reuses
-  the injection mechanism marcustack builds for the deprecation
-  banner and knows each file's path.
-  Who owns the navbar markup is open and is the director's call.
-- STEM collision.
-  Per-photo pages are named by `key.name`, so nested manifest paths
-  flatten.
-  Two photos sharing a basename in different directories write one
-  page, silently, the second overwriting the first.
-  The wedding collection has none.
-  Trigger: any collection whose manifest has subdirectories.
-  Fix is naming by the full key or by position; decide with the
-  numbering bullet above.
 
 ### ref/derive-pipeline
 
@@ -467,11 +358,179 @@ already done, and an input path as wide as the model behind it.
   Adopt-or-encode per record is most of the incremental skip.
 - When incremental derivation lands, flip build's `--derive`
   default to opt-out and revisit `--validate` with it.
+- Move `derive.py` hashing from `hash_b32` on read bytes to
+  `code_from_path`.
+  The b3c32 floor is already 0.0.3.
+- Record rendition dimensions.
+  They make `srcset` widths real and allow `width` and `height`
+  attributes.
+- Content-addressed rendition names, if wanted, come from this
+  pipeline's source-hash-plus-spec key.
 
 `PicRenditions` holds relative paths against a root and knows nothing
 of where files live.
 That stays until marcustack's routing and deploy tail exist, since a
 final shape now would be guessing at half the requirements.
+
+### ft/dev-loop
+
+Make iteration on templates and styles fast.
+
+Most of this exists: `serve --reload` watches `src/template` and
+`static`, and rebuilds through a subprocess.
+Build does no image processing, so it is fast regardless of
+collection size.
+
+- Wire the static asset copy into `build`.
+  `static_assets.py` has `copy_css_files()` and `copy_js_files()`
+  but nothing calls them.
+- Create the `static` directory the watcher already watches and the
+  build already creates empty output directories for.
+- Make a missing `watchdog` loud.
+  Reload currently catches the ImportError and prints a warning,
+  then silently does not reload, so an edit appears to do nothing
+  and the wrong thing gets debugged.
+- Assemble a small fixture collection for the loop.
+  Iterating against 645 photos is not the working rhythm; the real
+  collection is for acceptance runs.
+- `base_url` and the dev-versus-prod distinction land here.
+  It has no sensible program default: prod is a domain galleria must
+  not know, and dev is an address that does not exist until this loop
+  does.
+- The `serve` command is a stub reporting its unwired state on stderr.
+- `debug/template_debug.py` needs a refit.
+  Its sample data keys do not match the current template surface, its
+  structural analysis counts Alpine and Tailwind artifacts that are
+  being removed, and it manipulates `sys.path` at import rather than
+  relying on the package.
+- The `grid-scroll` inline script has no automated tests.
+  Add JS test tooling and backfill tests for it.
+- Interim loop until then: `uv run python -m galleria build` with
+  both manifests and `--output-dir` pointed at a built collection,
+  served by `python -m http.server`.
+  `fetch` needs HTTP, so `file://` cannot exercise the scroll.
+
+### ft/preview-modal
+
+Clicking a thumbnail opens a preview.
+
+- Modal or full-page.
+- Show the scaled-up thumbnail immediately, swap in the web version
+  once loaded.
+- A toggle switches to full resolution.
+- A download button acts on whichever rendition is currently
+  displayed.
+- Keyboard navigation and a working no-JS anchor underneath.
+- A modal keeps scroll position, which infinite scroll loses on Back
+  when the browser evicts the page from its back-forward cache.
+  Until the modal exists, restoring loaded count and scroll offset
+  per tab is the interim fix; it is redundant once the modal lands.
+- Decide here whether Alpine.js earns a place.
+  The scroll script is plain JavaScript; Alpine fits state-driven UI
+  like a modal, not imperative DOM work.
+- A modal's markup can follow the grid's pattern: a `<template>`
+  rendered by the same include as the page, cloned by script.
+
+The web set averages 3.5MB per image across 645 photos.
+That is "web" as a photographer means it, sized to survive a social
+network's ingest, not as a browser means it.
+The swap will feel like waiting, which is what the decision after
+this task addresses.
+
+### Decision point: what the preview needs
+
+Not a task.
+After the preview works, look at it on mobile against the real
+collection and answer two independent questions.
+
+Does the placeholder look acceptable while the larger image loads?
+If not, a progressive JPEG rendition is what fixes it.
+
+Does the larger image arrive fast enough to feel like a swap rather
+than a wait?
+If not, a smaller display rendition between thumbnail and web is what
+fixes it.
+
+Either, both, or neither may be needed for MVP.
+Progressive encoding changes what is seen during a transfer; a smaller
+rendition changes what is transferred.
+They address different complaints and neither substitutes for the
+other.
+
+What this decides is only what ships for MVP, not what exists.
+Both progressive JPEG and WEBP are formats a rendition spec names, and
+both belong in the set of options eventually.
+The rendition model is what makes that true: whichever is not chosen
+here lands later as configuration and a named generator, not as new
+plumbing.
+If adding the other one afterward would mean touching the generator's
+callers or branching on where output is displayed, the abstraction is
+wrong and that is the thing to fix.
+
+WEBP has incremental decoding, which paints top-to-bottom as bytes
+arrive.
+It does not have progressive decoding, the blurry-whole-image effect
+that makes a good placeholder.
+That is a JPEG feature, and it is why the two formats are not
+interchangeable here.
+
+Decide this by looking at it, not by reasoning about it.
+Then ask marcus how to proceed.
+Since both options need to exist, documenting both options' results and
+providing at least high-level planning documentation for both are required.
+
+### ft/static-gallery-refinements
+
+Observed on the real collection during the static gallery acceptance
+run.
+None blocks publishing; each is decided by looking at it.
+
+- Grid thumbs at mobile widths.
+  The grey placeholder and hidden alt text landed.
+  At mobile widths a cell is about 180 CSS px, roughly 540 device px
+  on a 3x screen, so the 400px WebP thumb is upscaled and its
+  artifacts show.
+  A larger thumb or `srcset` on grid cells, decided against the real
+  collection.
+- Jump to top and bottom.
+  Top is trivial.
+  Bottom is ill-defined under infinite scroll: the real end means
+  appending every remaining batch first.
+- Alt text wording.
+  Cells read `COLLECTION STEM`, which repeats the collection and
+  reads out a filename to screen readers.
+- Per-photo page numbering.
+  Pages are named by stem.
+  The maintainer prefers grid position, `pic/1.html` onward.
+  Trade-off: position renumbers every URL when a photo is added or
+  removed, where the stem is stable; decide by whether the published
+  set is frozen.
+- Supplied navbar.
+  The parent site owns landing page and navigation; galleria emits
+  gallery trees only, so the built-in navbar, "COLLECTION Gallery"
+  and a count, stands pre-MVP.
+  The constraint that decides the mechanism: pages sit at two depths,
+  `gallery/COLLECTION/` and `gallery/COLLECTION/pic/`, and every link
+  is relative, so a verbatim fragment included by path cannot carry
+  links correct at both depths.
+  A template override directory solves depth but puts two projects
+  in authority over one template set.
+  Current lean is the parent post-processing the output, which reuses
+  the injection mechanism marcustack builds for the deprecation
+  banner and knows each file's path.
+  Who owns the navbar markup is open and is the director's call.
+- STEM collision.
+  Per-photo pages are named by `key.name`, so nested manifest paths
+  flatten.
+  Two photos sharing a basename in different directories write one
+  page, silently, the second overwriting the first.
+  The wedding collection has none.
+  Trigger: any collection whose manifest has subdirectories.
+  Fix is naming by the full key or by position; decide with the
+  numbering bullet above.
+  The grid scroll script substitutes the whole key into the cell
+  template, so nested keys would also put directories into
+  per-photo hrefs.
 
 ### doc/mvp-docs-pass
 
@@ -526,6 +585,27 @@ Every template test added from here hits the same thing.
 `_one(soup, selector)` in `test/template/test_gallery_template.py`
 is the seed: it narrows `select_one` once.
 Attribute values still need `str()` at each use.
+
+- Template tests are hard to re-enter: it is not clear what each
+  render sets up or what each assertion selects.
+  Make helpers state both.
+- `GRID_CELL = ".pic-cell:not(template *)"` lives in the template
+  tests and is spelled out inline in `test_build.py`.
+  Share one definition through a conftest.
+
+### ref/template-autoescape
+
+The Jinja `Environment` has autoescape off, so values reach
+attributes raw.
+Harmless for today's stems; enabling it may change existing output,
+so it gets its own look.
+
+### chr/template-markers
+
+Every template's START and END comment says `src/template/`, which is
+stale since the module layout change.
+Correct them and give each template a `{# #}` header block (summary,
+Author, Created, License), as `components/grid-scroll.j2.html` has.
 
 ### chr/orphaned-test-fixtures
 
@@ -606,6 +686,16 @@ Recorded so they are not rediscovered.
 - CONTRIBUTE forbids batching questions.
   Independent questions batch fine and doing so saves exchanges; the
   rule means only that a question must not be buried in prose.
+- Dominant-color thumb placeholders.
+  One color per photo computed at derive time, painted at partial
+  opacity.
+  About 1.8KB gzipped extra in the grid index as 12-bit hex in a
+  separate array.
+  Low priority; after `ref/derive-pipeline`.
+- Indexing the grid index by short hash instead of stem.
+  Measured larger: hashes do not compress and the client still needs
+  stems to build URLs.
+  Revisit only if rendition URLs become hash-based.
   Reword it.
 - `pyright` and `beautifulsoup4` are unpinned.
   Both changed their finding sets materially across recent versions,
