@@ -19,7 +19,6 @@ dev = [
     "pyfakefs",
     "ruff",
     "beautifulsoup4",
-    "watchdog>=6.0.0",
 ]
 
 [build-system]
