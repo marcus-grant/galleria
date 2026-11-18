@@ -14,9 +14,6 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest",
-    "pytest-cov",
-    "pytest-mock",
-    "pyfakefs",
     "ruff",
     "beautifulsoup4",
 ]
