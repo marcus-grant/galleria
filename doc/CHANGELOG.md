@@ -3,6 +3,30 @@
 Most recent first.
 Pre-split history is archived under [changelog/](changelog/).
 
+## 2026-11-17
+
+### ft/lazy-scroll
+
+- Infinite scroll on the thumb grid for page 1 and index.
+  - Without JavaScript nothing changes; pages 2 and up always paginate.
+  - `build` writes `grid-index-CODE.json`, the full record keys in
+    page order, named by a b3c32 code prefix and replacing any prior
+    one.
+  - Page 1 carries the index name, load-ahead viewports, and page size
+    as data attributes, plus a `<template>` cell rendered by the
+    `pic-cell` include from a sentinel record.
+  - An inline module script clones that cell per key as the grid end
+    nears, hides pagination only after the index loads, and leaves
+    the no-JS path on any failure.
+- New `Config` tunables with program defaults: `load_ahead_viewports`
+  and `artifact_name_length`.
+- Grey placeholder behind loading thumbs; alt text hidden visually.
+- First inline style block: a token layer and BEM rules.
+- b3c32 floor raised to 0.0.3 for its streaming API.
+- Config defaults accessed through the `default` module.
+- Accepted in a browser on the real 645-photo collection.
+- Version 0.0.4.
+
 ## 2026-08-31
 
 ### ft/static-gallery
