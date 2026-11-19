@@ -97,30 +97,6 @@ helper rather than the project.
 The tasks below are ordered by what unblocks what.
 Each is a separate change with its own plan and sign-off.
 
-### Console script (Fix: on main)
-
-The package declares no console script.
-A tool install therefore provides no `galleria` command.
-
-- Lands as a `Fix:` commit on main, not on a branch.
-  - It follows the merge of `chr/orphaned-module-removal`.
-- Add `[project.scripts]` with `galleria = "galleria.cli:cli"`.
-- Bump the version and run `uv lock` in the same commit.
-- Verify with a clean `uv tool install` from the tag.
-  - Run the installed `galleria` command, not the module.
-  - Check `galleria build --help` lists every flag marcustack passes.
-  - Those are `--original-manifest`, `--display-manifest`, `--output-dir`.
-  - Also `--derive`/`--no-derive` and `--no-validate`.
-  - Then release.
-- marcustack pins the release, then switches its invocation.
-  - It switches only after the tag exists.
-  - Switching first breaks its pipeline.
-- Once switched, marcustack's pipeline exercises only `build`.
-  - The clean-install check still covers the rest.
-  - It renders no templates, so it does not catch missing package data.
-- Declare `pyright` in the dev group.
-  - `uv run pyright` currently resolves it from outside the project.
-
 ### ft/pic-page-loading
 
 Per-photo page loading, moved out of `ft/static-gallery-refinements`.

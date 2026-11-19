@@ -3,6 +3,16 @@
 Most recent first.
 Pre-split history is archived under [changelog/](changelog/).
 
+## 2026-11-19
+
+### main
+
+- `galleria` console script declared as `galleria.cli:cli`.
+  - A tool install now provides the `galleria` command.
+- `pyright` declared in the dev group and pinned by the lock.
+  - `uv run pyright` resolved it from outside the project before.
+- Version 0.0.5.
+
 ## 2026-11-18
 
 ### chr/orphaned-module-removal
