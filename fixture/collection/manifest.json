@@ -1,0 +1,56 @@
+{
+  "version": "0.1.0",
+  "collection_name": "fixture",
+  "generated_at": "2026-08-17T10:00:00Z",
+  "collection_root": "photo",
+  "pic": [
+    {
+      "hash": "b3c32:FZWJ1EXDRFW3D98021D27GMJ",
+      "relative_path": "a-red.jpg",
+      "size_bytes": 941,
+      "mtime": "2026-08-17T09:00:00Z",
+      "timestamp": "2026-08-16T09:00:00Z",
+      "timestamp_source": "exif"
+    },
+    {
+      "hash": "b3c32:BF50M92PSC7K3J762WYBZWFT",
+      "relative_path": "b-green.jpg",
+      "size_bytes": 949,
+      "mtime": "2026-08-17T09:05:00Z",
+      "timestamp": "2026-08-16T09:05:00Z",
+      "timestamp_source": "exif"
+    },
+    {
+      "hash": "b3c32:7MA7M2C8E1DCG5WTHZ22Z3K7",
+      "relative_path": "c-blue.jpg",
+      "size_bytes": 941,
+      "mtime": "2026-08-17T09:10:00Z",
+      "timestamp": "2026-08-16T09:10:00Z",
+      "timestamp_source": "exif"
+    },
+    {
+      "hash": "b3c32:35GYAXG8YMMNTM2K4A5N6PT5",
+      "relative_path": "2026/d-violet.jpg",
+      "size_bytes": 898,
+      "mtime": "2026-08-17T09:15:00Z",
+      "timestamp": "2026-08-16T09:15:00Z",
+      "timestamp_source": "exif"
+    },
+    {
+      "hash": "b3c32:FKGM136DT4KQ2M1N7EH1V3EM",
+      "relative_path": "e-amber.jpg",
+      "size_bytes": 914,
+      "mtime": "2026-08-17T09:20:00Z",
+      "timestamp": "2026-08-16T09:20:00Z",
+      "timestamp_source": "exif"
+    },
+    {
+      "hash": "b3c32:GFPV55Z31J19YR4G5MADMYW7",
+      "relative_path": "f-slate.jpg",
+      "size_bytes": 899,
+      "mtime": "2026-08-17T09:25:00Z",
+      "timestamp": "2026-08-16T09:25:00Z",
+      "timestamp_source": "exif"
+    }
+  ]
+}
