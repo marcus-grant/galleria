@@ -17,6 +17,7 @@ galleria = "galleria.cli:cli"
 [dependency-groups]
 dev = [
     "pytest",
+    "pyright",
     "ruff",
     "beautifulsoup4",
 ]
