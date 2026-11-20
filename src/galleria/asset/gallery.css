@@ -9,13 +9,52 @@
 :root {
   --pic-placeholder-bg: #e5e7eb;
   --pic-cell-radius: 0.5rem;
+  --pic-cell-shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --pic-cell-transition: box-shadow 150ms ease;
+  --pic-grid-columns: 2;
+  --pic-grid-gap: 1rem;
 }
 
+/* Column counts fill whole rows of the default page size at each width. */
+@media (min-width: 768px) {
+  :root {
+    --pic-grid-columns: 4;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --pic-grid-columns: 6;
+  }
+}
+
+.pic-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--pic-grid-columns), 1fr);
+  gap: var(--pic-grid-gap);
+}
+
+/* The link is the cell's box: it fixes the square, clips the image to
+   the rounded corners, and carries the hover shadow. The shadow sits
+   here because overflow: hidden clips a child's shadow, not its own. */
 .pic-cell__link {
+  display: block;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
   background: var(--pic-placeholder-bg);
   border-radius: var(--pic-cell-radius);
+  transition: var(--pic-cell-transition);
+}
+
+.pic-cell__link:hover {
+  box-shadow: var(--pic-cell-shadow-hover);
 }
 
 .pic-cell__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   color: transparent;
 }

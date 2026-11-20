@@ -90,8 +90,12 @@ class TestGalleryPage:
         assert meta is not None and meta["content"] == "noindex, nofollow"
 
     def test_one_grid_container(self):
-        """Exactly one grid container renders, carrying the grid class."""
-        assert len(_page([_record("a")]).select(".grid")) == 1
+        """Exactly one grid container renders, carrying the grid block."""
+        assert len(_page([_record("a")]).select(".pic-grid")) == 1
+
+    def test_grid_does_not_use_picos_grid_class(self):
+        """Pico defines .grid, so the grid takes its own block name."""
+        assert _page([_record("a")]).select(".grid") == []
 
     def test_cell_links_the_per_photo_page(self):
         """Each cell's anchor targets pic/STEM.html, never an image."""
@@ -134,9 +138,10 @@ class TestGalleryPage:
         assert _page([], page=3, pages=3).select_one("a[rel=next]") is None
 
     def test_cell_reserves_its_box(self):
-        """Every cell fixes its aspect so arriving images do not reflow the grid."""
+        """Every cell's link carries the class the stylesheet gives the
+        fixed aspect, so arriving images do not reflow the grid."""
         soup = _page([_record("a")])
-        assert "aspect-square" in _one(soup, ".pic-cell a")["class"]
+        assert "pic-cell__link" in _one(soup, ".pic-cell a")["class"]
 
 
 class TestScrollHooks:
