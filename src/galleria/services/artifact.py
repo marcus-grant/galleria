@@ -9,12 +9,18 @@ License: AGPL-3.0-or-later
 
 from pathlib import Path
 import re
+import shutil
 
 import b3c32
 
 # b3c32 certifies only this width today, so the full code is computed
 # and the name takes a prefix of it.
 CODE_BITS = 120
+
+
+def _artifact_name(stem: str, ext: str, code: str, length: int) -> str:
+    """STEM-CODE.EXT with the code cut to its first length characters."""
+    return f"{stem}-{code[:length]}.{ext}"
 
 
 def _prune_artifacts(dest_dir: Path, stem: str, ext: str) -> None:
@@ -42,8 +48,23 @@ def write_artifact(
     builds, so prior artifacts of the same stem and extension are
     removed first.
     """
-    code = b3c32.code_from_chunks([data], CODE_BITS)[:length]
-    name = f"{stem}-{code}.{ext}"
+    code = b3c32.code_from_chunks([data], CODE_BITS)
+    name = _artifact_name(stem, ext, code, length)
     _prune_artifacts(dest_dir, stem, ext)
     (dest_dir / name).write_bytes(data)
+    return name
+
+
+def copy_artifact(dest_dir: Path, stem: str, ext: str, src: Path, length: int) -> str:
+    """Copy the file src to dest_dir as STEM-CODE.EXT and return the name.
+
+    The code is the b3c32 code of the file's bytes, streamed so a
+    large file is never read whole. Naming and pruning are write_artifact's.
+    src must not be inside dest_dir, or pruning could delete it before
+    the copy.
+    """
+    code = b3c32.code_from_path(src, CODE_BITS)
+    name = _artifact_name(stem, ext, code, length)
+    _prune_artifacts(dest_dir, stem, ext)
+    shutil.copyfile(src, dest_dir / name)
     return name

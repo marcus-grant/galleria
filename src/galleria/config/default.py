@@ -30,3 +30,7 @@ LOAD_AHEAD_VIEWPORTS = 2
 
 # Characters of a b3c32 code prefix that name a derived artifact.
 ARTIFACT_NAME_LENGTH = 8
+
+# Where pages link the gallery stylesheet. None means the copy galleria
+# emits beside the pages; a string is linked verbatim instead.
+STYLESHEET_URL: str | None = None

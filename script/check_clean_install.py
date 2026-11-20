@@ -25,6 +25,7 @@ SENTINEL = "__STEM__"
 # Package data the installed distribution must ship, relative to
 # site-packages. The list ft/gallery-styling extends as assets land.
 PACKAGE_FILES = [
+    "galleria/asset/gallery.css",
     "galleria/vendor/pico/pico.min.css",
     "galleria/vendor/pico/LICENSE.md",
     "galleria/vendor/pico/pico.json",
@@ -47,7 +48,8 @@ class ImgSrcs(HTMLParser):
 def expected_files(keys: list[Path]) -> list[str]:
     """Output-relative paths that must exist, one entry per requirement.
 
-    The list ft/gallery-styling extends with its stylesheet.
+    The content-addressed stylesheets and grid index are matched by
+    pattern elsewhere, since their names carry a code.
     """
     site = f"gallery/{COLLECTION}"
     files = [f"{site}/page1.html", f"{site}/index.html"]
@@ -110,6 +112,38 @@ def missing_package_files() -> list[str]:
     return problems
 
 
+def wrong_stylesheets(out: Path) -> list[str]:
+    """Check the emitted stylesheets, and that Pico came from the wheel.
+
+    Exactly one pico-*.css and one gallery-*.css sit beside the pages.
+    The emitted Pico must be byte-identical to the installed vendored
+    file, and its name's code must be a prefix of the code recorded in
+    the installed pico.json.
+    """
+    site = out / "gallery" / COLLECTION
+    problems = []
+    found = {}
+    for stem in ("pico", "gallery"):
+        files = list(site.glob(f"{stem}-*.css"))
+        if len(files) != 1 or files[0].stat().st_size == 0:
+            problems.append(f"expected one non-empty {stem}-*.css in {site.name}")
+        else:
+            found[stem] = files[0]
+    if "pico" not in found:
+        return problems
+    dist = metadata.distribution("galleria")
+    vendor = Path(str(dist.locate_file("galleria/vendor/pico")))
+    css, record = vendor / "pico.min.css", vendor / "pico.json"
+    if not (css.is_file() and record.is_file()):
+        return problems  # already reported as missing package files
+    if found["pico"].read_bytes() != css.read_bytes():
+        problems.append("emitted pico css differs from the installed vendored file")
+    code = found["pico"].stem.removeprefix("pico-")
+    if not json.loads(record.read_text())["code"].startswith(code):
+        problems.append(f"{found['pico'].name} is not named by the recorded code")
+    return problems
+
+
 def main(manifest: Path) -> int:
     """Build the fixture and report every problem found."""
     exe = Path(sys.executable).parent / "galleria"
@@ -120,16 +154,17 @@ def main(manifest: Path) -> int:
         Path(p["relative_path"]).with_suffix("")
         for p in json.loads(manifest.read_text())["pic"]
     ]
+    problems = missing_package_files()
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp)
         cmd = [str(exe), "build", "--derive"]
         cmd += ["--original-manifest", str(manifest), "--output-dir", str(out)]
         run = subprocess.run(cmd, capture_output=True, text=True)
         if run.returncode != 0:
-            print(f"FAIL: galleria build exited {run.returncode}", file=sys.stderr)
+            problems.append(f"galleria build exited {run.returncode}")
             print(run.stdout + run.stderr, file=sys.stderr)
-            return 1
-        problems = missing_outputs(out, keys) + missing_package_files()
+        else:
+            problems += missing_outputs(out, keys) + wrong_stylesheets(out)
     for problem in problems:
         print(f"FAIL: {problem}", file=sys.stderr)
     return 1 if problems else 0

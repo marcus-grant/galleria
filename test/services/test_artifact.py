@@ -122,3 +122,80 @@ class TestPruneScope:
         folder.mkdir()
         artifact.write_artifact(tmp_path, "site", "css", b"a", 8)
         assert folder.is_dir()
+
+
+class TestCopyArtifact:
+    """A file on disk in, a content-named copy out."""
+
+    @staticmethod
+    def _src(tmp_path: Path, data: bytes) -> Path:
+        """A source file outside the destination directory."""
+        src = tmp_path / "src" / "source.css"
+        src.parent.mkdir(exist_ok=True)
+        src.write_bytes(data)
+        return src
+
+    @staticmethod
+    def _dest(tmp_path: Path) -> Path:
+        """An empty destination directory."""
+        dest = tmp_path / "dest"
+        dest.mkdir(exist_ok=True)
+        return dest
+
+    def test_name_is_stem_and_code_prefix_of_the_source(self, tmp_path: Path):
+        """The code in the name is the streamed b3c32 code of the file."""
+        src = self._src(tmp_path, b"body{}")
+        name = artifact.copy_artifact(self._dest(tmp_path), "site", "css", src, 8)
+        code = b3c32.code_from_path(src, 120)
+        assert name == f"site-{code[:8]}.css"
+
+    def test_copy_is_byte_equal(self, tmp_path: Path):
+        """The artifact is the source, byte for byte."""
+        dest = self._dest(tmp_path)
+        src = self._src(tmp_path, b"\x00\xffabc")
+        name = artifact.copy_artifact(dest, "site", "css", src, 8)
+        assert (dest / name).read_bytes() == b"\x00\xffabc"
+
+    def test_source_is_untouched(self, tmp_path: Path):
+        """A copy leaves the source in place with its bytes unchanged."""
+        src = self._src(tmp_path, b"\x00\xffabc")
+        artifact.copy_artifact(self._dest(tmp_path), "site", "css", src, 8)
+        assert src.read_bytes() == b"\x00\xffabc"
+
+    def test_changed_source_replaces_the_prior_artifact(self, tmp_path: Path):
+        """A new version of the source must not deploy beside the old."""
+        dest = self._dest(tmp_path)
+        src = self._src(tmp_path, b"a")
+        old = artifact.copy_artifact(dest, "site", "css", src, 8)
+        src.write_bytes(b"b")
+        new = artifact.copy_artifact(dest, "site", "css", src, 8)
+        assert not (dest / old).exists()
+        assert [p.name for p in dest.glob("site-*.css")] == [new]
+
+    def test_unchanged_source_keeps_its_artifact(self, tmp_path: Path):
+        """Cleanup must not delete the artifact a recopy just wrote."""
+        dest = self._dest(tmp_path)
+        src = self._src(tmp_path, b"a")
+        artifact.copy_artifact(dest, "site", "css", src, 8)
+        name = artifact.copy_artifact(dest, "site", "css", src, 8)
+        assert [p.name for p in dest.glob("site-*.css")] == [name]
+
+    def test_other_artifacts_and_files_survive(self, tmp_path: Path):
+        """Another stem, another extension, the grid index, and unrelated
+        files are never candidates."""
+        dest = self._dest(tmp_path)
+        keep = ["theme-AB12CD34.css", "site-AB12CD34.js", "page1.html"]
+        keep.append("grid-index-AB12CD34.json")
+        for name in keep:
+            (dest / name).write_text("keep")
+        artifact.copy_artifact(dest, "site", "css", self._src(tmp_path, b"a"), 8)
+        assert all((dest / name).read_text() == "keep" for name in keep)
+
+    def test_stem_prefix_of_another_stem_spares_it(self, tmp_path: Path):
+        """Copying stem grid does not prune grid-index artifacts."""
+        dest = self._dest(tmp_path)
+        index = dest / "grid-index-AB12CD34.json"
+        index.write_text("[]")
+        src = self._src(tmp_path, b"a")
+        artifact.copy_artifact(dest, "grid", "json", src, 8)
+        assert index.read_text() == "[]"

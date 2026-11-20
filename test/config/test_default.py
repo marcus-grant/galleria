@@ -35,6 +35,10 @@ class TestDefaultKeys:
         """Eight characters of a b3c32 code name a derived artifact."""
         assert default.ARTIFACT_NAME_LENGTH == 8
 
+    def test_stylesheet_url_defaults_to_the_local_stylesheet(self):
+        """No URL means pages link the gallery stylesheet galleria emits."""
+        assert default.STYLESHEET_URL is None
+
     def test_specs_cover_every_derived_rendition(self):
         """Display, preview, and thumb have specs; original does not."""
         assert set(default.RENDITION_SPECS) == set(Derivation) - {Derivation.ORIGINAL}

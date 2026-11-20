@@ -32,6 +32,7 @@ where = ["src"]
 [tool.setuptools.package-data]
 galleria = [
     "template/**/*.html",
+    "asset/gallery.css",
     "vendor/pico/pico.min.css",
     "vendor/pico/LICENSE.md",
     "vendor/pico/pico.json",

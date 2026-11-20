@@ -9,7 +9,7 @@ License: AGPL-3.0-or-later
 from pathlib import Path
 
 from bs4 import BeautifulSoup, Tag
-from conftest import make_pic
+from conftest import make_asset_context, make_pic
 
 from galleria.config import default
 from galleria.models.rendition import PicRenditions
@@ -41,6 +41,7 @@ def _page(pics, **overrides) -> BeautifulSoup:
     defaults; each keyword override replaces one context key.
     """
     ctx = {
+        **make_asset_context(),
         "collection": "wedding",
         "pics": pics,
         "page": 1,
@@ -67,6 +68,7 @@ def _one(soup: BeautifulSoup, selector: str) -> Tag:
 def _pic_page(rec, prev=None, next=None) -> BeautifulSoup:
     """Render pic.j2.html with the context build_gallery supplies."""
     ctx = {
+        **make_asset_context(asset_base="../"),
         "collection": "wedding",
         "pic": rec,
         "prev": prev,

@@ -1,0 +1,21 @@
+/*
+ * Galleria's own stylesheet, linked after Pico on every page.
+ *
+ * Author: Marcus Grant
+ * Created: 2026-11-20
+ * License: AGPL-3.0-or-later
+ */
+
+:root {
+  --pic-placeholder-bg: #e5e7eb;
+  --pic-cell-radius: 0.5rem;
+}
+
+.pic-cell__link {
+  background: var(--pic-placeholder-bg);
+  border-radius: var(--pic-cell-radius);
+}
+
+.pic-cell__img {
+  color: transparent;
+}

@@ -1,12 +1,13 @@
 # pyright: reportArgumentType=false, reportOptionalMemberAccess=false, reportOptionalIterable=false, reportCallIssue=false
 from bs4 import BeautifulSoup
+from conftest import make_asset_context
 from galleria.services.template_renderer import TemplateRenderer
 
 
 def test_base_template_includes_tailwind_cdn():
     """Test that base template includes Tailwind CSS from CDN"""
     renderer = TemplateRenderer()
-    photo_data = {"photos": []}
+    photo_data = make_asset_context(photos=[])
 
     html = renderer.render("base.j2.html", photo_data)
     soup = BeautifulSoup(html, "html.parser")
@@ -51,7 +52,7 @@ def test_base_template_includes_tailwind_cdn():
 def test_base_template_has_proper_html_structure():
     """Test that template has proper HTML5 structure"""
     renderer = TemplateRenderer()
-    photo_data = {"photos": []}
+    photo_data = make_asset_context(photos=[])
 
     html = renderer.render("base.j2.html", photo_data)
     soup = BeautifulSoup(html, "html.parser")
