@@ -30,7 +30,12 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-galleria = ["template/**/*.html"]
+galleria = [
+    "template/**/*.html",
+    "vendor/pico/pico.min.css",
+    "vendor/pico/LICENSE.md",
+    "vendor/pico/pico.json",
+]
 
 [tool.ruff]
 line-length = 88

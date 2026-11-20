@@ -13,6 +13,7 @@ Usage: check_clean_install.py MANIFEST
 
 import json
 from html.parser import HTMLParser
+from importlib import metadata
 from pathlib import Path
 import subprocess
 import sys
@@ -20,6 +21,14 @@ import tempfile
 
 COLLECTION = "fixture"
 SENTINEL = "__STEM__"
+
+# Package data the installed distribution must ship, relative to
+# site-packages. The list ft/gallery-styling extends as assets land.
+PACKAGE_FILES = [
+    "galleria/vendor/pico/pico.min.css",
+    "galleria/vendor/pico/LICENSE.md",
+    "galleria/vendor/pico/pico.json",
+]
 
 
 class ImgSrcs(HTMLParser):
@@ -81,6 +90,26 @@ def missing_thumb_links(site: Path, count: int) -> list[str]:
     return problems
 
 
+def missing_package_files() -> list[str]:
+    """Describe each PACKAGE_FILES entry the installed galleria lacks.
+
+    Reads the installed distribution's file list and resolves each
+    entry on disk, so it sees the wheel, never the checkout.
+    """
+    dist = metadata.distribution("galleria")
+    listed = {str(f): f for f in dist.files or []}
+    problems = []
+    for rel in PACKAGE_FILES:
+        entry = listed.get(rel)
+        if entry is None:
+            problems.append(f"installed distribution does not list {rel}")
+        elif not (path := Path(str(dist.locate_file(entry)))).is_file():
+            problems.append(f"listed but absent on disk: {rel}")
+        elif path.stat().st_size == 0:
+            problems.append(f"installed file is empty: {rel}")
+    return problems
+
+
 def main(manifest: Path) -> int:
     """Build the fixture and report every problem found."""
     exe = Path(sys.executable).parent / "galleria"
@@ -100,7 +129,7 @@ def main(manifest: Path) -> int:
             print(f"FAIL: galleria build exited {run.returncode}", file=sys.stderr)
             print(run.stdout + run.stderr, file=sys.stderr)
             return 1
-        problems = missing_outputs(out, keys)
+        problems = missing_outputs(out, keys) + missing_package_files()
     for problem in problems:
         print(f"FAIL: {problem}", file=sys.stderr)
     return 1 if problems else 0

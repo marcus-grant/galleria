@@ -20,3 +20,6 @@ clean-install:
 
 build:
     uv run python -m galleria build
+
+vendor-pico VERSION:
+    uv run python script/vendor_pico.py {{VERSION}}
