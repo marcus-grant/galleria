@@ -20,8 +20,9 @@ RENDITION_SPECS: dict[Derivation, RenditionSpec] = {
 
 OUTPUT_DIR = Path("_build")
 
-# Grid fills 6, 4, or 2 columns by breakpoint; 96 fills whole rows at
-# every width and paginates a 645-photo collection into 7 pages.
+# Grid fills 6, 4, or 3 columns by breakpoint, all of which divide 12;
+# 96 fills whole rows at every width and paginates a 645-photo
+# collection into 7 pages.
 PAGE_SIZE = 96
 
 # The client starts fetching more cells when the grid end is this many
@@ -30,3 +31,7 @@ LOAD_AHEAD_VIEWPORTS = 2
 
 # Characters of a b3c32 code prefix that name a derived artifact.
 ARTIFACT_NAME_LENGTH = 8
+
+# Where pages link the gallery stylesheet. None means the copy galleria
+# emits beside the pages; a string is linked verbatim instead.
+STYLESHEET_URL: str | None = None

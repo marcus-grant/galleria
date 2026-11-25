@@ -6,10 +6,12 @@ License: AGPL-3.0-or-later
 """
 
 from dataclasses import replace
+from importlib import resources
 import json
 from pathlib import Path
 from unittest.mock import patch
 
+import b3c32
 from bs4 import BeautifulSoup as BSoup
 from click.testing import CliRunner
 from PIL import Image
@@ -224,6 +226,87 @@ class TestBuildGalleryGridIndex:
             name = build_gallery(_cfg(man, out, 2), self.collection, records)
         grid = [c.args[2] for c in spy.call_args_list if c.args[1] == "gallery.j2.html"]
         assert [ctx["grid_index"] for ctx in grid] == [name, name]
+
+
+def _packaged(*parts: str) -> Path:
+    """Path of a file shipped inside the galleria package."""
+    return Path(str(resources.files("galleria").joinpath(*parts)))
+
+
+def _stylesheet_links(page: Path) -> list[str]:
+    """Hrefs of the page's stylesheet links, in document order."""
+    soup = BSoup(page.read_text(), "html.parser")
+    return [str(link["href"]) for link in soup.select("link[rel=stylesheet]")]
+
+
+class TestStylesheets:
+    """Pico and the gallery stylesheet, emitted and linked on every page."""
+
+    collection = "wedding"
+    url = "https://cdn.example.test/g.css?v=1&x=2"
+
+    def _build(self, tmp_path: Path, **overrides) -> Path:
+        """Build two pics and return the collection's site directory."""
+        man, out, records = _records(tmp_path, 2)
+        cfg = replace(_cfg(man, out, 5), **overrides)
+        build_gallery(cfg, self.collection, records)
+        return out / "gallery" / self.collection
+
+    def _pages(self, site: Path) -> list[Path]:
+        """One page at each depth: a grid page and a per-photo page."""
+        return [site / "page1.html", site / "pic" / "000.html"]
+
+    def test_both_stylesheets_are_emitted_by_content(self, tmp_path: Path):
+        """Each name is its stem plus the code prefix of its source file."""
+        site = self._build(tmp_path)
+        pico = b3c32.code_from_path(_packaged("vendor", "pico", "pico.min.css"), 120)
+        gallery = b3c32.code_from_path(_packaged("asset", "gallery.css"), 120)
+        expected = [f"gallery-{gallery[:8]}.css", f"pico-{pico[:8]}.css"]
+        assert sorted(p.name for p in site.glob("*.css")) == expected
+
+    def test_links_resolve_to_emitted_files_at_both_depths(self, tmp_path: Path):
+        """Relative hrefs reach a real file from a grid page and from pic/."""
+        site = self._build(tmp_path)
+        for page in self._pages(site):
+            links = _stylesheet_links(page)
+            assert len(links) == 2
+            assert all((page.parent / href).is_file() for href in links)
+
+    def test_pico_is_linked_before_the_gallery_stylesheet(self, tmp_path: Path):
+        """The gallery stylesheet comes second, so it can override Pico."""
+        site = self._build(tmp_path)
+        for page in self._pages(site):
+            first, second = _stylesheet_links(page)
+            assert Path(first).name.startswith("pico-")
+            assert Path(second).name.startswith("gallery-")
+
+    def test_set_url_is_linked_verbatim_at_both_depths(self, tmp_path: Path):
+        """A configured URL replaces the local link, unescaped."""
+        site = self._build(tmp_path, stylesheet_url=self.url)
+        for page in self._pages(site):
+            assert f'href="{self.url}"' in page.read_text()
+            assert _stylesheet_links(page)[1] == self.url
+
+    def test_set_url_keeps_the_local_pico_link(self, tmp_path: Path):
+        """Pico is linked locally whether or not a URL is set."""
+        site = self._build(tmp_path, stylesheet_url=self.url)
+        for page in self._pages(site):
+            first, second = _stylesheet_links(page)
+            assert (page.parent / first).is_file()
+            assert Path(first).name.startswith("pico-")
+            assert not Path(second).name.startswith("gallery-")
+
+    def test_set_url_still_emits_the_local_gallery_stylesheet(self, tmp_path: Path):
+        """The local copy is written either way, so output has one shape."""
+        site = self._build(tmp_path, stylesheet_url=self.url)
+        assert len(list(site.glob("gallery-*.css"))) == 1
+
+    def test_rebuild_leaves_one_of_each_stylesheet(self, tmp_path: Path):
+        """A rebuild into the same directory does not accumulate copies."""
+        self._build(tmp_path)
+        site = self._build(tmp_path)
+        assert len(list(site.glob("pico-*.css"))) == 1
+        assert len(list(site.glob("gallery-*.css"))) == 1
 
 
 class TestBuildCommand:

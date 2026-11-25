@@ -76,12 +76,16 @@ It is often a call whose result was never asserted on.
 Ten test modules were also found to contain no `pytest.raises` at all.
 So error paths in the code they cover are unexercised.
 
-**A local build has no `original/` or `display/` renditions.**
-Only preview and thumb are written under `output_dir`; the other two
-are marcustack's to place at deploy.
-For a browser run, symlink the manifest directories in at
-`pics/COLLECTION/original` and `pics/COLLECTION/display`, or every
-per-photo page 404s on its image and both links.
+**A local build has no `original/` rendition.**
+Build derives every rendition no manifest supplies, so with an
+original-only manifest it writes `display/`, `preview/`, and `thumb/`
+under `output_dir`.
+Only `original/` is always absent, since build never writes it;
+marcustack places it at deploy, along with any display a display
+manifest supplies.
+For a browser run, symlink the original collection's directory in at
+`pics/COLLECTION/original`, or every per-photo page 404s on its
+original and download links.
 The same fact is recorded for the output layout document under
 `doc/mvp-docs-pass`.
 
@@ -119,46 +123,6 @@ The display rendition is roughly 2MB and reads as a wait on mobile.
 - Build hrefs through the existing `href` helper, so the
   `ref/derive-pipeline` move of `rendition_href` stays mechanical.
 
-### ft/gallery-styling
-
-The first stylesheet this project has had.
-
-There is no CSS file anywhere in the repository.
-Styling today is Tailwind utility classes against a CDN script tag,
-which ships a compiler to the browser and is explicitly not a
-production configuration.
-
-- Remove the Tailwind CDN tag and the utility classes.
-  Roughly nine test assertions name Tailwind classes and will need
-  updating.
-- PicoCSS as the base.
-- A simple custom stylesheet over it.
-  No real theming yet.
-- Colors, spacing, and fonts as CSS custom properties at the root,
-  so a later shared theme is an override of variables rather than a
-  rewrite of rules.
-- Conventional BEM block names rather than clever ones, so a second
-  consumer would plausibly arrive at the same words.
-
-- `base.j2.html` carries an inline `<style>` block: a token layer on
-  `:root` and BEM rules for `pic-cell__link` and `pic-cell__img`.
-  Move it into the first stylesheet and keep it as the token layer's
-  seed.
-- `hidePagination` in `components/grid-scroll.j2.html` sets inline
-  `display: none` because Tailwind's `flex` outranks the `hidden`
-  attribute.
-  Switch it to `hidden` once Tailwind is gone.
-- Asset content addressing lands with the first stylesheet.
-  Name static assets by a b3c32 code prefix, pass a name map in
-  template context, and keep any stale-asset cleanup scoped by
-  pattern.
-  marcustack's `_upload_dir` uploads only top-level files, so an
-  asset subdirectory needs a marcustack change.
-  That boundary is the maintainer's call.
-
-Some renaming later is expected and fine.
-Spend no more effort here than that.
-
 ### ref/derive-pipeline
 
 A second pass at derivation, after the first landed enough to publish
@@ -195,6 +159,12 @@ already done, and an input path as wide as the model behind it.
   Aliased renditions have no file, so that class legitimately differs
   and the check needs to know which were aliased.
 - Consider another look at the defaults for derivations based on decision point
+- The thumb default grows from 400px to about 500px max dimension.
+  See "Grid thumbs at mobile widths" in
+  `ft/static-gallery-refinements`.
+  A spec change needs a full re-derive: `--force` until the cache keyed
+  on source hash plus spec exists, which then invalidates the old
+  thumbs by itself.
 - `services/link.py` and its test are interim.
   `rendition_href` composes `pics/COLLECTION/RELATIVE_PATH` from a
   `Pic` whose path already carries its kind; that belongs on a model
@@ -235,17 +205,23 @@ collection size.
 
 - `serve` and the dev server were removed.
   - The loop needs its own serving and reload mechanism.
-- Assemble a small fixture collection for the loop.
-  Iterating against 645 photos is not the working rhythm; the real
-  collection is for acceptance runs.
+- The small fixture collection exists at `fixture/collection/`.
+  Use it in the loop: iterating against 645 photos is not the working
+  rhythm, and the real collection is for acceptance runs.
+- Previews need two things build does not provide.
+  A page-size override, since none exists for building a multi-page
+  fixture, and the original photos linked in at
+  `pics/COLLECTION/original`, so per-photo pages resolve their
+  original and download links.
+  The loop should provide both.
 - `base_url` and the dev-versus-prod distinction land here.
   It has no sensible program default: prod is a domain galleria must
   not know, and dev is an address that does not exist until this loop
   does.
 - `debug/template_debug.py` needs a refit.
   Its sample data keys do not match the current template surface, its
-  structural analysis counts Alpine and Tailwind artifacts that are
-  being removed, and it manipulates `sys.path` at import rather than
+  structural analysis counts Alpine and Tailwind artifacts that no
+  longer exist, and it manipulates `sys.path` at import rather than
   relying on the package.
 - The `grid-scroll` inline script has no automated tests.
   Add JS test tooling and backfill tests for it.
@@ -331,11 +307,18 @@ None blocks publishing; each is decided by looking at it.
 
 - Grid thumbs at mobile widths.
   The grey placeholder and hidden alt text landed.
-  At mobile widths a cell is about 180 CSS px, roughly 540 device px
-  on a 3x screen, so the 400px WebP thumb is upscaled and its
-  artifacts show.
-  A larger thumb or `srcset` on grid cells, decided against the real
-  collection.
+  Decided: phones stay at 3 columns for a denser overview and faster
+  scrolling; 2 columns would need about 4x the thumb bytes.
+  A phone cell is about 110 CSS px, roughly 330 device px on a 3x
+  screen.
+  The 400px WebP thumb's short edge is 267px at 3:2 and 300px at 4:3,
+  so a square cover crop still enlarges it about 1.2 and 1.1 times,
+  and artifacts can show.
+  The fix is a larger thumb, about 500px max dimension, so a 3:2 short
+  edge of about 333px covers the cell without upscaling.
+  Settle the exact size against the real collection.
+  It needs a full re-derive, so it sequences with or after
+  `ref/derive-pipeline`.
 - Jump to top and bottom.
   Top is trivial.
   Bottom is ill-defined under infinite scroll: the real end means
@@ -376,6 +359,43 @@ None blocks publishing; each is decided by looking at it.
   template, so nested keys would also put directories into
   per-photo hrefs.
 
+### ft/navbar-page-controls
+
+On per-photo pages the navbar carries the page's controls.
+
+The pager row above the photo holds Previous, Back to gallery, and
+Next.
+At phone widths "Back to gallery" wraps when both neighbors exist, and
+sits off center when one is missing.
+Moving the controls resolves both.
+
+- Back to gallery sits beside the collection title in the navbar.
+- A position indicator such as `3 / 6`.
+  It needs the photo's index in the per-photo page context, which the
+  context does not carry today.
+- Previous and next flank the photo, in a stage element that moves
+  with it.
+- Each moved control lands with its own CSS, in the commit that moves
+  its markup.
+- Relates to "Supplied navbar" in `ft/static-gallery-refinements`:
+  who owns the navbar markup is open there.
+
+### ft/style-tuning
+
+The deliberate CSS pass the minimal styling deferred.
+
+Values stayed minimal on purpose until the whole page stack settles on
+a design.
+
+- Mobile stage.
+  A wide photo leaves most of the fixed photo stage empty on a phone
+  and pushes the actions below the fold.
+- A dark palette.
+  Pico is pinned to its light theme until one exists.
+- Page wrappers depend on Pico's `container`.
+  Give them a page-wrapper block before the shared stylesheet can
+  leave Pico.
+
 ### doc/mvp-docs-pass
 
 Reconcile the documentation subdirectories that describe the
@@ -389,12 +409,16 @@ Left until here because each describes a moving target.
   delete.
 - Restore a Quick Start to the root README once the CLI is settled.
 - Write the configuration document.
-- `static-site-generation.md` still names a nonexistent service.
+  It includes `stylesheet_url`, a `Config` field with no CLI option.
+  None links the gallery stylesheet emitted beside the pages, and a
+  string is linked verbatim in its place.
+  Pico stays local, and the local copy is still emitted.
+- `static-site-generation.md` still names a nonexistent service and a
+  stale configuration.
   - The service is `PhotoMetadataService`.
-- The testing README tree omits four directories.
-  - They are `models/`, `config/`, `template/`, and `debug/`.
-- Dead links in two READMEs.
-  - `doc/testing/README.md` links `patterns.md`.
+  - Its Configuration block names `TEMPLATE_DIR = 'src/template/'` and
+    a `gallery.html` mapping, neither of which matches the code.
+- Dead link in a README.
   - `doc/util/README.md` links `UUIDv7.md`.
 
 - Write the output layout document from these settled facts.
@@ -406,11 +430,15 @@ Left until here because each describes a moving target.
   position.
   Renditions at `pics/COLLECTION/KIND/`; every emitted link is
   relative to the page.
+  The grid index and both stylesheets sit flat beside the pages, named
+  by a code prefix of their bytes: `grid-index-CODE.json`,
+  `pico-CODE.css`, and `gallery-CODE.css`.
+  A rebuild removes the previous file of the same stem and extension.
   An absent original aliases to display and its links degrade to the
   shallowest present rendition; an absent display is derived from
   the original, or stops an adopt-only build as stale.
-  A local tree lacks `original/` and `display/`; the acceptance run
-  symlinks the manifest directories in.
+  A local tree lacks `original/`; the acceptance run symlinks the
+  original collection's directory in.
 
 ## Standalone tasks
 
@@ -480,6 +508,32 @@ They change together or not at all until this task lands.
 `test_build.py` adds `_records`, `_cfg`, `_pages`, and `_cells`;
 `test_gallery_template.py` adds `_record`, `_page`, and `_pic_page`.
 All belong in conftest modules.
+
+### ref/build-units
+
+`build_gallery` in `command/build.py` does too much.
+One function emits the stylesheets, writes the grid index, slices the
+records into pages, renders the grid pages, copies the index, and
+renders the per-photo pages.
+
+- Split it into grouped units it calls, named against the code at
+  planning.
+- Pure refactor: the existing tests stay unchanged and green.
+
+### fix/stale-pages
+
+Build never prunes `pageN.html` beyond the current page count.
+A collection that shrinks leaves orphan pages, and a mirror upload
+publishes them.
+
+- Prune `pageN.html` files above the new page count by pattern,
+  scoped like the artifact prune: same directory, regular files only,
+  no recursion.
+- Tests: a shrinking collection leaves no orphan page, and files that
+  merely resemble the pattern survive.
+- Per-photo pages under `pic/` have the same orphan risk when a photo
+  is removed.
+  Decide in the same plan whether they need the same pruning.
 
 ## Deferred
 

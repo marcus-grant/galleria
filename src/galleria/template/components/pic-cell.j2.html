@@ -1,11 +1,11 @@
 <!-- START: src/template/components/pic-cell.j2.html -->
 <div class="pic-cell">
-  <a href="pic/{{ pic.key.name }}.html" class="block aspect-square pic-cell__link">
+  <a href="pic/{{ pic.key.name }}.html" class="pic-cell__link">
     <img
       src="{{ root }}/{{ href(collection, pic.thumb) }}"
       alt="{{ collection }} {{ pic.key.name }}"
       loading="lazy"
-      class="w-full h-full object-cover rounded-lg hover:shadow-lg transition-shadow pic-cell__img"
+      class="pic-cell__img"
     />
   </a>
 </div>

@@ -1,30 +1,16 @@
 <!-- START: src/template/base.j2.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>{% block title %}Wedding Gallery{% endblock %}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    :root {
-      --pic-placeholder-bg: #e5e7eb;
-      --pic-cell-radius: 0.5rem;
-    }
-
-    .pic-cell__link {
-      background: var(--pic-placeholder-bg);
-      border-radius: var(--pic-cell-radius);
-    }
-
-    .pic-cell__img {
-      color: transparent;
-    }
-  </style>
+  <link rel="stylesheet" href="{{ asset_base }}{{ asset.pico }}">
+  <link rel="stylesheet" href="{{ stylesheet_url or asset_base ~ asset.gallery }}">
   {% block head %}{% endblock %}
 </head>
-<body class="bg-gray-50">
+<body>
   {% include 'components/navbar.j2.html' %}
   
   <main>

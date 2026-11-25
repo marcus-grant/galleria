@@ -3,14 +3,15 @@
 ## Template Structure
 
 ```
-src/template/
--> base.j2.html             (Base layout with head, scripts)
--> gallery.j2.html          (Main gallery page extending base)
--> index.j2.html            (Landing page)
+src/galleria/template/
+-> base.j2.html             (Base layout with head, stylesheets, navbar)
+-> gallery.j2.html          (Grid page extending base, with the pager)
+-> pic.j2.html              (Per-photo page extending base)
 -> components/
-   -> photo-grid.j2.html    (Grid container with ALL photos)
-   -> photo-cell.j2.html    (Direct-link photo thumbnail)
-   -> navbar.j2.html        (Navigation component)
+   -> navbar.j2.html        (Collection title and photo count)
+   -> pic-grid.j2.html      (Grid container)
+   -> pic-cell.j2.html      (One thumbnail cell, linking its photo page)
+   -> grid-scroll.j2.html   (Cell template and infinite-scroll script)
 ```
 
 ## Build Process
@@ -38,26 +39,51 @@ PHOTO_METADATA_SOURCE = 'json'  # Generated from processed photos
 ## Directory Structure
 
 ### Input Structure
-```
-src/template/
-├── base.j2.html              # Base layout
-├── index.j2.html             # Landing page
-├── gallery.j2.html           # Photo gallery
-└── components/
-    ├── navbar.j2.html         # Navigation
-    ├── photo-grid.j2.html     # Photo grid container
-    └── photo-cell.j2.html     # Individual photo cells
+
+```txt
+src/galleria/template/
+  base.j2.html              # Base layout
+  gallery.j2.html           # Grid page
+  pic.j2.html               # Per-photo page
+  components/
+    navbar.j2.html          # Collection title and photo count
+    pic-grid.j2.html        # Grid container
+    pic-cell.j2.html        # One thumbnail cell
+    grid-scroll.j2.html     # Cell template and infinite-scroll script
 ```
 
 ### Output Structure
+
+```txt
+<output-dir>/                       # Generated static site
+  gallery/COLLECTION/
+    page1.html ... pageN.html       # Grid pages
+    index.html                      # Byte copy of page1.html
+    pic/KEY.html                    # One page per photo, KEY its basename
+    grid-index-CODE.json            # Ordered keys for infinite scroll
+    pico-CODE.css                   # Vendored Pico
+    gallery-CODE.css                # Galleria's own stylesheet
+  pics/COLLECTION/
+    preview/                        # Derived renditions
+    thumb/
+    display/                        # Linked by pages; see below
+    original/                       # Linked by pages; see below
 ```
-<output-dir>/                  # Generated static site
-├── index.html                 # Landing page
-├── gallery.html               # Photo gallery
-├── css/                       # Tailwind CSS
-└── js/                        # Future: AlpineJS enhancements
-```
+
+The grid index and the stylesheets are content-addressed.
+CODE is a prefix of a hash of the file's bytes, so a changed file gets a
+new name and the build removes the previous one.
+
+Build derives only the renditions that no manifest supplies.
+The pages link `display/` and `original/` as well as `thumb/`, but a
+deploy tool places `original/` and any `display/` a display manifest
+supplies.
+Build never writes `original/`.
+With an original-only manifest, such as the test fixture, build also
+derives `display/`.
 
 ## Static-First Approach
 
-Gallery renders all photos server-side with direct image links. JavaScript features (modals, selection) are post-deployment enhancements.
+Gallery renders all photos server-side with direct image links.
+JavaScript features (modals, selection) are post-deployment enhancements.
+

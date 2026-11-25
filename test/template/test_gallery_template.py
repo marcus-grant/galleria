@@ -6,10 +6,13 @@ Created: 2026-08-31
 License: AGPL-3.0-or-later
 """
 
+import posixpath
+import re
 from pathlib import Path
 
+import pytest
 from bs4 import BeautifulSoup, Tag
-from conftest import make_pic
+from conftest import make_asset_context, make_pic
 
 from galleria.config import default
 from galleria.models.rendition import PicRenditions
@@ -20,6 +23,14 @@ from galleria.services.template_renderer import TemplateRenderer
 # <template> for the scroll script to clone; html.parser does not
 # treat template content as inert, so it would otherwise match.
 GRID_CELL = ".pic-cell:not(template *)"
+
+# A URL that leaves the site: a scheme (https:, data:, ...) or //host.
+EXTERNAL_URL = re.compile(r"^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|//)")
+
+# The per-photo page's two action links, told apart by the download
+# attribute rather than a hook class: only the download link carries it.
+ORIGINAL_LINK = ".button-group a:not([download])"
+DOWNLOAD_LINK = ".button-group a[download]"
 
 
 def _record(stem: str) -> PicRenditions:
@@ -41,6 +52,7 @@ def _page(pics, **overrides) -> BeautifulSoup:
     defaults; each keyword override replaces one context key.
     """
     ctx = {
+        **make_asset_context(),
         "collection": "wedding",
         "pics": pics,
         "page": 1,
@@ -67,6 +79,7 @@ def _one(soup: BeautifulSoup, selector: str) -> Tag:
 def _pic_page(rec, prev=None, next=None) -> BeautifulSoup:
     """Render pic.j2.html with the context build_gallery supplies."""
     ctx = {
+        **make_asset_context(asset_base="../"),
         "collection": "wedding",
         "pic": rec,
         "prev": prev,
@@ -88,8 +101,12 @@ class TestGalleryPage:
         assert meta is not None and meta["content"] == "noindex, nofollow"
 
     def test_one_grid_container(self):
-        """Exactly one grid container renders, carrying the grid class."""
-        assert len(_page([_record("a")]).select(".grid")) == 1
+        """Exactly one grid container renders, carrying the grid block."""
+        assert len(_page([_record("a")]).select(".pic-grid")) == 1
+
+    def test_grid_does_not_use_picos_grid_class(self):
+        """Pico defines .grid, so the grid takes its own block name."""
+        assert _page([_record("a")]).select(".grid") == []
 
     def test_cell_links_the_per_photo_page(self):
         """Each cell's anchor targets pic/STEM.html, never an image."""
@@ -111,11 +128,6 @@ class TestGalleryPage:
         hrefs = [a["href"] for a in soup.select(f"{GRID_CELL} a")]
         assert hrefs == ["pic/b.html", "pic/a.html"]
 
-    def test_navbar_counts_the_collection(self):
-        """The navbar count is the collection total, not the page size."""
-        soup = _page([_record("a")], total=645)
-        assert _one(soup, ".pic-count").get_text(strip=True) == "645 photos"
-
     def test_no_root_absolute_links(self):
         """No anchor or image points at a root-absolute or remote path."""
         soup = _page([_record("a")], page=2, pages=3)
@@ -132,9 +144,96 @@ class TestGalleryPage:
         assert _page([], page=3, pages=3).select_one("a[rel=next]") is None
 
     def test_cell_reserves_its_box(self):
-        """Every cell fixes its aspect so arriving images do not reflow the grid."""
+        """Every cell's link carries the class the stylesheet gives the
+        fixed aspect, so arriving images do not reflow the grid."""
         soup = _page([_record("a")])
-        assert "aspect-square" in _one(soup, ".pic-cell a")["class"]
+        assert "pic-cell__link" in _one(soup, ".pic-cell a")["class"]
+
+
+class TestNavbar:
+    """The navbar renders on both page kinds and links home from each."""
+
+    def test_counts_the_collection(self):
+        """The navbar count is the collection total, not the page size."""
+        soup = _page([_record("a")], total=645)
+        count = _one(soup, ".navbar__count")
+        assert count.get_text(strip=True) == "645 photos"
+
+    @pytest.mark.parametrize(
+        "soup, page_path",
+        [
+            (_page([_record("a")]), "gallery/wedding/page1.html"),
+            (_pic_page(_record("a")), "gallery/wedding/pic/a.html"),
+        ],
+        ids=["grid page", "per-photo page"],
+    )
+    def test_title_link_lands_on_the_collection_index(
+        self, soup: BeautifulSoup, page_path: str
+    ):
+        """The href, resolved from the page's own location, is the index."""
+        href = str(_one(soup, ".navbar__title")["href"])
+        here = posixpath.dirname(page_path)
+        landed = posixpath.normpath(posixpath.join(here, href))
+        assert landed == "gallery/wedding/index.html"
+
+
+class TestPagination:
+    """The no-JS pager under the grid, and the hook the script hides it by."""
+
+    def test_position_names_the_page_and_total(self):
+        """The position element reads the current page of the total."""
+        soup = _page([_record("a")], page=2, pages=3)
+        position = _one(soup, ".pager__position")
+        assert position.get_text(strip=True) == "Page 2 of 3"
+
+    def test_links_are_buttons_in_their_slots(self):
+        """Prev and next take the button block and their own pager slot."""
+        soup = _page([_record("a")], page=2, pages=3)
+        prev = _one(soup, "a[rel=prev]")
+        nxt = _one(soup, "a[rel=next]")
+        assert {"button", "pager__prev"} <= set(prev.get_attribute_list("class"))
+        assert {"button", "pager__next"} <= set(nxt.get_attribute_list("class"))
+
+    @pytest.mark.parametrize("page", [1, 2, 3])
+    def test_every_grid_page_has_one_pager_marked_for_the_script(self, page: int):
+        """Each grid page carries exactly one pager with the script's hook."""
+        soup = _page([_record("a")], page=page, pages=3)
+        assert len(soup.select("nav.pager[data-pagination]")) == 1
+
+    def test_the_scripts_selector_resolves_to_the_pager(self):
+        """The selector hidePagination uses finds the pager in the markup.
+
+        Renaming the hook on only one side would leave the pager
+        visible under infinite scroll, so the script's own selector is
+        read out of the rendered page and resolved against it.
+        """
+        soup = _page([_record("a")])
+        script = _one(soup, "script[type=module]").get_text()
+        body = re.search(r"function hidePagination\(\)\s*\{(.*?)\n  \}", script, re.S)
+        assert body is not None
+        selector = re.search(r'querySelector\("([^"]+)"\)', body.group(1))
+        assert selector is not None
+        assert soup.select_one(selector.group(1)) is _one(soup, "nav.pager")
+
+
+class TestNoExternalHosts:
+    """By default no page reaches a host of its own choosing."""
+
+    @pytest.mark.parametrize(
+        "soup",
+        [_page([_record("a")]), _pic_page(_record("a"))],
+        ids=["grid page", "per-photo page"],
+    )
+    def test_no_src_or_href_names_a_host(self, soup: BeautifulSoup):
+        """No src or href, on any element, carries a scheme or starts //."""
+        urls = [
+            str(tag[attr])
+            for tag in soup.select("[src], [href]")
+            for attr in ("src", "href")
+            if tag.has_attr(attr)
+        ]
+        assert urls
+        assert [u for u in urls if EXTERNAL_URL.match(u)] == []
 
 
 class TestScrollHooks:
@@ -211,21 +310,21 @@ class TestPicPage:
         """The main img src is root plus the display href."""
         rec = _record("a")
         assert rec.display is not None
-        src = str(_one(_pic_page(rec), ".pic-display img")["src"])
+        src = str(_one(_pic_page(rec), ".frame__img")["src"])
         assert src == f"../../../{rendition_href('wedding', rec.display)}"
 
     def test_links_the_original_separately(self):
         """The original is reached by its own anchor, not the display img."""
         rec = _record("a")
         assert rec.original is not None
-        href = str(_one(_pic_page(rec), "a.pic-original")["href"])
+        href = str(_one(_pic_page(rec), ORIGINAL_LINK)["href"])
         assert href == f"../../../{rendition_href('wedding', rec.original)}"
 
     def test_download_link_is_marked_download(self):
         """The download anchor targets the original and carries download."""
         rec = _record("a")
         assert rec.original is not None
-        tag = _one(_pic_page(rec), "a.pic-download")
+        tag = _one(_pic_page(rec), DOWNLOAD_LINK)
         assert str(tag["href"]) == f"../../../{rendition_href('wedding', rec.original)}"
         assert tag.has_attr("download")
 
@@ -234,8 +333,8 @@ class TestPicPage:
         display = make_pic(relative_path=Path("display/a.webp"))
         rec = PicRenditions(Path("a"), original=display, display=display)
         soup = _pic_page(rec)
-        original = str(_one(soup, "a.pic-original")["href"])
-        assert original == str(_one(soup, "a.pic-download")["href"])
+        original = str(_one(soup, ORIGINAL_LINK)["href"])
+        assert original == str(_one(soup, DOWNLOAD_LINK)["href"])
         assert "/display/" in original and "/original/" not in original
 
     def test_neighbors_by_position(self):
@@ -249,6 +348,13 @@ class TestPicPage:
         assert (
             _pic_page(_record("b"), prev=_record("a")).select_one("a[rel=next]") is None
         )
+
+    def test_every_control_is_a_button(self):
+        """All five controls carry the button block, so none can drop out."""
+        soup = _pic_page(_record("b"), prev=_record("a"), next=_record("c"))
+        controls = soup.select(".pager a, .button-group a")
+        assert len(controls) == 5
+        assert all("button" in c.get_attribute_list("class") for c in controls)
 
     def test_no_root_absolute_links(self):
         """No anchor or image points at a root-absolute or remote path."""

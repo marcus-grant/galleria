@@ -36,6 +36,13 @@ Never enumerate the environment.
 Never read a variable the maintainer has not named.
 Never echo one whose value is not a path.
 
+The same rule covers files.
+Never read `~/.config`, `.env`, or any other file that may hold a
+credential, including the live configuration of a composer or deploy
+tool.
+Never grep across such files, even to look for a single path or value.
+When a task needs something from one, ask the maintainer to report it.
+
 ## Ways of working
 
 Every change moves through the same path: plan, review, implement,
@@ -203,20 +210,39 @@ development, but always run the full suite before committing.
 
 ### The clean-install check
 
-The clean-install check is a separate requirement from the per-commit
-gate.
-It must pass before a change is submitted and before a release is
-tagged.
+The clean-install check is a separate requirement from the per-commit gate.
+It must pass before a change is submitted and before a release is tagged.
 Run it with `just clean-install`.
 
-The check installs the package non-editable into an isolated
-environment from a directory outside the repository, then runs
-`python -m galleria build --help`.
-A non-zero exit fails it.
-The dev environment masks undeclared runtime dependencies, so only a
-clean install can catch them.
+The check first removes the in-tree `build/` and `src/galleria.egg-info`
+directories.
+Stale setuptools residue there once hid a missing package-data entry,
+so a passing check proved nothing.
+It then installs the package non-editable into an isolated environment,
+from a directory outside the repository.
+It runs the installed `galleria` console script, resolved beside the
+interpreter and never from PATH.
+The dev environment masks undeclared runtime dependencies and package
+data, so only a clean install can catch them.
 The recipe forces a rebuild with `--refresh-package galleria`, because
 uv otherwise reuses a cached wheel when only `.py` files changed.
+
+The script builds the committed fixture collection, `fixture/collection/`,
+and fails on a non-zero exit or on any of these:
+
+- An expected output is missing: the grid pages, a page per photo, the
+  derived thumb and preview renditions, and the thumbnail links on
+  page 1.
+- The installed distribution lacks an expected package file, such as the
+  gallery stylesheet or a vendored Pico file.
+- The emitted Pico stylesheet differs from the installed vendored file,
+  or its name is not a prefix of the code recorded beside that file.
+
+The expected lists live in `script/check_clean_install.py`.
+`PACKAGE_FILES` near the top names the installed package files, and
+`expected_files` and `missing_outputs` name the build outputs.
+A change that adds package data or a build output extends them in the
+same commit.
 
 ### Commit sizing
 
@@ -341,6 +367,8 @@ docstrings, commit messages, and pull request descriptions.
   No em dashes, no arrows, no emoji, no decorative Unicode.
   Where a sentence wants an em dash, end the sentence and start
   another.
+  Vendored files under `src/galleria/vendor/` are exempt, since they
+  stay byte-exact; see "Vendored files" below.
 - Line length depends on context:
   - Commit body lines at most 72 characters (enforced).
   - Prose and documentation lines at most 80 characters.
@@ -362,6 +390,16 @@ Code conventions:
   methods, spaces around operators and after commas.
 - Two-space indentation in templates, stylesheets, and JavaScript.
   Python keeps four.
+
+### Vendored files
+
+Third-party files under `src/galleria/vendor/` ship as package data,
+byte for byte as upstream published them.
+Never edit one by hand, because its recorded code would stop matching.
+Bump one with `just vendor-pico VERSION`, which verifies the registry's
+integrity hash before it installs anything.
+The pin test in `test/vendor/test_pico.py` and the clean-install check
+both guard the bytes.
 
 ## Documentation discipline
 

@@ -48,6 +48,7 @@ class Config:
     page_size: int
     load_ahead_viewports: int
     artifact_name_length: int
+    stylesheet_url: str | None
 
     def has_manifest(self) -> bool:
         """Whether at least one variant manifest is configured.
@@ -71,6 +72,7 @@ class Config:
             page_size=default.PAGE_SIZE,
             load_ahead_viewports=default.LOAD_AHEAD_VIEWPORTS,
             artifact_name_length=default.ARTIFACT_NAME_LENGTH,
+            stylesheet_url=default.STYLESHEET_URL,
         )
         if not cfg.has_manifest():
             msg = "No manifest configured: supply original_manifest, "

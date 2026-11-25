@@ -54,6 +54,11 @@ class TestConfigFromOverrides:
         assert cfg.load_ahead_viewports == default.LOAD_AHEAD_VIEWPORTS
         assert cfg.artifact_name_length == default.ARTIFACT_NAME_LENGTH
 
+    def test_carries_stylesheet_url_default(self, tmp_path):
+        """The stylesheet URL comes from the default layer, which means
+        the local emitted stylesheet."""
+        assert make_config(tmp_path).stylesheet_url == default.STYLESHEET_URL
+
 
 class TestConfigImmutability:
     """The object is frozen once constructed."""

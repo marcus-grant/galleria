@@ -30,7 +30,13 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-galleria = ["template/**/*.html"]
+galleria = [
+    "template/**/*.html",
+    "asset/gallery.css",
+    "vendor/pico/pico.min.css",
+    "vendor/pico/LICENSE.md",
+    "vendor/pico/pico.json",
+]
 
 [tool.ruff]
 line-length = 88
@@ -40,7 +46,7 @@ target-version = "py312"
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
-include = ["src/galleria", "test"]
+include = ["src/galleria", "test", "script"]
 exclude = ["salvage", "**/__pycache__"]
 
 [tool.pytest.ini_options]

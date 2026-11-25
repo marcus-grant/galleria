@@ -24,6 +24,7 @@ from galleria.services.derive import (
 )
 from galleria.services.grid_index import write_grid_index
 from galleria.services.rendition import merge_variants
+from galleria.services.stylesheet import emit_stylesheets
 from galleria.services.template_renderer import TemplateRenderer
 
 SENTINEL = "__STEM__"
@@ -52,7 +53,9 @@ def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) ->
     which is merge order. An empty collection still writes page1.html.
     index.html is a byte copy of page1.html. Every page renders from
     two levels below the site root, so templates prefix hrefs with
-    root. A missing or broken template raises; there is no silent
+    root. The stylesheets are emitted flat beside the pages, and every
+    page links them by name through the asset map, prefixed with
+    asset_base for the pic/ depth. A missing or broken template raises; there is no silent
     partial build. The grid index artifact is written beside the pages
     first; its file name is returned and given to each grid page as
     grid_index.
@@ -61,6 +64,7 @@ def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) ->
     site_dir = cfg.output_dir / "gallery" / collection
     site_dir.mkdir(parents=True, exist_ok=True)
     grid_index = write_grid_index(site_dir, records, cfg.artifact_name_length)
+    asset = emit_stylesheets(site_dir, cfg.artifact_name_length)
     size = cfg.page_size
     sentinel = sentinel_record(cfg.specs)
     pages = [records[i : i + size] for i in range(0, len(records), size)] or [[]]
@@ -76,6 +80,9 @@ def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) ->
             "sentinel_pic": sentinel,
             "load_ahead_viewports": cfg.load_ahead_viewports,
             "page_size": cfg.page_size,
+            "asset": asset,
+            "asset_base": "",
+            "stylesheet_url": cfg.stylesheet_url,
         }
         renderer.save_html(
             renderer.render("gallery.j2.html", ctx), site_dir / f"page{n}.html"
@@ -89,6 +96,9 @@ def build_gallery(cfg: Config, collection: str, records: list[PicRenditions]) ->
             "next": records[i + 1] if i + 1 < len(records) else None,
             "total": len(records),
             "root": "../../..",
+            "asset": asset,
+            "asset_base": "../",
+            "stylesheet_url": cfg.stylesheet_url,
         }
         html = renderer.render("pic.j2.html", ctx)
         renderer.save_html(html, site_dir / "pic" / f"{rec.key.name}.html")
