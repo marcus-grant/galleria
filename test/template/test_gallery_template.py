@@ -6,8 +6,10 @@ Created: 2026-08-31
 License: AGPL-3.0-or-later
 """
 
+import posixpath
 from pathlib import Path
 
+import pytest
 from bs4 import BeautifulSoup, Tag
 from conftest import make_asset_context, make_pic
 
@@ -117,11 +119,6 @@ class TestGalleryPage:
         hrefs = [a["href"] for a in soup.select(f"{GRID_CELL} a")]
         assert hrefs == ["pic/b.html", "pic/a.html"]
 
-    def test_navbar_counts_the_collection(self):
-        """The navbar count is the collection total, not the page size."""
-        soup = _page([_record("a")], total=645)
-        assert _one(soup, ".pic-count").get_text(strip=True) == "645 photos"
-
     def test_no_root_absolute_links(self):
         """No anchor or image points at a root-absolute or remote path."""
         soup = _page([_record("a")], page=2, pages=3)
@@ -142,6 +139,33 @@ class TestGalleryPage:
         fixed aspect, so arriving images do not reflow the grid."""
         soup = _page([_record("a")])
         assert "pic-cell__link" in _one(soup, ".pic-cell a")["class"]
+
+
+class TestNavbar:
+    """The navbar renders on both page kinds and links home from each."""
+
+    def test_counts_the_collection(self):
+        """The navbar count is the collection total, not the page size."""
+        soup = _page([_record("a")], total=645)
+        count = _one(soup, ".navbar__count")
+        assert count.get_text(strip=True) == "645 photos"
+
+    @pytest.mark.parametrize(
+        "soup, page_path",
+        [
+            (_page([_record("a")]), "gallery/wedding/page1.html"),
+            (_pic_page(_record("a")), "gallery/wedding/pic/a.html"),
+        ],
+        ids=["grid page", "per-photo page"],
+    )
+    def test_title_link_lands_on_the_collection_index(
+        self, soup: BeautifulSoup, page_path: str
+    ):
+        """The href, resolved from the page's own location, is the index."""
+        href = str(_one(soup, ".navbar__title")["href"])
+        here = posixpath.dirname(page_path)
+        landed = posixpath.normpath(posixpath.join(here, href))
+        assert landed == "gallery/wedding/index.html"
 
 
 class TestScrollHooks:

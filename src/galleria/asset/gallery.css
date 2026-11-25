@@ -14,6 +14,16 @@
   --pic-cell-transition: box-shadow 150ms ease;
   --pic-grid-columns: 2;
   --pic-grid-gap: 1rem;
+  --navbar-bg: #fff;
+  --navbar-border: #e5e7eb;
+  --navbar-height: 4rem;
+  --navbar-max-width: 80rem;
+  --navbar-pad-x: 1rem;
+  --navbar-title-color: #111827;
+  --navbar-title-color-hover: #2563eb;
+  --navbar-title-size: 1.25rem;
+  --navbar-count-color: #6b7280;
+  --navbar-count-size: 0.875rem;
 }
 
 /* Column counts fill whole rows of the default page size at each width. */
@@ -27,6 +37,44 @@
   :root {
     --pic-grid-columns: 6;
   }
+}
+
+/* Pico styles a bare nav as a flex row and expects nav > ul > li. The
+   navbar holds a title and a count, not a list, so the block sets the
+   row itself and zeroes the nav spacing Pico would otherwise apply. */
+.navbar {
+  display: block;
+  margin: 0;
+  padding: 0;
+  background: var(--navbar-bg);
+  border-bottom: 1px solid var(--navbar-border);
+}
+
+.navbar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  height: var(--navbar-height);
+  max-width: var(--navbar-max-width);
+  margin: 0 auto;
+  padding: 0 var(--navbar-pad-x);
+}
+
+.navbar__title {
+  color: var(--navbar-title-color);
+  font-size: var(--navbar-title-size);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.navbar__title:hover {
+  color: var(--navbar-title-color-hover);
+}
+
+.navbar__count {
+  color: var(--navbar-count-color);
+  font-size: var(--navbar-count-size);
 }
 
 .pic-grid {
