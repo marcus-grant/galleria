@@ -18,7 +18,7 @@ License: AGPL-3.0-or-later
   /**
     * Wire infinite scroll if this page carries the hooks.
     *
-    * Pagination (nav.page-nav) stays visible until the grid index
+    * Pagination ([data-pagination]) stays visible until the grid index
     * has loaded, so any failure leaves the no-JS path intact.
     * Page 1's cells are already rendered, so appending starts at
     * offset page size.
@@ -68,12 +68,12 @@ License: AGPL-3.0-or-later
   /**
     * Hide the no-JS pagination once scrolling has taken over.
     *
-    * Kept in the DOM; only hidden. Uses inline display because
-    * Tailwind's flex utility outranks the hidden attribute.
+    * Kept in the DOM; only hidden, through the hidden attribute. The
+    * stylesheet makes [hidden] win over the pager's own display.
     */
   function hidePagination() {
-    const nav = document.querySelector("nav.page-nav");
-    if (nav) nav.style.display = "none";
+    const nav = document.querySelector("[data-pagination]");
+    if (nav) nav.hidden = true;
   }
 
 

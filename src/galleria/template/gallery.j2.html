@@ -2,18 +2,18 @@
 {% extends "base.j2.html" %}
 
 {% block content %}
-<div class="container mx-auto py-8">
+<div class="container">
   {% include 'components/pic-grid.j2.html' with context %}
   {% if page == 1 %}
   {% include 'components/grid-scroll.j2.html' with context %}
   {% endif %}
-  <nav class="page-nav flex justify-between py-8">
+  <nav class="pager" data-pagination>
     {% if page > 1 %}
-    <a rel="prev" href="page{{ page - 1 }}.html">Previous page</a>
+    <a rel="prev" href="page{{ page - 1 }}.html" class="pager__prev button">Previous</a>
     {% endif %}
-    <span>Page {{ page }} of {{ pages }}</span>
+    <span class="pager__position">Page {{ page }} of {{ pages }}</span>
     {% if page < pages %}
-    <a rel="next" href="page{{ page + 1 }}.html">Next page</a>
+    <a rel="next" href="page{{ page + 1 }}.html" class="pager__next button">Next</a>
     {% endif %}
   </nav>
 </div>

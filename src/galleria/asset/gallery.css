@@ -41,6 +41,8 @@
   --button-focus-ring: 0 0 0 3px rgb(37 99 235 / 0.4);
   --pager-gap: 1rem;
   --pager-margin-y: 1rem;
+  --pager-position-color: #6b7280;
+  --pager-position-size: 0.875rem;
   --button-group-gap: 1rem;
   --button-group-margin-y: 1rem;
   --frame-height: 75vh;
@@ -183,8 +185,23 @@ html {
   justify-self: start;
 }
 
-.pager__up {
+.pager__up,
+.pager__position {
   grid-column: 2;
+}
+
+/* Where the row stands, as text between the two links. */
+.pager__position {
+  justify-self: center;
+  color: var(--pager-position-color);
+  font-size: var(--pager-position-size);
+  text-align: center;
+}
+
+/* The display above would outrank the browser's own [hidden] rule. The
+   scroll script hides the no-JS pager this way once the index loads. */
+.pager[hidden] {
+  display: none;
 }
 
 .pager__next {

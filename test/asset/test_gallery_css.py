@@ -31,6 +31,8 @@ class TestGalleryStylesheet:
             ".pager__prev",
             ".pager__up",
             ".pager__next",
+            ".pager__position",
+            ".pager[hidden]",
             ".button",
             ".button--primary",
             ".button-group",

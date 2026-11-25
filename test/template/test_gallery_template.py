@@ -7,6 +7,7 @@ License: AGPL-3.0-or-later
 """
 
 import posixpath
+import re
 from pathlib import Path
 
 import pytest
@@ -171,6 +172,45 @@ class TestNavbar:
         here = posixpath.dirname(page_path)
         landed = posixpath.normpath(posixpath.join(here, href))
         assert landed == "gallery/wedding/index.html"
+
+
+class TestPagination:
+    """The no-JS pager under the grid, and the hook the script hides it by."""
+
+    def test_position_names_the_page_and_total(self):
+        """The position element reads the current page of the total."""
+        soup = _page([_record("a")], page=2, pages=3)
+        position = _one(soup, ".pager__position")
+        assert position.get_text(strip=True) == "Page 2 of 3"
+
+    def test_links_are_buttons_in_their_slots(self):
+        """Prev and next take the button block and their own pager slot."""
+        soup = _page([_record("a")], page=2, pages=3)
+        prev = _one(soup, "a[rel=prev]")
+        nxt = _one(soup, "a[rel=next]")
+        assert {"button", "pager__prev"} <= set(prev.get_attribute_list("class"))
+        assert {"button", "pager__next"} <= set(nxt.get_attribute_list("class"))
+
+    @pytest.mark.parametrize("page", [1, 2, 3])
+    def test_every_grid_page_has_one_pager_marked_for_the_script(self, page: int):
+        """Each grid page carries exactly one pager with the script's hook."""
+        soup = _page([_record("a")], page=page, pages=3)
+        assert len(soup.select("nav.pager[data-pagination]")) == 1
+
+    def test_the_scripts_selector_resolves_to_the_pager(self):
+        """The selector hidePagination uses finds the pager in the markup.
+
+        Renaming the hook on only one side would leave the pager
+        visible under infinite scroll, so the script's own selector is
+        read out of the rendered page and resolved against it.
+        """
+        soup = _page([_record("a")])
+        script = _one(soup, "script[type=module]").get_text()
+        body = re.search(r"function hidePagination\(\)\s*\{(.*?)\n  \}", script, re.S)
+        assert body is not None
+        selector = re.search(r'querySelector\("([^"]+)"\)', body.group(1))
+        assert selector is not None
+        assert soup.select_one(selector.group(1)) is _one(soup, "nav.pager")
 
 
 class TestScrollHooks:
