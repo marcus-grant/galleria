@@ -13,20 +13,6 @@ def test_base_template_pins_pico_to_its_light_theme():
     assert soup.html.get("data-theme") == "light"
 
 
-def test_base_template_includes_tailwind_cdn():
-    """Test that base template includes Tailwind CSS from CDN"""
-    renderer = TemplateRenderer()
-    photo_data = make_asset_context(photos=[])
-
-    html = renderer.render("base.j2.html", photo_data)
-    soup = BeautifulSoup(html, "html.parser")
-
-    # Check for Tailwind CSS CDN link
-    tailwind_link = soup.find("script", src=lambda x: x and "tailwindcss" in x)
-    assert tailwind_link is not None
-    assert "cdn.tailwindcss.com" in tailwind_link["src"]
-
-
 # TODO: Not ready for Alpine.js tests - post-deployment feature
 # def test_base_template_includes_alpinejs_cdn():
 #     """Test that base template includes Alpine.js from CDN"""

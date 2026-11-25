@@ -24,6 +24,9 @@ from galleria.services.template_renderer import TemplateRenderer
 # treat template content as inert, so it would otherwise match.
 GRID_CELL = ".pic-cell:not(template *)"
 
+# A URL that leaves the site: a scheme (https:, data:, ...) or //host.
+EXTERNAL_URL = re.compile(r"^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|//)")
+
 # The per-photo page's two action links, told apart by the download
 # attribute rather than a hook class: only the download link carries it.
 ORIGINAL_LINK = ".button-group a:not([download])"
@@ -211,6 +214,26 @@ class TestPagination:
         selector = re.search(r'querySelector\("([^"]+)"\)', body.group(1))
         assert selector is not None
         assert soup.select_one(selector.group(1)) is _one(soup, "nav.pager")
+
+
+class TestNoExternalHosts:
+    """By default no page reaches a host of its own choosing."""
+
+    @pytest.mark.parametrize(
+        "soup",
+        [_page([_record("a")]), _pic_page(_record("a"))],
+        ids=["grid page", "per-photo page"],
+    )
+    def test_no_src_or_href_names_a_host(self, soup: BeautifulSoup):
+        """No src or href, on any element, carries a scheme or starts //."""
+        urls = [
+            str(tag[attr])
+            for tag in soup.select("[src], [href]")
+            for attr in ("src", "href")
+            if tag.has_attr(attr)
+        ]
+        assert urls
+        assert [u for u in urls if EXTERNAL_URL.match(u)] == []
 
 
 class TestScrollHooks:
