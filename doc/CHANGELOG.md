@@ -3,6 +3,48 @@
 Most recent first.
 Pre-split history is archived under [changelog/](changelog/).
 
+## 2026-11-25
+
+### ft/gallery-styling
+
+- Tailwind removed.
+  - The CDN script tag and every utility class are gone.
+  - No page references an external host by default, and a test pins it.
+- Pico 2.1.1 vendored as package data with its license.
+  - Its version and content code are recorded in `pico.json`.
+  - A test hashes the packaged file against the recorded code.
+- Stylesheets emitted content-addressed beside the pages and linked.
+  - `pico-CODE.css` and `gallery-CODE.css`, Pico first.
+  - Templates receive the name map as `asset`, plus `asset_base`.
+  - Naming and pruning is shared in `services/artifact.py`, which the
+    grid index uses too.
+- `stylesheet_url` config field links a stylesheet verbatim in place of
+  the emitted one.
+  - Default None; no CLI option.
+- BEM blocks replace the utility classes.
+  - Grid and cell, navbar, pager, button, button group, and frame.
+  - Colors, spacing, and sizes are custom properties on `:root`.
+- Per-photo page and pagination restyled.
+  - The photo sits on a fixed stage that fits the viewport.
+  - Previous, next, back, original, and download are buttons.
+  - The no-JS pager shows the page position; the scroll script finds it
+    by `[data-pagination]` and hides it with the `hidden` attribute.
+  - Pico is pinned to its light theme, and the root paints the page
+    background.
+- Phones show 3 grid columns, up from 2.
+  - Column counts are 3, 4, and 6, all dividing 12; page sizes should
+    be multiples of 12.
+- Clean-install check builds a committed fixture collection.
+  - It runs the installed `galleria` script from outside the repository.
+  - It asserts outputs, installed package files, and Pico provenance.
+  - It removes stale `build/` and `src/galleria.egg-info` first.
+  - The fixture lives at `fixture/collection/`.
+- `script/vendor_pico.py` and `just vendor-pico VERSION`.
+  - It verifies the registry integrity hash before installing.
+- Documentation updated for the above.
+  - CONTRIBUTE: the clean-install check, the file rule, vendored files.
+  - The architecture and testing READMEs.
+
 ## 2026-11-19
 
 ### main
