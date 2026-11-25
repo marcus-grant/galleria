@@ -1,6 +1,6 @@
 [project]
 name = "galleria"
-version = "0.0.5"
+version = "0.0.6"
 description = "Static web photo gallery generator"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"

@@ -45,6 +45,11 @@ Pre-split history is archived under [changelog/](changelog/).
   - CONTRIBUTE: the clean-install check, the file rule, vendored files.
   - The architecture and testing READMEs.
 
+### Separate Chore Commit
+
+- Version 0.0.6, releasing ft/gallery-styling.
+- chr/review-cleanup queued first from the branch review.
+
 ## 2026-11-19
 
 ### main

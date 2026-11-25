@@ -101,6 +101,19 @@ helper rather than the project.
 The tasks below are ordered by what unblocks what.
 Each is a separate change with its own plan and sign-off.
 
+### chr/review-cleanup
+
+Small fixes found reviewing ft/gallery-styling.
+First task after the 0.0.6 release.
+
+- `script/check_clean_install.py` comment above PACKAGE_FILES names a
+  branch; say the list is extended when package data is added.
+- `build_gallery` docstring has a line over 88 columns; rewrap it.
+- Grid pages fall back to the title "Wedding Gallery" for every
+  collection; title them by collection.
+- Template START and END comments say `src/template/`; correct them
+  to `src/galleria/template/`.
+
 ### ft/pic-page-loading
 
 Per-photo page loading, moved out of `ft/static-gallery-refinements`.
