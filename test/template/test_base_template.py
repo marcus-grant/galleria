@@ -4,6 +4,15 @@ from conftest import make_asset_context
 from galleria.services.template_renderer import TemplateRenderer
 
 
+def test_base_template_pins_pico_to_its_light_theme():
+    """Pico follows prefers-color-scheme unless the root names a theme."""
+    html = TemplateRenderer().render("base.j2.html", make_asset_context())
+    soup = BeautifulSoup(html, "html.parser")
+
+    assert soup.html is not None
+    assert soup.html.get("data-theme") == "light"
+
+
 def test_base_template_includes_tailwind_cdn():
     """Test that base template includes Tailwind CSS from CDN"""
     renderer = TemplateRenderer()

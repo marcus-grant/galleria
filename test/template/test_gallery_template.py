@@ -23,6 +23,11 @@ from galleria.services.template_renderer import TemplateRenderer
 # treat template content as inert, so it would otherwise match.
 GRID_CELL = ".pic-cell:not(template *)"
 
+# The per-photo page's two action links, told apart by the download
+# attribute rather than a hook class: only the download link carries it.
+ORIGINAL_LINK = ".button-group a:not([download])"
+DOWNLOAD_LINK = ".button-group a[download]"
+
 
 def _record(stem: str) -> PicRenditions:
     """A filled record whose paths carry their kinds."""
@@ -242,21 +247,21 @@ class TestPicPage:
         """The main img src is root plus the display href."""
         rec = _record("a")
         assert rec.display is not None
-        src = str(_one(_pic_page(rec), ".pic-display img")["src"])
+        src = str(_one(_pic_page(rec), ".frame__img")["src"])
         assert src == f"../../../{rendition_href('wedding', rec.display)}"
 
     def test_links_the_original_separately(self):
         """The original is reached by its own anchor, not the display img."""
         rec = _record("a")
         assert rec.original is not None
-        href = str(_one(_pic_page(rec), "a.pic-original")["href"])
+        href = str(_one(_pic_page(rec), ORIGINAL_LINK)["href"])
         assert href == f"../../../{rendition_href('wedding', rec.original)}"
 
     def test_download_link_is_marked_download(self):
         """The download anchor targets the original and carries download."""
         rec = _record("a")
         assert rec.original is not None
-        tag = _one(_pic_page(rec), "a.pic-download")
+        tag = _one(_pic_page(rec), DOWNLOAD_LINK)
         assert str(tag["href"]) == f"../../../{rendition_href('wedding', rec.original)}"
         assert tag.has_attr("download")
 
@@ -265,8 +270,8 @@ class TestPicPage:
         display = make_pic(relative_path=Path("display/a.webp"))
         rec = PicRenditions(Path("a"), original=display, display=display)
         soup = _pic_page(rec)
-        original = str(_one(soup, "a.pic-original")["href"])
-        assert original == str(_one(soup, "a.pic-download")["href"])
+        original = str(_one(soup, ORIGINAL_LINK)["href"])
+        assert original == str(_one(soup, DOWNLOAD_LINK)["href"])
         assert "/display/" in original and "/original/" not in original
 
     def test_neighbors_by_position(self):
@@ -280,6 +285,13 @@ class TestPicPage:
         assert (
             _pic_page(_record("b"), prev=_record("a")).select_one("a[rel=next]") is None
         )
+
+    def test_every_control_is_a_button(self):
+        """All five controls carry the button block, so none can drop out."""
+        soup = _pic_page(_record("b"), prev=_record("a"), next=_record("c"))
+        controls = soup.select(".pager a, .button-group a")
+        assert len(controls) == 5
+        assert all("button" in c.get_attribute_list("class") for c in controls)
 
     def test_no_root_absolute_links(self):
         """No anchor or image points at a root-absolute or remote path."""

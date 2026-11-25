@@ -7,6 +7,7 @@
  */
 
 :root {
+  --page-bg: #f9fafb;
   --pic-placeholder-bg: #e5e7eb;
   --pic-cell-radius: 0.5rem;
   --pic-cell-shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1),
@@ -24,6 +25,43 @@
   --navbar-title-size: 1.25rem;
   --navbar-count-color: #6b7280;
   --navbar-count-size: 0.875rem;
+  --button-bg: #fff;
+  --button-fg: #111827;
+  --button-border: #6b7280;
+  --button-border-width: 1px;
+  --button-font-weight: 600;
+  --button-radius: 0.5rem;
+  --button-pad-y: 0.625rem;
+  --button-pad-x: 1.25rem;
+  --button-bg-hover: #f3f4f6;
+  --button-primary-bg: #374151;
+  --button-primary-fg: #fff;
+  --button-primary-border: #374151;
+  --button-primary-bg-hover: #1f2937;
+  --button-focus-ring: 0 0 0 3px rgb(37 99 235 / 0.4);
+  --pager-gap: 1rem;
+  --pager-margin-y: 1rem;
+  --button-group-gap: 1rem;
+  --button-group-margin-y: 1rem;
+  --frame-height: 75vh;
+  --frame-gap: 1rem;
+}
+
+/* The root paints the page color, so it fills the viewport however
+   short the content is. A body background only covers the body's own
+   height, and Pico paints the root with its theme color otherwise. */
+html {
+  background: var(--page-bg);
+}
+
+/* Small-viewport units keep the stage steady when a phone's address bar
+   shows or hides; browsers without them keep the vh value above. The
+   override sits in @supports because a var() declaration that fails
+   at computed-value time would not fall back to an earlier one. */
+@supports (height: 1svh) {
+  :root {
+    --frame-height: 75svh;
+  }
 }
 
 /* Column counts fill whole rows of the default page size at each width. */
@@ -75,6 +113,99 @@
 .navbar__count {
   color: var(--navbar-count-color);
   font-size: var(--navbar-count-size);
+}
+
+/* A link that acts like a button. The block owns its whole look rather
+   than leaning on Pico's role="button", which would announce a
+   navigation link as a button and tie the look to Pico's variables. Color
+   and text-decoration are set on every state so Pico's link styling
+   cannot leak in. --primary marks the one emphasized action. */
+.button {
+  display: inline-block;
+  box-sizing: border-box;
+  padding: var(--button-pad-y) var(--button-pad-x);
+  background: var(--button-bg);
+  color: var(--button-fg);
+  border: var(--button-border-width) solid var(--button-border);
+  border-radius: var(--button-radius);
+  font-weight: var(--button-font-weight);
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--button-bg-hover);
+  color: var(--button-fg);
+  text-decoration: none;
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: var(--button-focus-ring);
+}
+
+.button--primary {
+  background: var(--button-primary-bg);
+  color: var(--button-primary-fg);
+  border-color: var(--button-primary-border);
+}
+
+.button--primary:hover {
+  background: var(--button-primary-bg-hover);
+  color: var(--button-primary-fg);
+}
+
+/* Related actions in a row. */
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--button-group-gap);
+  margin: var(--frame-gap) 0 var(--button-group-margin-y);
+}
+
+/* Previous, up and next. Pico makes a bare nav a flex row; the pager
+   is a three-column grid so a missing neighbor leaves its slot empty
+   and the others stay put. */
+.pager {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--pager-gap);
+  margin: var(--pager-margin-y) 0 var(--frame-gap);
+  padding: 0;
+}
+
+.pager__prev {
+  grid-column: 1;
+  justify-self: start;
+}
+
+.pager__up {
+  grid-column: 2;
+}
+
+.pager__next {
+  grid-column: 3;
+  justify-self: end;
+}
+
+/* The image is a fixed stage: one box for every photo, so what follows
+   it never moves. scale-down centers a small image at its own size and
+   fits a large one whole, and never enlarges anything. The gap above
+   and below the stage is the one --frame-gap. */
+.frame {
+  margin: 0;
+}
+
+.frame__img {
+  display: block;
+  width: 100%;
+  height: var(--frame-height);
+  object-fit: scale-down;
+  object-position: center;
 }
 
 .pic-grid {

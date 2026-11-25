@@ -4,30 +4,26 @@
 {% block title %}{{ pic.key.name }} - {{ collection }} Gallery{% endblock %}
 
 {% block content %}
-<div class="container mx-auto py-8 px-4">
-  <nav class="pic-nav flex justify-between py-4">
+<div class="container">
+  <nav class="pager">
     {% if prev %}
-    <a rel="prev" href="{{ prev.key.name }}.html">Previous</a>
-    {% else %}
-    <span></span>
+    <a rel="prev" href="{{ prev.key.name }}.html" class="pager__prev button">Previous</a>
     {% endif %}
-    <a href="../index.html">Back to gallery</a>
+    <a href="../index.html" class="pager__up button">Back to gallery</a>
     {% if next %}
-    <a rel="next" href="{{ next.key.name }}.html">Next</a>
-    {% else %}
-    <span></span>
+    <a rel="next" href="{{ next.key.name }}.html" class="pager__next button">Next</a>
     {% endif %}
   </nav>
-  <figure class="pic-display">
+  <figure class="frame">
     <img
       src="{{ root }}/{{ href(collection, pic.display) }}"
       alt="{{ collection }} {{ pic.key.name }}"
-      class="mx-auto max-h-screen"
+      class="frame__img"
     />
   </figure>
-  <div class="pic-links flex justify-center space-x-6 py-4">
-    <a class="pic-original" href="{{ root }}/{{ href(collection, pic.original) }}">View original</a>
-    <a class="pic-download" href="{{ root }}/{{ href(collection, pic.original) }}" download>Download</a>
+  <div class="button-group">
+    <a href="{{ root }}/{{ href(collection, pic.original) }}" class="button">View original</a>
+    <a href="{{ root }}/{{ href(collection, pic.original) }}" class="button button--primary" download>Download</a>
   </div>
 </div>
 {% endblock %}
