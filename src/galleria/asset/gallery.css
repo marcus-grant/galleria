@@ -13,7 +13,7 @@
   --pic-cell-shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1),
     0 4px 6px -4px rgb(0 0 0 / 0.1);
   --pic-cell-transition: box-shadow 150ms ease;
-  --pic-grid-columns: 2;
+  --pic-grid-columns: 3;
   --pic-grid-gap: 1rem;
   --navbar-bg: #fff;
   --navbar-border: #e5e7eb;
@@ -66,7 +66,10 @@ html {
   }
 }
 
-/* Column counts fill whole rows of the default page size at each width. */
+/* Column counts of 3, 4 and 6 all divide 12, so a page size that is a
+   multiple of 12 fills whole rows at every width; the default 96 is.
+   Phones get 3 so a cell is about 110 CSS px, close to what the 400px
+   thumbnails can fill without enlarging; revisit with thumbnail tuning. */
 @media (min-width: 768px) {
   :root {
     --pic-grid-columns: 4;
